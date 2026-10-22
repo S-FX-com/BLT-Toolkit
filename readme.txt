@@ -14,7 +14,7 @@ Switch to another user and back, change usernames, and edit roles and capabiliti
 
 == Description ==
 
-**In development.** BLT Toolkit is being built phase by phase from its specification. Phase 0 (the scaffold) is in progress, so the features below are not available yet. They are described here as specified.
+**In development.** BLT Toolkit is being built phase by phase from its specification. Phases 0 to 4 are built (protection, the activity log, switching, username changes, and the roles engine with the Advanced view); Simple view, separate permissions for custom post types and the Tools screen are still to come. Features are described here as specified.
 
 BLT Toolkit gives site administrators three user-management tools in one place, under one security model and one activity log. It replaces User Switching, Username Changer and User Role Editor on S-FX-managed sites.
 
@@ -100,4 +100,4 @@ Thank you to their authors.
 == Changelog ==
 
 = 0.1.0 =
-* In development. Phases 0 to 2: scaffold; protection, activity log and role snapshots; switching to another user and back.
+* In development. Phases 0 to 4: scaffold; protection, activity log and role snapshots; switching to another user and back; username changes, including bulk rename from CSV; the roles engine, the Advanced view, the role lifecycle, additional roles and per-user capabilities.

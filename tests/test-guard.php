@@ -552,6 +552,101 @@ class Test_Guard extends TestCase {
 	}
 
 	/**
+	 * The effective capabilities a user would have with these roles, as
+	 * BLT_Toolkit_Guard::can_change_user_roles() builds them.
+	 *
+	 * @param string[] $roles Role IDs, in order.
+	 * @param array    $own   The user's own capabilities.
+	 * @return array
+	 */
+	private function caps_with_roles( array $roles, array $own = array() ) {
+		$defs = array(
+			'boss'    => array(
+				'read'            => true,
+				'edit_posts'      => true,
+				'install_plugins' => true,
+			),
+			'limiter' => array(
+				'read'            => true,
+				'install_plugins' => false,
+			),
+			'helper'  => array(
+				'read'       => true,
+				'edit_posts' => true,
+			),
+		);
+		$list = array();
+
+		foreach ( $roles as $role ) {
+			$list[ $role ] = isset( $defs[ $role ] ) ? $defs[ $role ] : array();
+		}
+
+		return BLT_Toolkit_Superset::normalize( BLT_Toolkit_Guard::merge_caps( $list, $own ), array_keys( $defs ) );
+	}
+
+	/**
+	 * SEC-2, SEC-3: taking away (US-3 remove, RO-41 remove), replacing
+	 * (RO-41 swap and set) or reordering (US-1 profile) a role that denies a
+	 * capability another role grants gives the user that capability: a
+	 * grant the actor may make only when they hold it. Known vectors with a
+	 * `limiter` role denying `install_plugins` that `boss` grants.
+	 *
+	 * @return void
+	 */
+	public function test_sec2_sec3_lifting_a_role_deny_from_a_user_is_a_grant() {
+		$actor = array_fill_keys( array( 'read', 'edit_posts', 'list_users', 'promote_users' ), true );
+		$facts = static function ( array $after ) use ( $actor ) {
+			return array(
+				'actor_is_admin' => false,
+				'actor_caps'     => $actor,
+				'after_caps'     => $after,
+			);
+		};
+
+		// Before: the deny wins, so the user is a subset of the actor.
+		$this->assertNull( BLT_Toolkit_Guard::user_roles_violation( $facts( $this->caps_with_roles( array( 'boss', 'limiter' ) ) ) ) );
+
+		// US-3 bulk remove, RO-41 remove.
+		$removed   = BLT_Toolkit_User_Roles::bulk_roles_after( array( 'boss', 'limiter' ), '', 'limiter' );
+		$violation = BLT_Toolkit_Guard::user_roles_violation( $facts( $this->caps_with_roles( $removed ) ) );
+		$this->assertSame( 'blt_toolkit_roles_exceed_actor', $violation['code'] );
+		$this->assertSame( 'SEC-3', $violation['rule'] );
+		$this->assertSame( array( 'install_plugins' ), $violation['caps'] );
+
+		$plan = BLT_Toolkit_Role_Lifecycle::plan_user( array( 'boss', 'limiter' ), 'limiter', '', BLT_Toolkit_Role_Lifecycle::MODE_REPLACE );
+		$this->assertSame( 'remove', $plan['op'] );
+		$this->assertNotNull( BLT_Toolkit_Guard::user_roles_violation( $facts( $this->caps_with_roles( $plan['roles'] ) ) ) );
+
+		// RO-41/RO-42 swap: the replacement takes the deny role's place.
+		$plan = BLT_Toolkit_Role_Lifecycle::plan_user( array( 'boss', 'limiter' ), 'limiter', 'helper', BLT_Toolkit_Role_Lifecycle::MODE_MOVE );
+		$this->assertSame( 'swap', $plan['op'] );
+		$this->assertSame( array( 'install_plugins' ), BLT_Toolkit_Guard::user_roles_violation( $facts( $this->caps_with_roles( $plan['roles'] ) ) )['caps'] );
+
+		// RO-41 set: the only role replaced by one the actor may give is fine.
+		$plan = BLT_Toolkit_Role_Lifecycle::plan_user( array( 'limiter' ), 'limiter', 'helper', BLT_Toolkit_Role_Lifecycle::MODE_REPLACE );
+		$this->assertSame( 'set', $plan['op'] );
+		$this->assertNull( BLT_Toolkit_Guard::user_roles_violation( $facts( $this->caps_with_roles( $plan['roles'] ) ) ) );
+
+		// US-1: the deny role moved ahead of the grant no longer denies.
+		$this->assertNotNull( BLT_Toolkit_Guard::user_roles_violation( $facts( $this->caps_with_roles( array( 'limiter', 'boss' ) ) ) ) );
+
+		// A user-level deny still wins over every role.
+		$this->assertNull( BLT_Toolkit_Guard::user_roles_violation( $facts( $this->caps_with_roles( array( 'boss' ), array( 'install_plugins' => false ) ) ) ) );
+
+		// An actor who holds the capability, or a toolkit admin, may.
+		$actor_with = $facts( $this->caps_with_roles( array( 'boss' ) ) );
+		$actor_with['actor_caps']['install_plugins'] = true;
+		$this->assertNull( BLT_Toolkit_Guard::user_roles_violation( $actor_with ) );
+
+		$admin                   = $facts( $this->caps_with_roles( array( 'boss' ) ) );
+		$admin['actor_is_admin'] = true;
+		$this->assertNull( BLT_Toolkit_Guard::user_roles_violation( $admin ) );
+
+		// The deprecated levels are left out, as for SEC-4.
+		$this->assertNull( BLT_Toolkit_Guard::user_roles_violation( $facts( array( 'read' => true, 'level_1' => true ) ) ) );
+	}
+
+	/**
 	 * Facts for a per-user capability change, with defaults that allow it.
 	 *
 	 * @param array $overrides Facts to change.

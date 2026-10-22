@@ -305,6 +305,12 @@ class BLT_Toolkit_Admin {
 			// False when the current user lacks the capability: nothing to gate.
 			if ( is_string( $hook ) && '' !== $hook ) {
 				$this->page_hooks[ $hook ] = $key;
+
+				// A role lifecycle page the user may not open answers 403
+				// before any output (render() would be too late for a status).
+				if ( 'roles' === $key && class_exists( 'BLT_Toolkit_Admin_Role_Lifecycle' ) ) {
+					add_action( 'load-' . $hook, array( 'BLT_Toolkit_Admin_Role_Lifecycle', 'check_access' ) );
+				}
 			}
 		}
 

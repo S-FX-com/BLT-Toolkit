@@ -29,8 +29,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * - SEC-6 (hide administrators): the Users list query, its role counts and
  *   views, and the REST users collection.
  * - SEC-2, SEC-3, SEC-5, SEC-10, SEC-12 and SEC-13 for BLT write paths:
- *   can_act_on_user(), can_change_user_caps(), can_grant(),
- *   check_role_change(), requires_critical_review(), is_protected_role().
+ *   can_act_on_user(), can_change_user_caps(), can_change_user_roles(),
+ *   can_grant(), check_role_change(), requires_critical_review(),
+ *   is_protected_role().
  * - SEC-14 recovery mode: maybe_recover() and recovery_notice(), hooked
  *   only while `BLT_TOOLKIT_RECOVERY` is true.
  *
@@ -148,6 +149,15 @@ class BLT_Toolkit_Guard {
 	 * @var array<string,string[]>
 	 */
 	private static $missing_cache = array();
+
+	/**
+	 * A user's effective capabilities after a change of roles, keyed by the
+	 * new roles and the user's own capabilities (SEC-9; see
+	 * can_change_user_roles()).
+	 *
+	 * @var array<string,array<string,true>>
+	 */
+	private static $after_cache = array();
 
 	/**
 	 * Register the Guard's hooks. Called on `plugins_loaded` priority 1.
@@ -515,6 +525,7 @@ class BLT_Toolkit_Guard {
 	public static function flush() {
 		self::$caps_cache    = array();
 		self::$missing_cache = array();
+		self::$after_cache   = array();
 	}
 
 	/**
@@ -1028,6 +1039,87 @@ class BLT_Toolkit_Guard {
 	}
 
 	/**
+	 * Whether the actor may leave a user holding exactly these roles (SEC-2,
+	 * SEC-3): the check every path that adds, removes, swaps or replaces a
+	 * user's roles calls with the roles the user will hold afterwards (US-1,
+	 * US-3, RO-41).
+	 *
+	 * Checking only the roles involved is not enough. A role can store a
+	 * deny (`install_plugins => false`) that overrides another role's grant,
+	 * so taking that role away, or replacing it, gives the user the
+	 * capability back: lifting a deny is a grant, as check_role_change() and
+	 * can_change_user_caps() already count it. For a non-admin, the user's
+	 * effective capabilities after the change (the new roles in order, then
+	 * the user's own capabilities, as `WP_User::get_role_caps()` merges
+	 * them) must be a subset of the actor's. That also covers SEC-2 for what
+	 * the user holds already. A toolkit admin may make any change.
+	 *
+	 * SEC-1 and SEC-5 stay with the caller (can_act_on_user() and the
+	 * own-roles check), which also decides `promote_user`.
+	 *
+	 * @param WP_User  $actor     Who is acting.
+	 * @param WP_User  $target    Whose roles change.
+	 * @param string[] $new_roles The roles the user will hold, in order.
+	 * @param array    $role_caps Role ID => capabilities for roles that are
+	 *                            not stored yet (a dry run's new role).
+	 * @return true|WP_Error `blt_toolkit_no_actor`, `blt_toolkit_no_user` or
+	 *                       `blt_toolkit_roles_exceed_actor` (SEC-3, data
+	 *                       `caps` lists what the user would gain that the
+	 *                       actor lacks).
+	 */
+	public static function can_change_user_roles( WP_User $actor, WP_User $target, array $new_roles, array $role_caps = array() ) {
+		if ( ! $target->exists() ) {
+			return self::error( self::violation( 'blt_toolkit_no_user', '' ) );
+		}
+
+		if ( ! $actor->exists() ) {
+			return self::error( self::violation( 'blt_toolkit_no_actor', '' ) );
+		}
+
+		if ( self::is_toolkit_admin( $actor ) ) {
+			return true;
+		}
+
+		$wp_roles = wp_roles();
+		$roles    = array();
+		$own      = array();
+
+		foreach ( $new_roles as $role ) {
+			$role = (string) $role;
+
+			if ( isset( $role_caps[ $role ] ) && is_array( $role_caps[ $role ] ) ) {
+				$roles[ $role ] = $role_caps[ $role ];
+				continue;
+			}
+
+			$obj            = $wp_roles->get_role( $role );
+			$roles[ $role ] = $obj instanceof WP_Role && is_array( $obj->capabilities ) ? $obj->capabilities : array();
+		}
+
+		foreach ( is_array( $target->caps ) ? $target->caps : array() as $cap => $value ) {
+			if ( ! $wp_roles->is_role( (string) $cap ) ) {
+				$own[ (string) $cap ] = $value;
+			}
+		}
+
+		$key = md5( (string) wp_json_encode( array( $roles, $own ) ) );
+
+		if ( ! isset( self::$after_cache[ $key ] ) ) {
+			self::$after_cache[ $key ] = BLT_Toolkit_Superset::normalize( self::merge_caps( $roles, $own ), self::role_names() );
+		}
+
+		$violation = self::user_roles_violation(
+			array(
+				'actor_is_admin' => false,
+				'actor_caps'     => self::effective_caps( $actor ),
+				'after_caps'     => self::$after_cache[ $key ],
+			)
+		);
+
+		return null === $violation ? true : self::error( $violation );
+	}
+
+	/**
 	 * Whether the actor may make this change to a role (RO-4).
 	 *
 	 * - SEC-12, for everyone: the lockout-critical set cannot be removed from
@@ -1477,6 +1569,36 @@ class BLT_Toolkit_Guard {
 	}
 
 	/**
+	 * SEC-2 and SEC-3 for a change of a user's roles, from plain facts (see
+	 * can_change_user_roles()): everything the user can do afterwards must
+	 * be something the actor can do. The deprecated user levels are left
+	 * out, as for SEC-4's assignable roles (BLT_Toolkit_Superset::missing()).
+	 *
+	 * @param array $facts {
+	 *     @type bool  $actor_is_admin Whether the actor is a toolkit admin.
+	 *     @type array $actor_caps     The actor's effective capabilities (cap => true).
+	 *     @type array $after_caps     The user's effective capabilities after the change (cap => true).
+	 * }
+	 * @return array|null Null when allowed; otherwise array( 'code', 'rule', 'caps' ).
+	 */
+	public static function user_roles_violation( array $facts ) {
+		if ( ! empty( $facts['actor_is_admin'] ) ) {
+			return null;
+		}
+
+		$missing = BLT_Toolkit_Superset::missing(
+			isset( $facts['actor_caps'] ) ? (array) $facts['actor_caps'] : array(),
+			isset( $facts['after_caps'] ) ? (array) $facts['after_caps'] : array()
+		);
+
+		if ( array() !== $missing ) {
+			return self::violation( 'blt_toolkit_roles_exceed_actor', 'SEC-3', $missing );
+		}
+
+		return null;
+	}
+
+	/**
 	 * SEC-3 for a set of grants and denies, from plain facts.
 	 *
 	 * A non-admin may set only capabilities they hold, to either value:
@@ -1697,6 +1819,10 @@ class BLT_Toolkit_Guard {
 			case 'blt_toolkit_own_caps':
 				$message = __( 'You cannot change your own capabilities. Ask an administrator.', 'blt-toolkit' );
 				break;
+			case 'blt_toolkit_roles_exceed_actor':
+				/* translators: %s: comma-separated capability names. */
+				$message = sprintf( __( 'With these roles the user would have capabilities you do not have yourself (%s), so you cannot make this change. A role that denies a capability another role grants takes it away; removing it gives it back.', 'blt-toolkit' ), $list );
+				break;
 			case 'blt_toolkit_admin_holds_role':
 				$message = __( 'An administrator also holds this role, so only an administrator can deny capabilities in it.', 'blt-toolkit' );
 				break;
@@ -1896,12 +2022,30 @@ class BLT_Toolkit_Guard {
 			error_log( 'BLT Toolkit: recovery mode could not store a role snapshot first; it restored the administrator role anyway.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- A failed snapshot must be visible to the site owner's logs.
 		}
 
+		// The role store's hooks, context `recovery` (RO-4). Recovery keeps its
+		// own path, because it must go ahead when the snapshot fails.
+		$changes = array(
+			self::ADMIN_ROLE => array(
+				'add'     => array_fill_keys( $missing, true ),
+				'remove'  => array(),
+				'created' => $recreate,
+				'deleted' => false,
+				'name'    => null,
+			),
+		);
+
+		/** This action is documented in includes/class-blt-toolkit-role-store.php */
+		do_action( 'blt_toolkit_before_roles_save', $changes, 'recovery' );
+
 		// One write for the whole batch (the RO-3 technique).
 		self::grant_in_memory( $wp_roles, $missing, $recreate );
 
 		update_option( $wp_roles->role_key, $wp_roles->roles );
 
 		self::log_recovery( $missing, $recreate, $snapshot_id );
+
+		/** This action is documented in includes/class-blt-toolkit-role-store.php */
+		do_action( 'blt_toolkit_after_roles_save', $changes, 'recovery', max( 0, (int) $snapshot_id ) );
 
 		return $missing;
 	}

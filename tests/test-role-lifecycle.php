@@ -572,4 +572,19 @@ class Test_Role_Lifecycle extends TestCase {
 
 		$this->assertSame( array(), BLT_Toolkit_Role_Lifecycle::batches( 'helper', array() ) );
 	}
+
+	/**
+	 * SEC-12: nobody takes `administrator` away from themselves through a
+	 * move, merge or reassign; other people, and roles other than
+	 * administrator, are not affected by this rule.
+	 *
+	 * @return void
+	 */
+	public function test_sec12_drops_own_admin() {
+		$this->assertTrue( BLT_Toolkit_Role_Lifecycle::drops_own_admin( true, array( 'administrator' ), array( 'admins_copy' ) ) );
+		$this->assertTrue( BLT_Toolkit_Role_Lifecycle::drops_own_admin( true, array( 'editor', 'administrator' ), array( 'editor' ) ) );
+		$this->assertFalse( BLT_Toolkit_Role_Lifecycle::drops_own_admin( false, array( 'administrator' ), array( 'admins_copy' ) ) );
+		$this->assertFalse( BLT_Toolkit_Role_Lifecycle::drops_own_admin( true, array( 'administrator', 'helper' ), array( 'administrator', 'editor' ) ) );
+		$this->assertFalse( BLT_Toolkit_Role_Lifecycle::drops_own_admin( true, array( 'helper' ), array( 'editor' ) ) );
+	}
 }

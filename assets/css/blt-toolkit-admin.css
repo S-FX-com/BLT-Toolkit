@@ -449,3 +449,539 @@
 		color: var(--blt-muted-fg, #646970);
 	}
 }
+
+/* =========================================================================
+   Roles screen: role editor and Advanced view (SPEC 9.3, 13.2; RO-20 to
+   RO-26, US-10). Layout only; components come from the design system, and
+   every color is a token.
+   ========================================================================= */
+
+/* Skip link past the role list and group tree (WCAG 2.4.1): out of sight
+   until it has keyboard focus. Its targets take focus without an outline
+   of their own. */
+.blt-toolkit-roles .blt-toolkit-skip:not(:focus) {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.blt-toolkit-roles .blt-toolkit-skip:focus {
+	display: inline-block;
+	margin: 0 0 12px;
+	padding: 8px 12px;
+	border-radius: var(--blt-radius-sm);
+	background: var(--blt-surface);
+	color: var(--blt-primary);
+}
+
+.blt-toolkit-roles #blt-tk-role-main:focus,
+.blt-toolkit-roles #blt-tk-matrix:focus {
+	outline: none;
+}
+
+/* Left column (role list, group tree) and main column. Stacked until there
+   is room for both side by side. */
+.blt-toolkit-roles .blt-toolkit-roles-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 0 20px;
+	align-items: start;
+}
+
+@media screen and (min-width: 1100px) {
+	.blt-toolkit-roles .blt-toolkit-roles-layout {
+		grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+	}
+}
+
+.blt-toolkit-roles .blt-toolkit-roles-main {
+	min-width: 0;
+}
+
+/* --- Role list ---------------------------------------------------------- */
+
+.blt-toolkit-roles .blt-toolkit-role-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.blt-toolkit-roles .blt-toolkit-role-list li {
+	margin: 0;
+	border-top: 1px solid var(--blt-surface-muted);
+}
+
+.blt-toolkit-roles .blt-toolkit-role-list li:first-child {
+	border-top: 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-role-link {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 10px 24px;
+	color: var(--blt-fg);
+	text-decoration: none;
+}
+
+.blt-toolkit-roles .blt-toolkit-role-link:hover {
+	background: var(--blt-surface-muted);
+	color: var(--blt-primary);
+}
+
+.blt-toolkit-roles .blt-toolkit-role-link:focus {
+	box-shadow: inset 0 0 0 2px var(--blt-primary);
+	outline: none;
+}
+
+.blt-toolkit-roles .blt-toolkit-role-link.is-current {
+	background: var(--blt-primary-tint);
+	box-shadow: inset 3px 0 0 var(--blt-primary);
+}
+
+.blt-toolkit-roles .blt-toolkit-role-line {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 4px 8px;
+}
+
+.blt-toolkit-roles .blt-toolkit-role-name {
+	font-weight: 600;
+}
+
+.blt-toolkit-roles .blt-toolkit-role-count,
+.blt-toolkit-roles .blt-toolkit-role-desc {
+	font-size: 12px;
+	color: var(--blt-muted-fg);
+}
+
+.blt-toolkit-roles .blt-toolkit-role-badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+/* --- Group tree (RO-13): nested links with granted / total --------------- */
+
+.blt-toolkit-roles .blt-toolkit-tree-card .blt-card-body {
+	padding-top: 8px;
+	padding-bottom: 12px;
+}
+
+.blt-toolkit-roles .blt-toolkit-tree {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.blt-toolkit-roles .blt-toolkit-tree .blt-toolkit-tree {
+	margin-left: 14px;
+	padding-left: 8px;
+	border-left: 1px solid var(--blt-border);
+}
+
+.blt-toolkit-roles .blt-toolkit-tree li {
+	margin: 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-tree-link {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 4px 6px;
+	border-radius: var(--blt-radius-sm);
+	color: var(--blt-fg);
+	text-decoration: none;
+}
+
+.blt-toolkit-roles .blt-toolkit-tree-link:hover {
+	background: var(--blt-surface-muted);
+	color: var(--blt-primary);
+}
+
+.blt-toolkit-roles .blt-toolkit-tree-link:focus {
+	box-shadow: 0 0 0 2px var(--blt-primary);
+	outline: none;
+}
+
+.blt-toolkit-roles .blt-toolkit-tree-link.is-current {
+	background: var(--blt-primary-tint);
+	color: var(--blt-primary);
+	font-weight: 600;
+}
+
+.blt-toolkit-roles .blt-toolkit-tree-count {
+	flex-shrink: 0;
+	font-size: 12px;
+	color: var(--blt-muted-fg);
+}
+
+/* --- Role header ---------------------------------------------------------- */
+
+.blt-toolkit-roles .blt-toolkit-role-header .blt-card-header h2 .blt-chip {
+	margin-left: 6px;
+	font-size: 12px;
+	font-weight: 400;
+	vertical-align: middle;
+}
+
+.blt-toolkit-roles .blt-toolkit-role-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-bottom: 12px;
+}
+
+.blt-toolkit-roles .blt-toolkit-test-as-form {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.blt-toolkit-roles .blt-toolkit-test-as-form label {
+	font-weight: 600;
+}
+
+.blt-toolkit-roles .blt-toolkit-test-as-form select {
+	max-width: 100%;
+}
+
+.blt-toolkit-roles .blt-toolkit-test-as-search {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-top: 12px;
+}
+
+.blt-toolkit-roles .blt-toolkit-test-as-search input {
+	box-sizing: border-box;
+	max-width: 100%;
+}
+
+.blt-toolkit-roles .blt-toolkit-test-as-results {
+	margin: 0 0 0 1.4em;
+	list-style: disc;
+}
+
+.blt-toolkit-roles .blt-toolkit-user-roles {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	margin: 0;
+}
+
+/* Simple / Advanced tabs sit between the role header and the view. */
+.blt-toolkit-roles .blt-toolkit-view-tabs {
+	margin-top: 0;
+}
+
+/* --- Toolbar (RO-22) ------------------------------------------------------ */
+
+.blt-toolkit-roles .blt-toolkit-roles-toolbar .blt-toggle {
+	align-items: center;
+}
+
+.blt-toolkit-roles .blt-toolkit-roles-filter,
+.blt-toolkit-roles .blt-toolkit-roles-columns {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-roles-filter input,
+.blt-toolkit-roles .blt-toolkit-roles-filter select {
+	box-sizing: border-box;
+	max-width: 100%;
+}
+
+/* --- Matrix (RO-20, RO-21) ------------------------------------------------ */
+
+.blt-toolkit-roles .blt-toolkit-matrix-heading {
+	margin: 20px 0 4px;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--blt-fg);
+}
+
+.blt-toolkit-roles .blt-toolkit-matrix-section:first-of-type .blt-toolkit-matrix-heading {
+	margin-top: 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-matrix {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 0 24px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+@media screen and (min-width: 783px) {
+	.blt-toolkit-roles .blt-toolkit-matrix.blt-toolkit-cols-2 {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.blt-toolkit-roles .blt-toolkit-matrix.blt-toolkit-cols-3 {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+.blt-toolkit-roles .blt-toolkit-cap {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 6px 12px;
+	min-width: 0;
+	margin: 0;
+	padding: 10px 0;
+	border-top: 1px solid var(--blt-surface-muted);
+}
+
+.blt-toolkit-roles .blt-toolkit-cap[hidden],
+.blt-toolkit-roles .blt-toolkit-matrix-section[hidden] {
+	display: none;
+}
+
+.blt-toolkit-roles .blt-toolkit-cap .blt-toggle {
+	flex: 1 1 16em;
+	min-width: 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-cap .blt-toggle-text {
+	min-width: 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-cap .blt-toggle-label,
+.blt-toolkit-roles .blt-toolkit-cap-label {
+	overflow-wrap: anywhere;
+}
+
+.blt-toolkit-roles .blt-toolkit-cap .blt-chip,
+.blt-toolkit-roles .blt-toolkit-review-list .blt-chip {
+	display: inline-block;
+	margin: 2px 0;
+	font-size: 11px;
+	overflow-wrap: anywhere;
+}
+
+.blt-toolkit-roles .blt-toolkit-cap .blt-toggle-desc,
+.blt-toolkit-roles .blt-toolkit-cap-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 8px;
+	margin-top: 2px;
+}
+
+.blt-toolkit-roles .blt-toolkit-source {
+	background: var(--blt-surface-muted);
+	border-color: var(--blt-border);
+	color: var(--blt-muted-fg);
+}
+
+.blt-toolkit-roles .blt-toolkit-simple,
+.blt-toolkit-roles .blt-toolkit-note {
+	font-size: 12px;
+	color: var(--blt-muted-fg);
+}
+
+/* A row nobody may change here: still readable, plainly not a control. */
+.blt-toolkit-roles .blt-toolkit-cap.is-locked .blt-toggle {
+	cursor: not-allowed;
+}
+
+.blt-toolkit-roles .blt-toolkit-cap.is-locked .blt-toggle-track {
+	opacity: 0.55;
+}
+
+.blt-toolkit-roles .blt-toolkit-cap-action {
+	flex-shrink: 0;
+	font-size: 12px;
+}
+
+/* User mode: label and source on the left, Inherit / Grant / Deny right. */
+.blt-toolkit-roles .blt-toolkit-cap-text {
+	display: flex;
+	flex: 1 1 16em;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-cap-label {
+	font-weight: 500;
+}
+
+.blt-toolkit-roles .blt-toolkit-cap-user select {
+	flex-shrink: 0;
+	max-width: 100%;
+}
+
+.blt-toolkit-roles .blt-toolkit-filter-status {
+	margin: 0 0 4px;
+	color: var(--blt-muted-fg);
+}
+
+/* An empty live region stays rendered (no height, no margin), so screen
+   readers already track it when the filter first writes to it (RO-26). */
+.blt-toolkit-roles .blt-toolkit-filter-status:empty {
+	margin: 0;
+}
+
+/* --- Sticky save bar (SPEC 13.2) -----------------------------------------
+   Outside the card (whose overflow is hidden), tied to the form with
+   form=, so it can stick to the bottom of the window while the matrix
+   scrolls past. */
+
+.blt-toolkit-roles .blt-toolkit-savebar {
+	position: sticky;
+	bottom: 0;
+	z-index: 20;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px 16px;
+	margin: -12px 0 20px;
+	padding: 12px 24px;
+	background: var(--blt-surface);
+	border: 1px solid var(--blt-border);
+	border-radius: var(--blt-radius);
+}
+
+/* A control scrolled to (keyboard focus, a link to it) stays clear of the
+   sticky save bar, so focus is never hidden under it (WCAG 2.2, 2.4.11).
+   The toggle's hidden checkbox is stretched over its whole row (still
+   invisible, still the thing that is clicked), because a 0 x 0 box at the
+   top edge counts as "in view" while the row below it is under the bar. */
+.blt-toolkit-roles .blt-toolkit-cap .blt-toggle {
+	position: relative;
+}
+
+.blt-toolkit-roles .blt-toolkit-cap .blt-toggle input[type="checkbox"] {
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-cap,
+.blt-toolkit-roles .blt-toolkit-cap input,
+.blt-toolkit-roles .blt-toolkit-cap select {
+	scroll-margin-top: 48px;
+	scroll-margin-bottom: 160px;
+}
+
+/* A row already inside the window but under the bar is not scrolled by
+   the margin above; padding the window's own scroll area is what the
+   browser checks first. Only on a page that has the save bar. */
+html:has(.blt-toolkit-roles .blt-toolkit-savebar) {
+	scroll-padding-bottom: 140px;
+}
+
+.blt-toolkit-roles .blt-toolkit-matrix-wrap.is-dirty .blt-toolkit-savebar {
+	background: var(--blt-primary-tint);
+	border-color: var(--blt-primary);
+}
+
+.blt-toolkit-roles .blt-toolkit-change-count {
+	margin: 0;
+	color: var(--blt-fg);
+}
+
+.blt-toolkit-roles .blt-toolkit-savebar-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+/* --- Review, conflict, compare, delete ------------------------------------ */
+
+.blt-toolkit-roles .blt-toolkit-review-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.blt-toolkit-roles .blt-toolkit-review-list li {
+	margin: 0 0 6px;
+}
+
+.blt-toolkit-roles .blt-toolkit-review .notice {
+	margin: 0 0 16px;
+}
+
+.blt-toolkit-roles .blt-toolkit-diff-role {
+	padding: 8px 0;
+	border-top: 1px solid var(--blt-border);
+}
+
+.blt-toolkit-roles .blt-toolkit-diff-role:first-child {
+	border-top: 0;
+	padding-top: 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-diff-role p {
+	margin: 4px 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-diff-label {
+	margin: 8px 0 4px;
+	color: var(--blt-muted-fg);
+}
+
+.blt-toolkit-roles .blt-toolkit-diff-flips {
+	margin: 0 0 0 1.4em;
+	list-style: disc;
+}
+
+.blt-toolkit-roles .blt-toolkit-table-scroll {
+	overflow-x: auto;
+}
+
+.blt-toolkit-roles .blt-toolkit-compare th[scope="row"] {
+	font-weight: 400;
+	overflow-wrap: anywhere;
+}
+
+.blt-toolkit-roles .blt-toolkit-compare .blt-toolkit-compare-granted {
+	color: var(--blt-success-fg);
+	font-weight: 600;
+}
+
+.blt-toolkit-roles .blt-toolkit-compare .blt-toolkit-compare-denied {
+	color: var(--blt-danger-fg);
+	font-weight: 600;
+}
+
+.blt-toolkit-roles .blt-toolkit-compare .blt-toolkit-compare-absent {
+	color: var(--blt-muted-fg);
+}
+
+/* Narrow screens: the card padding the design system already trims, plus
+   the role list and save bar. */
+@media screen and (max-width: 782px) {
+	.blt-toolkit-roles .blt-toolkit-role-link {
+		padding-left: 16px;
+		padding-right: 16px;
+	}
+
+	.blt-toolkit-roles .blt-toolkit-savebar {
+		padding: 10px 16px;
+	}
+
+	.blt-toolkit-roles .blt-toolkit-roles-filter,
+	.blt-toolkit-roles .blt-toolkit-roles-filter input {
+		width: 100%;
+	}
+}

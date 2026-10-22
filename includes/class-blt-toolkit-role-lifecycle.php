@@ -118,6 +118,14 @@ class BLT_Toolkit_Role_Lifecycle {
 	const COUNT_PAGE = 500;
 
 	/**
+	 * Stand-in target for the dry run of a move whose new role does not
+	 * exist yet (RO-32). `#` never appears in a role ID, so no real role
+	 * matches it, and a role that does not exist is assignable (SEC-4 has
+	 * nothing to compare).
+	 */
+	const NEW_ROLE = '#new';
+
+	/**
 	 * Meta capability names a role ID may not take (RO-23), used when the
 	 * capability catalog is not loaded. A role ID equal to a capability
 	 * name would be read as a role membership wherever that capability is
@@ -263,11 +271,11 @@ class BLT_Toolkit_Role_Lifecycle {
 		$out = array();
 
 		foreach ( array(
-			self::BLANK    => $read,
-			'subscriber'   => $subscriber,
-			'contributor'  => $contributor,
-			'author'       => $author,
-			'editor'       => $editor,
+			self::BLANK   => $read,
+			'subscriber'  => $subscriber,
+			'contributor' => $contributor,
+			'author'      => $author,
+			'editor'      => $editor,
 		) as $key => $caps ) {
 			$caps = array_fill_keys( $caps, true );
 
@@ -472,12 +480,12 @@ class BLT_Toolkit_Role_Lifecycle {
 	 * has the same name, compared without case, so two "Editor" entries never
 	 * sit in one role menu).
 	 *
-	 * @param string               $name  Display name, already sanitized.
-	 * @param array<string,string> $names Role ID => display name of the site's roles.
-	 * @param string               $self  Role being renamed, whose own name does not count, or ''.
+	 * @param string               $name   Display name, already sanitized.
+	 * @param array<string,string> $names  Role ID => display name of the site's roles.
+	 * @param string               $except Role being renamed, whose own name does not count, or ''.
 	 * @return string
 	 */
-	public static function name_error( $name, array $names, $self = '' ) {
+	public static function name_error( $name, array $names, $except = '' ) {
 		$name = trim( (string) $name );
 
 		if ( '' === $name ) {
@@ -493,7 +501,7 @@ class BLT_Toolkit_Role_Lifecycle {
 		$folded = self::fold( $name );
 
 		foreach ( $names as $id => $other ) {
-			if ( (string) $id !== (string) $self && is_scalar( $other ) && self::fold( (string) $other ) === $folded ) {
+			if ( (string) $id !== (string) $except && is_scalar( $other ) && self::fold( (string) $other ) === $folded ) {
 				return 'exists';
 			}
 		}
@@ -778,14 +786,14 @@ class BLT_Toolkit_Role_Lifecycle {
 	 * the names as stored and as shown (translated), so a name that reads
 	 * like another role's in the role menus is refused either way.
 	 *
-	 * @param string $name Display name, sanitized.
-	 * @param string $self Role being renamed, or ''.
+	 * @param string $name   Display name, sanitized.
+	 * @param string $except Role being renamed, or ''.
 	 * @return string Code, or ''.
 	 */
-	private static function name_problem( $name, $self = '' ) {
-		$error = self::name_error( $name, self::stored_names(), $self );
+	private static function name_problem( $name, $except = '' ) {
+		$error = self::name_error( $name, self::stored_names(), $except );
 
-		return '' !== $error ? $error : self::name_error( $name, self::role_names(), $self );
+		return '' !== $error ? $error : self::name_error( $name, self::role_names(), $except );
 	}
 
 	/**
@@ -945,13 +953,30 @@ class BLT_Toolkit_Role_Lifecycle {
 
 	/**
 	 * Number of users holding each role, from one counting query
-	 * (`count_users()`).
+	 * (`count_users()`). For someone from whom SEC-6 hides administrators,
+	 * the users list's own count without them
+	 * (BLT_Toolkit_Guard::count_users_without_admins()): no administrator is
+	 * counted, in the Administrator role or any other.
 	 *
 	 * @return array<string,int>
 	 */
 	public static function user_counts() {
-		$counts = count_users();
-		$out    = array();
+		$counts = null;
+		$hidden = BLT_Toolkit_Guard::hides_admins_from( wp_get_current_user() );
+
+		if ( $hidden ) {
+			$counts = BLT_Toolkit_Guard::count_users_without_admins( null, 'time', get_current_blog_id() );
+		}
+
+		if ( ! is_array( $counts ) ) {
+			$counts = count_users();
+		}
+
+		if ( $hidden && isset( $counts['avail_roles'] ) && is_array( $counts['avail_roles'] ) ) {
+			unset( $counts['avail_roles'][ self::ADMIN_ROLE ] );
+		}
+
+		$out = array();
 
 		if ( isset( $counts['avail_roles'] ) && is_array( $counts['avail_roles'] ) ) {
 			foreach ( $counts['avail_roles'] as $role => $count ) {
@@ -1369,6 +1394,12 @@ class BLT_Toolkit_Role_Lifecycle {
 			return new WP_Error( 'blt_toolkit_role_missing', self::undeletable_message( 'missing' ), array( 'status' => 404 ) );
 		}
 
+		$refusal = self::move_refusal( $role );
+
+		if ( is_wp_error( $refusal ) ) {
+			return $refusal;
+		}
+
 		$users = self::holder_count( $role );
 
 		if ( $users > 0 ) {
@@ -1520,7 +1551,7 @@ class BLT_Toolkit_Role_Lifecycle {
 		$empty = array_values( array_diff( $roles, $with_users ) );
 
 		if ( array() !== $empty ) {
-			$removed = self::remove_roles( $empty, $replacement, $merge ? 'merge' : 'delete' );
+			$removed = self::remove_roles( $empty, $replacement, $merge ? 'merge' : 'delete', false );
 
 			if ( is_wp_error( $removed ) ) {
 				return $removed;
@@ -1630,6 +1661,30 @@ class BLT_Toolkit_Role_Lifecycle {
 	}
 
 	/**
+	 * Whether every holder of this role may be moved out of it (RO-32,
+	 * RO-41): never for `administrator`. Its ID cannot change (SEC-12), and
+	 * emptying it would leave nobody a toolkit admin (SPEC 5.2), with no way
+	 * back through SEC-14 recovery, which needs someone holding the role.
+	 *
+	 * @param string $role Role ID.
+	 * @return true|WP_Error `blt_toolkit_protected_role_move` (403, rule SEC-12).
+	 */
+	public static function move_refusal( $role ) {
+		if ( ! BLT_Toolkit_Guard::is_protected_role( (string) $role ) ) {
+			return true;
+		}
+
+		return new WP_Error(
+			'blt_toolkit_protected_role_move',
+			__( 'Users cannot be moved out of the Administrator role: its ID never changes, and the site needs people who hold it. Rename it instead, or change each person\'s role on the Users screen.', 'blt-toolkit' ),
+			array(
+				'status' => 403,
+				'rule'   => 'SEC-12',
+			)
+		);
+	}
+
+	/**
 	 * Whether the current user may change other people's roles at all:
 	 * `promote_users`, as core asks on the Users screen. Each person is
 	 * checked again when the job reaches them (may_change_user()).
@@ -1653,11 +1708,12 @@ class BLT_Toolkit_Role_Lifecycle {
 	 * since).
 	 *
 	 * @param string[] $roles       Role IDs.
-	 * @param string   $replacement The replacement, for the hook ('' when none was needed).
+	 * @param string   $replacement The replacement ('' when none was needed), for the log and, when people held the roles, the hook.
 	 * @param string   $context     `delete` or `merge`.
+	 * @param bool     $were_held   Whether people held the roles and were given the replacement; false sends '' to the hook, as HOOKS.md says for a role nobody held.
 	 * @return array|WP_Error The store's result.
 	 */
-	private static function remove_roles( array $roles, $replacement, $context ) {
+	private static function remove_roles( array $roles, $replacement, $context, $were_held = true ) {
 		foreach ( $roles as $role ) {
 			$refusal = self::delete_refusal( $role );
 
@@ -1722,7 +1778,7 @@ class BLT_Toolkit_Role_Lifecycle {
 			 * @param string $role_id     The deleted role's ID.
 			 * @param string $replacement The role its users were given instead, or '' when nobody held it.
 			 */
-			do_action( 'blt_toolkit_role_deleted', $role, (string) $replacement );
+			do_action( 'blt_toolkit_role_deleted', $role, $were_held ? (string) $replacement : '' );
 		}
 
 		return self::with_result( $result, array( 'deleted' => $roles ) );
@@ -1779,6 +1835,12 @@ class BLT_Toolkit_Role_Lifecycle {
 
 		if ( ! wp_roles()->is_role( $role ) ) {
 			return new WP_Error( 'blt_toolkit_role_missing', self::undeletable_message( 'missing' ), array( 'status' => 404 ) );
+		}
+
+		$refusal = self::move_refusal( $role );
+
+		if ( is_wp_error( $refusal ) ) {
+			return $refusal;
 		}
 
 		$ready = self::check_replacement( $replacement, array( $role ), false );
@@ -1851,7 +1913,7 @@ class BLT_Toolkit_Role_Lifecycle {
 		);
 
 		if ( $then_delete && array() !== $nobody ) {
-			$removed = self::remove_roles( $nobody, $replacement, $context );
+			$removed = self::remove_roles( $nobody, $replacement, $context, false );
 
 			if ( is_wp_error( $removed ) ) {
 				return $removed;
@@ -1929,19 +1991,67 @@ class BLT_Toolkit_Role_Lifecycle {
 	/**
 	 * What emptying a role would do (the RO-41 dry run): how many hold it,
 	 * how many would get the target, how many would simply lose the role,
-	 * and how many the current user may not change (SEC-1, SEC-2, SEC-4,
-	 * SEC-5). Writes nothing; names nobody (SEC-6).
+	 * and how many the current user may not change (SEC-1 to SEC-5, SEC-12).
+	 * Writes nothing; names nobody (SEC-6).
+	 *
+	 * Cost (SEC-9): for a toolkit admin, whom only the plan itself can stop,
+	 * it reads each holder's capabilities meta in pages of COUNT_PAGE rows and
+	 * builds no user object. For anyone else every holder is checked by the
+	 * Guard, a page of COUNT_PAGE users at a time, and each page's users are
+	 * let go before the next, so memory stays at one page however many hold
+	 * the role.
 	 *
 	 * @param string $role   Role being emptied.
-	 * @param string $target Replacement.
+	 * @param string $target Replacement, or NEW_ROLE for the copy a move creates.
 	 * @param string $mode   MODE_REPLACE or MODE_MOVE.
 	 * @return array{users:int,get:int,remove:int,blocked:int,self:bool}
 	 */
 	public static function reassign_counts( $role, $target, $mode ) {
+		$role       = (string) $role;
+		$target     = (string) $target;
 		$out        = self::empty_counts();
-		$ids        = self::holder_ids( $role );
-		$assignable = '' !== (string) $target && BLT_Toolkit_Guard::may_assign_role( $target );
+		$assignable = '' !== $target && BLT_Toolkit_Guard::may_assign_role( $target );
 		$me         = get_current_user_id();
+		$role_caps  = array();
+
+		// The copy a move creates does not exist yet; it will hold exactly
+		// the role's capabilities.
+		if ( self::NEW_ROLE === $target ) {
+			$obj = wp_roles()->get_role( $role );
+
+			$role_caps[ self::NEW_ROLE ] = $obj instanceof WP_Role && is_array( $obj->capabilities ) ? $obj->capabilities : array();
+		}
+
+		if ( BLT_Toolkit_Guard::is_toolkit_admin( wp_get_current_user() ) ) {
+			self::each_holder(
+				$role,
+				static function ( $id, array $roles ) use ( &$out, $role, $target, $mode, $me ) {
+					$plan = BLT_Toolkit_Role_Lifecycle::plan_user( $roles, $role, $target, $mode );
+
+					++$out['users'];
+
+					if ( 'skip' === $plan['op'] ) {
+						return;
+					}
+
+					if ( $id === $me ) {
+						$out['self'] = true;
+					}
+
+					if ( 'blocked' === $plan['op'] || BLT_Toolkit_Role_Lifecycle::drops_own_admin( $id === $me, $roles, $plan['roles'] ) ) {
+						++$out['blocked'];
+					} elseif ( 'remove' === $plan['op'] ) {
+						++$out['remove'];
+					} else {
+						++$out['get'];
+					}
+				}
+			);
+
+			return $out;
+		}
+
+		$ids = self::holder_ids( $role );
 
 		$out['users'] = count( $ids );
 
@@ -1965,7 +2075,7 @@ class BLT_Toolkit_Role_Lifecycle {
 					$out['self'] = true;
 				}
 
-				if ( true !== self::may_change_user( $user, $plan, $assignable ) ) {
+				if ( true !== self::may_change_user( $user, $plan, $assignable, $role_caps ) ) {
 					++$out['blocked'];
 				} elseif ( 'remove' === $plan['op'] ) {
 					++$out['remove'];
@@ -1973,26 +2083,129 @@ class BLT_Toolkit_Role_Lifecycle {
 					++$out['get'];
 				}
 			}
+
+			self::release_users( array_diff( $chunk, array( $me ) ) );
 		}
 
 		return $out;
 	}
 
 	/**
+	 * Call `$visit( int $user_id, string[] $roles )` for every user holding a
+	 * role, lowest ID first, from their capabilities meta alone: one query
+	 * per COUNT_PAGE users and no user object (SEC-9). `$roles` are the keys
+	 * that name a role, in stored order, as WP_User::$roles lists them.
+	 *
+	 * @param string   $role  Role ID.
+	 * @param callable $visit Callback.
+	 * @return void
+	 */
+	private static function each_holder( $role, callable $visit ) {
+		global $wpdb;
+
+		$wp_roles = wp_roles();
+		$key      = $wpdb->get_blog_prefix() . 'capabilities';
+		$like     = '%' . $wpdb->esc_like( '"' . (string) $role . '"' ) . '%';
+		$after    = 0;
+
+		do {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- A dry run's paged read of one meta key (SEC-9); nothing to cache across requests.
+			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT m.user_id, m.meta_value FROM {$wpdb->usermeta} m INNER JOIN {$wpdb->users} u ON u.ID = m.user_id WHERE m.meta_key = %s AND m.meta_value LIKE %s AND m.user_id > %d ORDER BY m.user_id ASC LIMIT %d", $key, $like, $after, self::COUNT_PAGE ), ARRAY_A );
+			$rows = is_array( $rows ) ? $rows : array();
+			$full = count( $rows ) === self::COUNT_PAGE;
+
+			foreach ( $rows as $row ) {
+				$after = (int) $row['user_id'];
+				$caps  = maybe_unserialize( $row['meta_value'] );
+
+				if ( ! is_array( $caps ) ) {
+					continue;
+				}
+
+				$roles = array_values( array_filter( array_map( 'strval', array_keys( $caps ) ), array( $wp_roles, 'is_role' ) ) );
+
+				if ( in_array( (string) $role, $roles, true ) ) {
+					call_user_func( $visit, $after, $roles );
+				}
+			}
+		} while ( $full );
+	}
+
+	/**
+	 * Whether a change would take `administrator` away from the person
+	 * making it (SEC-12; see may_change_user()). Pure.
+	 *
+	 * @param bool     $is_self Whether the person changed is the actor.
+	 * @param string[] $before  Their roles now.
+	 * @param string[] $after   Their roles afterwards.
+	 * @return bool
+	 */
+	public static function drops_own_admin( $is_self, array $before, array $after ) {
+		return $is_self
+			&& in_array( self::ADMIN_ROLE, array_map( 'strval', $before ), true )
+			&& ! in_array( self::ADMIN_ROLE, array_map( 'strval', $after ), true );
+	}
+
+	/**
+	 * Let go of users a dry-run page loaded (see reassign_counts()). Without
+	 * a persistent object cache the entries live only in this request and
+	 * are deleted; with one, deleting would empty the shared cache, so only
+	 * this request's copy is dropped (wp_cache_flush_runtime()), when the
+	 * cache supports that. The same technique as the bulk-rename template
+	 * (tasks/lessons.md, Phase 3 review fixes).
+	 *
+	 * @param int[] $ids User IDs.
+	 * @return void
+	 */
+	private static function release_users( array $ids ) {
+		if ( array() === $ids ) {
+			return;
+		}
+
+		if ( ! wp_using_ext_object_cache() ) {
+			foreach ( $ids as $id ) {
+				$data = wp_cache_get( $id, 'users' );
+
+				// The lookups update_user_caches() adds next to the user.
+				if ( is_object( $data ) ) {
+					wp_cache_delete( (string) $data->user_login, 'userlogins' );
+					wp_cache_delete( (string) $data->user_nicename, 'userslugs' );
+					wp_cache_delete( (string) $data->user_email, 'useremail' );
+				}
+
+				wp_cache_delete( $id, 'users' );
+				wp_cache_delete( $id, 'user_meta' );
+			}
+
+			return;
+		}
+
+		if ( function_exists( 'wp_cache_supports' ) && wp_cache_supports( 'flush_runtime' ) ) {
+			wp_cache_flush_runtime();
+		}
+	}
+
+	/**
 	 * Whether the current user may make this change to a person's roles.
 	 *
-	 * A toolkit admin may. Anyone else: never their own roles (SEC-5), not
-	 * an administrator or someone with more capabilities (SEC-1, SEC-2, via
-	 * `can_act_on_user()`), only with `promote_user` on them (core's rule for
-	 * changing roles, which the Guard also maps), and only giving a role they
-	 * may assign (SEC-4).
+	 * Nobody, a toolkit admin included, takes `administrator` away from
+	 * themselves here (SEC-12, SEC-13: the last administrator could
+	 * otherwise move every administrator, themselves too, out of the role).
+	 * Otherwise a toolkit admin may. Anyone else: never their own roles
+	 * (SEC-5), not an administrator or someone with more capabilities
+	 * (SEC-1, SEC-2, via `can_act_on_user()`), only with `promote_user` on
+	 * them (core's rule for changing roles, which the Guard also maps), only
+	 * giving a role they may assign (SEC-4), and never leaving the person
+	 * with a capability the actor lacks (SEC-3, `can_change_user_roles()`:
+	 * dropping a role that denies a capability gives it back).
 	 *
 	 * @param WP_User $user       Whose roles change.
 	 * @param array   $plan       plan_user() result.
 	 * @param bool    $assignable Whether the actor may assign the target (Guard::may_assign_role()).
+	 * @param array   $role_caps  Role ID => capabilities for a role not stored yet (the dry run's NEW_ROLE).
 	 * @return true|WP_Error
 	 */
-	private static function may_change_user( WP_User $user, array $plan, $assignable ) {
+	private static function may_change_user( WP_User $user, array $plan, $assignable, array $role_caps = array() ) {
 		$actor = wp_get_current_user();
 
 		if ( ! $actor->exists() ) {
@@ -2001,6 +2214,19 @@ class BLT_Toolkit_Role_Lifecycle {
 
 		if ( 'blocked' === $plan['op'] ) {
 			return new WP_Error( 'blt_toolkit_replacement_missing', __( 'This person has no other role, and no replacement was chosen.', 'blt-toolkit' ), array( 'status' => 400 ) );
+		}
+
+		$roles_after = isset( $plan['roles'] ) ? array_map( 'strval', (array) $plan['roles'] ) : array();
+
+		if ( self::drops_own_admin( (int) $actor->ID === (int) $user->ID, (array) $user->roles, $roles_after ) ) {
+			return new WP_Error(
+				'blt_toolkit_own_admin_role',
+				__( 'You cannot take the Administrator role away from yourself here.', 'blt-toolkit' ),
+				array(
+					'status' => 403,
+					'rule'   => 'SEC-12',
+				)
+			);
 		}
 
 		if ( BLT_Toolkit_Guard::is_toolkit_admin( $actor ) ) {
@@ -2039,7 +2265,7 @@ class BLT_Toolkit_Role_Lifecycle {
 			);
 		}
 
-		return true;
+		return BLT_Toolkit_Guard::can_change_user_roles( $actor, $user, $roles_after, $role_caps );
 	}
 
 	/**
@@ -2122,6 +2348,13 @@ class BLT_Toolkit_Role_Lifecycle {
 
 		if ( '' === $role ) {
 			return new WP_Error( 'blt_toolkit_job_item', __( 'The batch names no role.', 'blt-toolkit' ) );
+		}
+
+		// SEC-12, for a job stored before move_refusal() existed.
+		$refusal = self::move_refusal( $role );
+
+		if ( is_wp_error( $refusal ) ) {
+			return $refusal;
 		}
 
 		if ( '' !== $target && ! wp_roles()->is_role( $target ) ) {
@@ -2208,16 +2441,15 @@ class BLT_Toolkit_Role_Lifecycle {
 		}
 
 		if ( array() !== $failed ) {
-			$first = $failed[0];
-
+			// No login here: the job panel is shown to people from whom SEC-6
+			// hides administrators. The log row names them.
 			return new WP_Error(
 				'blt_toolkit_reassign_failed',
 				sprintf(
-					/* translators: 1: number of people, 2: a username, 3: why their roles could not be changed. */
-					_n( '%1$s person could not be changed (%2$s: %3$s)', '%1$s people could not be changed (first, %2$s: %3$s)', count( $failed ), 'blt-toolkit' ),
+					/* translators: 1: number of people, 2: why the first of them could not be changed. */
+					_n( '%1$s person could not be changed and keeps the role. %2$s', '%1$s people could not be changed and keep the role. The first reason: %2$s', count( $failed ), 'blt-toolkit' ),
 					number_format_i18n( count( $failed ) ),
-					$first['login'],
-					$first['reason']
+					$failed[0]['reason']
 				)
 			);
 		}
@@ -2382,7 +2614,9 @@ class BLT_Toolkit_Role_Lifecycle {
 			return false;
 		}
 
-		return (int) $user->ID === (int) ( isset( $job['owner'] ) ? $job['owner'] : 0 ) || BLT_Toolkit_Guard::is_toolkit_admin( $user );
+		$owner = isset( $job['owner'] ) ? (int) $job['owner'] : 0;
+
+		return $owner === (int) $user->ID || BLT_Toolkit_Guard::is_toolkit_admin( $user );
 	}
 
 	/**

@@ -4,7 +4,7 @@ BLT Toolkit gives WordPress site administrators three user-management tools in o
 
 Part of the BLT family of WordPress plugins by S-FX.com. It is deliberately narrow: two tables, no front end beyond a "Switch back" link and an optional username form, a REST namespace used only by its own admin screens, and no runtime dependencies.
 
-> **Status: in development.** BLT Toolkit is built phase by phase per [SPEC.md](SPEC.md) section 17. **Phase 0 (scaffold) and Phase 1 (protection for administrators, recovery mode, the activity log and role snapshots) are built; Phase 2 (switch) is next.** This README describes the plugin as specified; a feature is available only once the phase that delivers it has passed its acceptance criteria. Progress is tracked in [tasks/todo.md](tasks/todo.md).
+> **Status: in development.** BLT Toolkit is built phase by phase per [SPEC.md](SPEC.md) section 17. **Phases 0 to 4 are built: the scaffold, protection for administrators, recovery mode, the activity log and role snapshots (Phase 1), switching (Phase 2), username changes (Phase 3), and the roles engine with the Advanced view, the role lifecycle and the user-level role features (Phase 4). Phase 5 (Simple view and separate permissions) is next.** This README describes the plugin as specified; a feature is available only once the phase that delivers it has passed its acceptance criteria. Progress is tracked in [tasks/todo.md](tasks/todo.md).
 
 ## Requirements
 
@@ -37,7 +37,7 @@ Default behavior as specified (SPEC 1.1), except that SPEC 1.1 lists self-servic
 | --- | --- |
 | Switch | Administrators can switch to any non-administrator and back. "Switch To" appears on the Users list and profiles; "Switch back" appears in the toolbar, notices, the login screen and a fixed link on the site. |
 | Usernames | Administrators can change any username from the user's profile. Changes take effect immediately, including on sites with a persistent object cache. Old author URLs redirect. |
-| Roles | Roles screen opens in Simple view. Every save is snapshotted and can be restored. |
+| Roles | Roles screen opens in Simple view (until Phase 5 lands, a placeholder there links to Advanced view, which edits every capability). Every role change is snapshotted first; restoring a snapshot arrives with Tools in Phase 6. |
 | Protection | Non-administrators can never edit, delete, rename, re-role or switch into an administrator, and can never grant a capability they do not hold. |
 | Activity log | Every switch, rename and role change is logged with who did it, including "acting as" when the change was made from a switched session. |
 | Self-service | Administrators can change their own username from their profile (activation gives them `blt_change_own_username`). Other roles get it only when it is switched on for them in Settings > Usernames. |
@@ -103,7 +103,7 @@ No block or Bricks element is planned for v1.
 | Roles | Show deprecated capabilities | Off | `level_0` to `level_10`, `edit_files` (RO-22). |
 | Roles | Readable capability names | On | Plain-English labels; the raw name is always shown too (RO-12). |
 | Roles | Hide administrators from everyone else | On | In the Users list and the REST users collection (SEC-6, D5). |
-| Roles | Additional default roles | None | Roles every new user receives besides WordPress's default role, on every registration path (US-2). |
+| Roles | Additional default roles | None | Roles every new user receives besides WordPress's default role, on every registration path: the registration form, Add New User (shown ticked, so they can be left out), REST, WP-CLI and single sign-on (US-2). A non-administrator who creates an account passes on only roles they could give. Administrator is never offered. Shown while the Roles module is on. |
 | Roles | Snapshots to keep | 50 | Plus the baseline, which is never pruned (SNAP-3). |
 | Activity log | Keep entries for | 365 days | Pruned daily in batches (LOG-4, D9). |
 | Activity log | Record IP addresses | On | From `REMOTE_ADDR`. `CF-Connecting-IP` is used only for requests that arrive from Cloudflare's published ranges, checked with a copy of the BLT family's range check (LOG-5). |
@@ -112,7 +112,7 @@ No block or Bricks element is planned for v1.
 | Advanced | Check for Updates | | Asks GitHub immediately. |
 | Advanced | Recovery instructions | | How to use `BLT_TOOLKIT_RECOVERY`, shown as a code block. |
 
-A role's description, its "Hide the toolbar on the site" flag and separate permissions for a custom post type are set on the Roles screen, not here.
+A role's description and its "Hide the toolbar on the site" flag are set under **Role details** on the Roles screen, and separate permissions for a custom post type (Phase 5) will be too, not here.
 
 ### Constants
 
@@ -168,7 +168,7 @@ Namespace `blt-toolkit/v1`. The routes serve BLT Toolkit's own admin screens; ev
 
 | Route | Method | Purpose |
 | --- | --- | --- |
-| `/switch/users?search=` | GET | Toolbar "Switch to…" typeahead. At least 2 characters, at most 20 results (`blt_toolkit_switch_search_limit`), only users the current user may switch to, each with a nonced switch URL generated on the server (SW-20). |
+| `/switch/users?search=` | GET | Toolbar "Switch to…" typeahead. At least 2 characters, at most 20 results (`blt_toolkit_switch_search_limit`), only users the current user may switch to, each with a nonced switch URL generated on the server (SW-20). An optional `role` (a role ID) searches only that role's holders, for the Roles screen's **Test as…** search (X-3). |
 | `/usernames/check` | GET | Live, advisory validation of a new username while typing (UN-16). The server validates again when the form is saved. |
 | `/jobs/{id}` | GET | A background job's progress: status, done and total, elapsed time, estimate, current item, failed items and warnings (JOB-4). |
 | `/jobs/{id}/tick` | POST | Drives a background job while its screen is open (JOB-1). |
@@ -210,9 +210,25 @@ Two meta capabilities are checked against a target user and never granted direct
 
 - A non-administrator can never edit, delete, remove, re-role, switch into or rename an administrator (SEC-1).
 - A non-administrator can never act on a user more powerful than themselves, never grant a capability they lack, and can only assign roles whose capabilities they hold (SEC-2, SEC-3, SEC-4).
-- A non-administrator can never change a role they hold, or their own roles (SEC-5).
+- A non-administrator can never change a role they hold, or their own roles (SEC-5), and never adds, removes or replaces someone's roles in a way that leaves that person with a capability they lack: taking away a role that denies a capability another role grants gives it back, so it counts as granting it (SEC-2, SEC-3).
+- Nobody moves the people who hold `administrator` to another role (SEC-12).
 - Granting a Critical capability to any role other than `administrator`, or to any user, needs a review step and the role's name typed to confirm (SEC-10). Tier badges appear next to every control (SEC-11).
 - The `administrator` role is read-only in Simple view, cannot be deleted, keeps its ID, and keeps its lockout-critical capabilities (`read`, `manage_options`, `list_users`, `edit_users`, `promote_users`, `activate_plugins`, `blt_edit_roles`, `blt_edit_capabilities`) in Advanced view (SEC-12). A save that would leave you without `blt_edit_roles` is refused unless another administrator exists and you confirm (SEC-13).
+
+**The Roles screen** (BLT Toolkit > Roles, or Users > Roles; `blt_edit_roles`):
+
+- **Role list**: every role with its user count and badges (Built-in, Default, Has Critical capabilities) and its description. **Add role** (`blt_create_roles`) starts from Blank (`read` only), Subscriber, Contributor, Author or Editor (WordPress's default capabilities), or a copy of a role whose capabilities you all hold yourself (SEC-3); the ID is suggested from the name and cannot be changed later (RO-30). A role with Critical capabilities is confirmed by typing its name (SEC-10).
+- **Role header**: the name, ID, a user count linking to the filtered Users list, **Rename** (display name only, RO-31), **Move users to a new role** (the way to change an ID: a copy under the new ID, everyone moved by a background job, then an offer to delete the old one, RO-32; never for Administrator, whose ID cannot change, SEC-12), **Merge into another role** and **Delete** (`blt_delete_roles`; never `administrator`, WordPress's own roles, the default role or an additional default role; people who hold a deleted role get the replacement you choose, or simply lose it when they have other roles, RO-40 to RO-42), **Compare** (two roles side by side by group, read only, RO-25) and **Test as…** (switch to one of up to 20 holders you may switch to and land on their dashboard, X-3).
+- **Advanced view** (`blt_edit_capabilities`): the capability matrix with a group tree (Core areas, one node per content type capability group with every type that shares it, taxonomies, plugins, BLT Toolkit, Orphaned). A post type registered with `capability_type => 'post'` is listed inside Posts, labeled "also used by", never as its own node (RO-14). Each row shows the label, the raw name, its source and its risk tier. The toolbar has a quick filter, Granted only, Show deprecated, Readable names and 1 to 3 columns, all of them links or GET fields so the page works without JavaScript; with JavaScript the filter is instant and the save bar counts changes. A save changes only the capabilities that were on the page, is refused with the difference if someone else changed the role since you opened it, takes a snapshot, and writes the roles option once (RO-1 to RO-3). More than ten changes, a Critical grant or a change that would lock you out go through a review page first.
+- **Add capability** (administrators only, since a new capability is one nobody else holds: lowercase letters, digits, `_` and `-`, at most 191 characters, never a meta capability name such as `edit_post`) to the roles you choose (RO-23). **Delete capability** is offered only for orphaned capabilities, those nothing on the site registers, with every role and user holding it listed and a dry run first (RO-24).
+- **Role details**: a description shown in the role list, and **Hide the toolbar on the site**, applied only when every one of a user's roles has it (capabilities are additive). A switched user whose toolbar is hidden still gets the "Switch back" link at the foot of the page (SPEC 9.5, X-5).
+
+**Users and profiles** (Roles module):
+
+- **Additional roles** on another user's profile and on Add New User, below WordPress's Role dropdown, which stays the main role. Only roles you could give are offered (SEC-4), never on your own profile (SEC-5) (US-1).
+- **Add role…** and **Remove role…** with an Apply button next to "Change role to…" on the Users list, checked per user and logged as one row (US-3).
+- **Users without a role** are counted only when you press **Count** on the Users list or the Overview, cached for an hour, and listed by a "No role (N)" view; the count is never run on a normal page load (US-12).
+- **Capabilities** on the profile replaces WordPress's "Additional Capabilities" row: it lists the user's own grants and denies, and **Edit capabilities** (`blt_edit_capabilities`, `blt_edit_roles` and permission to change the user's role) opens the Roles screen for that user, where each capability is Inherit, Grant or Deny with where it comes from. A save writes the user's capabilities once, keeps their roles, and asks for the username before granting a Critical capability (US-10, US-11, SEC-10).
 
 **Optional role.** **Support Agent** (`blt_support_agent`: `read`, `list_users`, `blt_switch_users`) is created only when the owner clicks the button under **Settings > Switching**, checks the preview and types the role's name to confirm. The protection rules keep it from switching into anyone more powerful than itself (SW-21): on a default site it can switch into Subscribers, never into Contributors, Authors, Editors or Administrators. The deprecated `level_0` to `level_10` capabilities are left out of that comparison (SEC-8).
 
@@ -236,7 +252,7 @@ Requirements and phases are in [SPEC.md](SPEC.md), repository conventions for co
 ## Data
 
 - **Tables.** `{prefix}blt_toolkit_log`: one row per switch, rename or role change, with module, action, actor, "acting as", object, a one-line summary, a JSON details blob (before and after, diff, the chain of switched users), an optional snapshot ID, IP, status and source (empty for native rows, the plugin name for imported ones). `{prefix}blt_toolkit_snapshots`: the complete roles array as canonical JSON with its SHA-256, the actor, the reason and a baseline flag. Times are UTC.
-- **Options.** `blt_toolkit_settings` and `blt_toolkit_db_version` (autoloaded; the Guard reads the settings on most requests), `blt_toolkit_secrets` (the encrypted GitHub token), `blt_toolkit_job_{id}` (state of a background job), `blt_toolkit_legacy_imports` (what was imported from the legacy plugins, and when). Transients: `blt_toolkit_no_role_count` caches the "users without a role" count for an hour, `blt_toolkit_log_menus` the Activity screen's filter menus for up to a week (refreshed from new rows on each view, dropped by the prune), and `blt_toolkit_recovery_in_code` notes for a day that recovery mode repaired roles defined in code, so that is logged once a day rather than on every request.
+- **Options.** `blt_toolkit_settings` and `blt_toolkit_db_version` (autoloaded; the Guard reads the settings on most requests), `blt_toolkit_secrets` (the encrypted GitHub token), `blt_toolkit_job_{id}` (state of a background job), `blt_toolkit_legacy_imports` (what was imported from the legacy plugins, and when). Transients: `blt_toolkit_no_role_count` caches the "users without a role" count (or the job counting it) for an hour, `blt_toolkit_log_menus` the Activity screen's filter menus for up to a week (refreshed from new rows on each view, dropped by the prune), and `blt_toolkit_recovery_in_code` notes for a day that recovery mode repaired roles defined in code, so that is logged once a day rather than on every request. Short-lived per-user transients carry a screen's result across a redirect: `blt_toolkit_roles_pending_{user}` (a review or a refused save on the Roles screen, an hour), `blt_toolkit_lifecycle_notice_{user}` (ten minutes) and `blt_toolkit_bulk_roles_notice_{user}` (the Users list's bulk role result, five minutes), alongside the username ones. Role metadata and the additional default roles live in `blt_toolkit_settings` (`roles.role_meta`, `roles.extra_default_roles`).
 - **User meta.** `blt_toolkit_editor_mode` (Simple or Advanced), `blt_toolkit_columns` (Advanced matrix columns), `blt_toolkit_previous_nicenames` (old author slugs, for redirects), `blt_toolkit_username_changed_at` (cooldown).
 - **Session data** in WordPress's `session_tokens`: `blt_switched_from_id`, `blt_switched_from_session` (the verifier of the session switched from, never a token) and `blt_switched_remember` on the session created for a switch target; `blt_switched_into` and `blt_switched_at` on the session of the person who switched. A switch target's session lasts at most 48 hours.
 - **Cookies.** `wordpress_blt_sw_{COOKIEHASH}` and `wordpress_blt_sw_secure_{COOKIEHASH}` hold the stack of the originating users' auth cookies; `wordpress_blt_sw_olduser_{COOKIEHASH}` holds a logged-in cookie for the most recent one. All `HttpOnly` and `SameSite=Lax`, and `Secure` when WordPress's own auth cookies are. Like core's auth cookies, they contain the originating user's username.

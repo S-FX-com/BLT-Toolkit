@@ -122,6 +122,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 						?>
 					</span>
 				</div>
+				<?php
+				// US-12: counted only when someone asks (the tile's Count button).
+				if ( BLT_Toolkit_Plugin::is_active( 'roles' ) ) {
+					BLT_Toolkit_User_Roles::render_overview_tile();
+				}
+				?>
 				<div class="blt-stat">
 					<span class="blt-stat-label"><?php esc_html_e( 'Version', 'blt-toolkit' ); ?></span>
 					<span class="blt-stat-value"><?php echo esc_html( BLT_TOOLKIT_VERSION ); ?></span>
@@ -129,4 +135,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</div>
 		</div>
 	</div>
+
+	<?php
+	// US-12, JOB-4: the count job's progress while it runs on a large site.
+	if ( BLT_Toolkit_Plugin::is_active( 'roles' ) ) {
+		BLT_Toolkit_User_Roles::render_overview_job();
+	}
+	?>
 </div>

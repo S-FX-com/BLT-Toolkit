@@ -13,11 +13,11 @@ Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) se
 | [`blt_toolkit_switched_off`](#blt_toolkit_switched_off) | action | SW-6 | Available | After switching off |
 | [`blt_toolkit_before_username_change`](#blt_toolkit_before_username_change) | action | UN-10 | Available | Before a username is written |
 | [`blt_toolkit_after_username_change`](#blt_toolkit_after_username_change) | action | UN-10 | Available | After a username changed |
-| [`blt_toolkit_before_roles_save`](#blt_toolkit_before_roles_save) | action | RO-4 | Planned (Phase 4) | Before role capabilities are written |
-| [`blt_toolkit_after_roles_save`](#blt_toolkit_after_roles_save) | action | RO-4 | Planned (Phase 4) | After role capabilities were written |
-| [`blt_toolkit_role_created`](#blt_toolkit_role_created) | action | RO-30 | Planned (Phase 4) | After a role is added |
-| [`blt_toolkit_role_deleted`](#blt_toolkit_role_deleted) | action | RO-40, RO-42 | Planned (Phase 4) | After a role is deleted |
-| [`blt_toolkit_role_renamed`](#blt_toolkit_role_renamed) | action | RO-31 | Planned (Phase 4) | After a role's display name changes |
+| [`blt_toolkit_before_roles_save`](#blt_toolkit_before_roles_save) | action | RO-4 | Available | Before role capabilities are written |
+| [`blt_toolkit_after_roles_save`](#blt_toolkit_after_roles_save) | action | RO-4 | Available | After role capabilities were written |
+| [`blt_toolkit_role_created`](#blt_toolkit_role_created) | action | RO-30 | Available | After a role is added |
+| [`blt_toolkit_role_deleted`](#blt_toolkit_role_deleted) | action | RO-40, RO-42 | Available | After a role is deleted |
+| [`blt_toolkit_role_renamed`](#blt_toolkit_role_renamed) | action | RO-31 | Available | After a role's display name changes |
 | [`blt_toolkit_post_type_isolated`](#blt_toolkit_post_type_isolated) | action | RS-30 | Planned (Phase 5) | A post type was given separate permissions |
 | [`blt_toolkit_post_type_shared`](#blt_toolkit_post_type_shared) | action | RS-32 | Planned (Phase 5) | A post type shares Posts' permissions again |
 | [`blt_toolkit_before_job`](#blt_toolkit_before_job) | action | JOB-1 to JOB-5 | Available | A background job starts |
@@ -38,10 +38,10 @@ Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) se
 | [`blt_toolkit_username_email`](#blt_toolkit_username_email) | filter | UN-15 | Available | The rename notification email |
 | [`blt_toolkit_bulk_rename_max_rows`](#blt_toolkit_bulk_rename_max_rows) | filter | UN-30 | Available | Bulk rename CSV row cap |
 | [`shortcode_atts_blt_toolkit_username_form`](#shortcode_atts_blt_toolkit_username_form) | filter | UN-23 | Available | The username form's shortcode attributes (core's filter) |
-| [`blt_toolkit_risky_caps`](#blt_toolkit_risky_caps) | filter | SPEC 5.4, SEC-10, SEC-11 | Planned (Phase 4) | Capability risk tiers |
+| [`blt_toolkit_risky_caps`](#blt_toolkit_risky_caps) | filter | SPEC 5.4, SEC-10, SEC-11 | Available | Capability risk tiers |
 | [`blt_toolkit_lockout_critical_caps`](#blt_toolkit_lockout_critical_caps) | filter | SEC-12 | Available | Capabilities administrator always keeps |
-| [`blt_toolkit_capability_labels`](#blt_toolkit_capability_labels) | filter | RO-12 | Planned (Phase 4) | Plain-English capability labels |
-| [`blt_toolkit_capability_groups`](#blt_toolkit_capability_groups) | filter | RO-11, RO-13 | Planned (Phase 4) | Named capability groups |
+| [`blt_toolkit_capability_labels`](#blt_toolkit_capability_labels) | filter | RO-12 | Available | Plain-English capability labels |
+| [`blt_toolkit_capability_groups`](#blt_toolkit_capability_groups) | filter | RO-11, RO-13 | Available | Named capability groups |
 | [`blt_toolkit_simple_controls`](#blt_toolkit_simple_controls) | filter | RS-3 | Planned (Phase 5) | Simple view controls |
 | [`blt_toolkit_isolation_excluded_types`](#blt_toolkit_isolation_excluded_types) | filter | RS-30, RS-35 | Planned (Phase 5) | Post types that cannot get separate permissions |
 | [`blt_toolkit_isolation_caps`](#blt_toolkit_isolation_caps) | filter | RS-31 | Planned (Phase 5) | Arguments applied to an isolated post type |
@@ -121,38 +121,38 @@ Requirement UN-10. Status: Available.
 
 ### `blt_toolkit_before_roles_save`
 
-Fires after the Guard has approved a computed change set and before the roles option is written (RO-4). Every write to role capabilities made by BLT Toolkit's role store goes through it.
+Fires after the Guard has approved a computed change set (and the SEC-10 review was confirmed) and the SNAP-1 snapshot was stored, just before the roles option is written once (RO-3, RO-4). Every BLT Toolkit write to the roles option fires it: `BLT_Toolkit_Role_Store::save_caps()` and `transaction()`, and SEC-14 recovery, which keeps its own path because it must go ahead when the snapshot fails. Snapshot restore (Tools, Phase 6) will go through the store too; uninstall's removal of BLT Toolkit's own capabilities does not fire it. A save that changes nothing, a dry run and a refused save fire nothing.
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `$changes` | array | The change set: per role, the capabilities to add and to remove. |
-| `$context` | string | Where the save came from. *Proposed values:* `simple`, `advanced`, `self_service`, `isolation`, `import`, `restore`, `reset`, `recovery`. |
+| `$changes` | array | Role ID => `array( 'add' => array<string,bool>, 'remove' => string[], 'created' => bool, 'deleted' => bool, 'name' => null or array( 'from' => string, 'to' => string ) )`. `add` holds the new value of each capability added or flipped (`true` grants, `false` denies); `remove` the capabilities taken out of the role. A created role lists all its capabilities in `add`, a deleted one all of them in `remove`. |
+| `$context` | string | Where the save came from: `advanced` (the Advanced matrix, and adding or deleting a capability there; the default for a one-role save), `simple` (Phase 5), `self_service` (Settings > Usernames, UN-20), `support_agent` (SW-21), `lifecycle` (add, rename, move to a new role, delete and merge, RO-30 to RO-42), `activation` and `sync` (the administrator grant), `recovery` (SEC-14), and later phases' own (`isolation`, `import`, `restore`, `reset`). A `transaction()` without one passes `roles`. |
 
-Requirement RO-4. Status: Planned (Phase 4).
+Requirement RO-4. Status: Available.
 
 ### `blt_toolkit_after_roles_save`
 
-Fires after the roles option was written once (RO-3) and the change logged (RO-4).
+Fires after the roles option was written once (RO-3), the role objects reloaded from it, and the change logged (RO-4). A write the database refused fires nothing here (it is logged with status `failure`).
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `$changes` | array | The change set that was applied. |
+| `$changes` | array | The change set that was applied, as for `blt_toolkit_before_roles_save`. |
 | `$context` | string | As for `blt_toolkit_before_roles_save`. |
-| `$snapshot_id` | int | The snapshot taken before the write (SNAP-1). When the roles already matched the newest snapshot, that snapshot's ID. |
+| `$snapshot_id` | int | The snapshot taken before the write (SNAP-1). When the roles already matched the newest snapshot, that snapshot's ID. `0` only for SEC-14 recovery whose snapshot failed. |
 
-Requirement RO-4. Status: Planned (Phase 4).
+Requirement RO-4. Status: Available.
 
 ### `blt_toolkit_role_created`
 
-Fires after a role is added (RO-30), including a copy made by "Move users to a new role" (RO-32) and a role created by an import (RO-45).
+Fires after BLT Toolkit added a role and the roles option was written (RO-30), including the copy made by "Move users to a new role" (RO-32) and the Support Agent role (SW-21). A dry run, a refused add and an add awaiting the SEC-10 typed confirmation fire nothing. Import (RO-45) will fire it too.
 
 | Argument | Type | Description |
 | --- | --- | --- |
 | `$role_id` | string | The new role's ID. |
-| `$display_name` | string | *Proposed.* Its display name. |
-| `$source` | string | *Proposed.* What it started from: `blank`, or the ID of the role it copied. |
+| `$display_name` | string | Its display name, as stored. |
+| `$from` | string | What it started from: `blank` (`read` only), `subscriber`, `contributor`, `author` or `editor` (WordPress's default capabilities for that role), `copy:` followed by the copied role's ID (a copy, and every RO-32 move), or `support_agent` (SW-21). |
 
-Requirement RO-30. Status: Planned (Phase 4).
+Requirement RO-30. Status: Available.
 
 ### `blt_toolkit_role_deleted`
 
@@ -161,9 +161,11 @@ Fires after a role is deleted (RO-40), including at the end of a merge (RO-42).
 | Argument | Type | Description |
 | --- | --- | --- |
 | `$role_id` | string | The deleted role's ID. |
-| `$replacement` | string | *Proposed.* The role its users were moved to, or `''` when it had no users. |
+| `$replacement` | string | The role its holders were given instead (RO-41 and RO-42), or `''` when nobody held it. |
 
-Requirement RO-40, RO-42. Status: Planned (Phase 4).
+Fires once per role after the roles option was written, so a multi-role delete fires it for each. A role that people hold is deleted by the `role_reassign` job once nobody holds it, so for it the action fires inside the job's last batch (a page tick, a loopback or cron), not on the request that asked.
+
+Requirement RO-40, RO-42. Status: Available.
 
 ### `blt_toolkit_role_renamed`
 
@@ -172,10 +174,10 @@ Fires after a role's display name changes (RO-31). A role ID never changes in pl
 | Argument | Type | Description |
 | --- | --- | --- |
 | `$role_id` | string | The role's ID. |
-| `$old_name` | string | *Proposed.* The previous display name. |
-| `$new_name` | string | *Proposed.* The new display name. |
+| `$old_name` | string | The previous display name, as stored. |
+| `$new_name` | string | The new display name. |
 
-Requirement RO-31. Status: Planned (Phase 4).
+Requirement RO-31. Status: Available.
 
 ### `blt_toolkit_post_type_isolated`
 
@@ -403,7 +405,7 @@ add_filter(
 );
 ```
 
-Requirement SPEC 5.4, SEC-10, SEC-11. Status: Planned (Phase 4). `BLT_Toolkit_Caps::tiers()` already applies the filter, but nothing reads the tiers until the tier badges and the Critical review step arrive with the Roles screen.
+Requirement SPEC 5.4, SEC-10, SEC-11. Status: Available. The role store's SEC-10 review (`BLT_Toolkit_Guard::requires_critical_review()`) and every capability catalog entry's `tier` (the tier badges, SEC-11) read it.
 
 ### `blt_toolkit_lockout_critical_caps`
 
@@ -423,9 +425,11 @@ Plain-English labels for capabilities (RO-12). The raw name is always shown next
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$labels` | array | The built-in dictionary for core capabilities, plus labels built from each post type's and taxonomy's own labels ("Edit others' Events") | Capability => label. Capabilities with no label are humanized from their name. |
+| `$labels` | array | The built-in dictionary for core capabilities, plus labels built from each post type's and taxonomy's own labels ("Edit others' Events") | Capability => label, for every capability in the catalog (core, content types, taxonomies, BLT Toolkit's own, declared groups, and any capability found on a role or user). Capabilities with no label are humanized from their name (`gravityforms_edit_forms` reads "Gravityforms edit forms"). Return the array; only non-empty strings for capabilities already in it are used. |
 
-Requirement RO-12. Status: Planned (Phase 4).
+Applied once per request, when `BLT_Toolkit_Capability_Catalog` is first built (only on BLT roles screens and their write paths), and again for `BLT_Toolkit_Capability_Catalog::label()` before the full catalog exists.
+
+Requirement RO-12. Status: Available.
 
 ### `blt_toolkit_capability_groups`
 
@@ -433,9 +437,24 @@ Named groups of capabilities for the Advanced view's group tree (RO-13). A capab
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$groups` | array | `array()` | *Proposed shape:* group key => `array( 'label' => string, 'caps' => string[] )`. |
+| `$groups` | array | WooCommerce's `manage_woocommerce` and `view_woocommerce_reports` (key `woocommerce`) while WooCommerce is active, and Gravity Forms' `GFCommon::all_caps()` (key `gravityforms`) while Gravity Forms is active | Group key => `array( 'label' => string, 'caps' => string[] )`. The key becomes the tree node `plugin-{key}` (lowercase letters, digits, `_` and `-`); a missing label is the key humanized; groups without capabilities are dropped. |
 
-Requirement RO-11, RO-13. Status: Planned (Phase 4).
+A capability declared here that core, a post type or a taxonomy also registers keeps that as its source and is also listed in the group's node. Capabilities nobody declares that share a prefix with two or more others (`gravityforms_*`, `manage_woocommerce` and `view_woocommerce_reports`) are grouped by that prefix too, but stay flagged as orphaned.
+
+```php
+add_filter(
+	'blt_toolkit_capability_groups',
+	function ( $groups ) {
+		$groups['acme'] = array(
+			'label' => 'Acme Bookings',
+			'caps'  => array( 'acme_manage_bookings', 'acme_view_reports' ),
+		);
+		return $groups;
+	}
+);
+```
+
+Requirement RO-11, RO-13. Status: Available.
 
 ### `blt_toolkit_simple_controls`
 

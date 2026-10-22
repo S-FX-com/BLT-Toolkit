@@ -71,7 +71,9 @@ class BLT_Toolkit_Caps {
 
 	/**
 	 * Grant every one of the plugin's capabilities to `administrator` in a
-	 * single write to the roles option (the RO-3 technique).
+	 * single write to the roles option, through the role store
+	 * (BLT_Toolkit_Role_Store::transaction(): the roles read again, a
+	 * snapshot first, one write, the before and after hooks, a log row).
 	 *
 	 * Only capabilities the role does not mention at all are added. One the
 	 * owner explicitly set to "deny" stays denied: reactivating the plugin must
@@ -88,13 +90,21 @@ class BLT_Toolkit_Caps {
 	 * reactivation that gives back a capability the owner had removed shows
 	 * on the Activity screen.
 	 *
+	 * Activation runs before any module boots and, from WP-CLI, with nobody
+	 * signed in, so `activation` is a system write: only SEC-12 applies. Any
+	 * other context (`sync`, the Tools action) is checked by the Guard as the
+	 * current user.
+	 *
+	 * @param string $context `activation` (default) or `sync`; passed to the
+	 *                        `blt_toolkit_*_roles_save` hooks and logged.
 	 * @return bool|WP_Error True when the role now carries every capability
 	 *                       (or was left with deliberate denials), false when
 	 *                       there is no administrator role,
 	 *                       `blt_toolkit_snapshot_failed` when the snapshot
-	 *                       could not be stored and nothing was changed.
+	 *                       could not be stored and nothing was changed, or
+	 *                       another refusal from the role store.
 	 */
-	public static function grant_admin() {
+	public static function grant_admin( $context = 'activation' ) {
 		$wp_roles = wp_roles();
 		$role     = $wp_roles->get_role( 'administrator' );
 
@@ -108,6 +118,79 @@ class BLT_Toolkit_Caps {
 			return true;
 		}
 
+		// Roles defined in code ($wp_user_roles) cannot be written: grant in
+		// memory for this request, as before the role store existed.
+		if ( ! $wp_roles->use_db ) {
+			return self::grant_in_memory( $wp_roles, $role, $missing );
+		}
+
+		$granted = array();
+		$context = 'sync' === $context ? 'sync' : 'activation';
+		$result  = BLT_Toolkit_Role_Store::transaction(
+			static function ( array $roles ) use ( &$granted ) {
+				if ( ! isset( $roles['administrator'] ) || ! is_array( $roles['administrator'] ) ) {
+					return new WP_Error( 'blt_toolkit_no_admin_role', __( 'There is no Administrator role.', 'blt-toolkit' ), array( 'status' => 404 ) );
+				}
+
+				$caps    = isset( $roles['administrator']['capabilities'] ) && is_array( $roles['administrator']['capabilities'] ) ? $roles['administrator']['capabilities'] : array();
+				$granted = array_values( array_diff( array_keys( BLT_Toolkit_Caps::own() ), array_map( 'strval', array_keys( $caps ) ) ) );
+
+				foreach ( $granted as $cap ) {
+					$caps[ $cap ] = true;
+				}
+
+				$roles['administrator']['capabilities'] = $caps;
+
+				return $roles;
+			},
+			array(
+				'context'   => $context,
+				'system'    => 'activation' === $context,
+				'reason'    => 'before_save',
+				'module'    => 'toolkit',
+				'action'    => 'administrator_synced',
+				'object_id' => 'administrator',
+				'describe'  => static function () use ( &$granted ) {
+					return array(
+						'summary' => BLT_Toolkit_Caps::grant_summary( $granted ),
+						'details' => array( 'granted' => $granted ),
+					);
+				},
+			)
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return 'blt_toolkit_no_admin_role' === $result->get_error_code() ? false : $result;
+		}
+
+		return true;
+	}
+
+	/**
+	 * The log summary of a grant.
+	 *
+	 * @param string[] $granted Capabilities given to `administrator`.
+	 * @return string
+	 */
+	public static function grant_summary( array $granted ) {
+		return sprintf(
+			/* translators: %s: number of capabilities. */
+			_n( 'Gave the Administrator role %s BLT Toolkit capability it did not have.', 'Gave the Administrator role %s BLT Toolkit capabilities it did not have.', count( $granted ), 'blt-toolkit' ),
+			number_format_i18n( count( $granted ) )
+		);
+	}
+
+	/**
+	 * grant_admin() for roles defined in code: nothing can be written, so the
+	 * capabilities are granted in memory for this request (after a snapshot,
+	 * as every grant takes one) and logged.
+	 *
+	 * @param WP_Roles $wp_roles Roles.
+	 * @param WP_Role  $role     The administrator role.
+	 * @param string[] $missing  Capabilities to grant.
+	 * @return true|WP_Error
+	 */
+	private static function grant_in_memory( WP_Roles $wp_roles, WP_Role $role, array $missing ) {
 		$snapshot_id = (int) BLT_Toolkit_Snapshots::take( 'before_save' );
 
 		if ( 0 === $snapshot_id ) {
@@ -116,20 +199,10 @@ class BLT_Toolkit_Caps {
 
 		$before = $wp_roles->roles;
 
-		// WP_Role::add_cap() writes the whole roles option once per call. With
-		// use_db off it only updates memory (both the role object and
-		// $wp_roles->roles), and the single update_option() below persists it.
-		$use_db           = $wp_roles->use_db;
-		$wp_roles->use_db = false;
-
+		// use_db is already off for roles defined in code, so add_cap() only
+		// changes memory (both the role object and $wp_roles->roles).
 		foreach ( $missing as $cap ) {
 			$role->add_cap( $cap, true );
-		}
-
-		$wp_roles->use_db = $use_db;
-
-		if ( $use_db ) {
-			update_option( $wp_roles->role_key, $wp_roles->roles );
 		}
 
 		self::log_grant( array_values( $missing ), $before, $wp_roles->roles, $snapshot_id );
@@ -158,14 +231,12 @@ class BLT_Toolkit_Caps {
 				'action'      => 'administrator_synced',
 				'object_type' => 'role',
 				'object_id'   => 'administrator',
-				'summary'     => sprintf(
-					/* translators: %s: number of capabilities. */
-					_n( 'Gave the Administrator role %s BLT Toolkit capability it did not have.', 'Gave the Administrator role %s BLT Toolkit capabilities it did not have.', count( $granted ), 'blt-toolkit' ),
-					number_format_i18n( count( $granted ) )
-				),
+				'summary'     => self::grant_summary( $granted ),
 				'details'     => array(
-					'granted' => $granted,
-					'diff'    => BLT_Toolkit_Role_Diff::diff( $before, $after ),
+					'granted'       => $granted,
+					'context'       => 'activation',
+					'roles_in_code' => true,
+					'diff'          => BLT_Toolkit_Role_Diff::diff( $before, $after ),
 				),
 				'snapshot_id' => (int) $snapshot_id,
 				'source'      => '',

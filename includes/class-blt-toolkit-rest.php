@@ -33,7 +33,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * - `GET /switch/users?search=` the toolbar "Switch to…" typeahead (SW-20):
  *   needs `blt_switch_users`, at least 2 characters, at most
  *   `blt_toolkit_switch_search_limit` (20) users, only users the current
- *   user may switch to, each with a nonced switch URL made here.
+ *   user may switch to, each with a nonced switch URL made here. An
+ *   optional `role` (a role ID) narrows the query to that role's holders,
+ *   for the Roles screen's "Test as…" search (X-3).
  * - The `blt_toolkit_switch_url` field on core's `user` object (SW-27):
  *   that URL, or null unless the current user may switch to that user.
  *
@@ -393,6 +395,11 @@ class BLT_Toolkit_Rest {
 						'validate_callback' => array( __CLASS__, 'validate_switch_search' ),
 						'sanitize_callback' => array( __CLASS__, 'clean_switch_search' ),
 					),
+					'role'   => array(
+						'description' => __( 'Only users holding this role (a role ID).', 'blt-toolkit' ),
+						'type'        => 'string',
+						'required'    => false,
+					),
 				),
 			)
 		);
@@ -485,12 +492,22 @@ class BLT_Toolkit_Rest {
 	 * itself, since SEC-1 would refuse every one of them; the capability
 	 * check still decides. Reads at most SWITCH_SEARCH_SCAN candidates.
 	 *
+	 * With `role`, only that role's holders are queried (X-3's "Test as…"
+	 * search), so a broad term still finds them; a role that does not
+	 * exist finds nobody.
+	 *
 	 * @param WP_REST_Request $request Request.
 	 * @return WP_REST_Response
 	 */
 	public static function search_switch_users( WP_REST_Request $request ) {
 		$search = self::clean_switch_search( $request->get_param( 'search' ) );
 		$actor  = wp_get_current_user();
+		$role   = $request->get_param( 'role' );
+		$role   = is_string( $role ) ? $role : '';
+
+		if ( '' !== $role && ! wp_roles()->is_role( $role ) ) {
+			return self::respond( array() );
+		}
 
 		/**
 		 * Filter the most users the toolbar "Switch to…" search returns (SW-20).
@@ -514,6 +531,10 @@ class BLT_Toolkit_Rest {
 
 		if ( ! BLT_Toolkit_Guard::is_toolkit_admin( $actor ) ) {
 			$args['role__not_in'] = array( BLT_Toolkit_Guard::ADMIN_ROLE );
+		}
+
+		if ( '' !== $role ) {
+			$args['role'] = $role;
 		}
 
 		$found   = array();
