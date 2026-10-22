@@ -80,11 +80,19 @@ class BLT_Toolkit_Caps {
 	 *
 	 * When something is about to change, a snapshot of the current roles is
 	 * taken first (SNAP-1). On first activation the baseline was just taken
-	 * from the same state, so that snapshot is skipped as a duplicate.
+	 * from the same state, so that snapshot is skipped as a duplicate. When
+	 * the snapshot cannot be stored, nothing is written (the decided policy
+	 * for every BLT write to the roles option; see BLT_Toolkit_Snapshots).
+	 * The write is logged as `toolkit` / `administrator_synced` with the
+	 * capabilities granted, the diff and the snapshot's ID (LOG-1), so a
+	 * reactivation that gives back a capability the owner had removed shows
+	 * on the Activity screen.
 	 *
-	 * @return bool True when the role now carries every capability (or was
-	 *              left with deliberate denials), false when there is no
-	 *              administrator role.
+	 * @return bool|WP_Error True when the role now carries every capability
+	 *                       (or was left with deliberate denials), false when
+	 *                       there is no administrator role,
+	 *                       `blt_toolkit_snapshot_failed` when the snapshot
+	 *                       could not be stored and nothing was changed.
 	 */
 	public static function grant_admin() {
 		$wp_roles = wp_roles();
@@ -100,7 +108,13 @@ class BLT_Toolkit_Caps {
 			return true;
 		}
 
-		BLT_Toolkit_Snapshots::take( 'before_save' );
+		$snapshot_id = (int) BLT_Toolkit_Snapshots::take( 'before_save' );
+
+		if ( 0 === $snapshot_id ) {
+			return new WP_Error( 'blt_toolkit_snapshot_failed', __( 'A copy of the roles could not be saved first, so no role was changed.', 'blt-toolkit' ), array( 'status' => 500 ) );
+		}
+
+		$before = $wp_roles->roles;
 
 		// WP_Role::add_cap() writes the whole roles option once per call. With
 		// use_db off it only updates memory (both the role object and
@@ -118,7 +132,45 @@ class BLT_Toolkit_Caps {
 			update_option( $wp_roles->role_key, $wp_roles->roles );
 		}
 
+		self::log_grant( array_values( $missing ), $before, $wp_roles->roles, $snapshot_id );
+
 		return true;
+	}
+
+	/**
+	 * Record grant_admin()'s write in the activity log (LOG-1), with the diff
+	 * and the snapshot taken first, as every roles write is.
+	 *
+	 * @param string[] $granted     Capabilities given to `administrator`.
+	 * @param array    $before      Roles before the write.
+	 * @param array    $after       Roles after it.
+	 * @param int      $snapshot_id The `before_save` snapshot (the baseline on a first activation).
+	 * @return void
+	 */
+	private static function log_grant( array $granted, array $before, array $after, $snapshot_id ) {
+		if ( ! is_callable( array( 'BLT_Toolkit_Log', 'record' ) ) ) {
+			return;
+		}
+
+		BLT_Toolkit_Log::record(
+			array(
+				'module'      => 'toolkit',
+				'action'      => 'administrator_synced',
+				'object_type' => 'role',
+				'object_id'   => 'administrator',
+				'summary'     => sprintf(
+					/* translators: %s: number of capabilities. */
+					_n( 'Gave the Administrator role %s BLT Toolkit capability it did not have.', 'Gave the Administrator role %s BLT Toolkit capabilities it did not have.', count( $granted ), 'blt-toolkit' ),
+					number_format_i18n( count( $granted ) )
+				),
+				'details'     => array(
+					'granted' => $granted,
+					'diff'    => BLT_Toolkit_Role_Diff::diff( $before, $after ),
+				),
+				'snapshot_id' => (int) $snapshot_id,
+				'source'      => '',
+			)
+		);
 	}
 
 	/**

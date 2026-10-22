@@ -212,6 +212,12 @@ class BLT_Toolkit_Admin {
 				'method' => 'handle_test_connection',
 				'cap'    => 'manage_options',
 			),
+			// Streams the CSV and exits instead of redirecting (SPEC 13.2).
+			'blt_toolkit_export_log'      => array(
+				'screen' => 'activity',
+				'method' => 'handle_export',
+				'cap'    => 'blt_view_toolkit_log',
+			),
 		);
 	}
 
@@ -835,7 +841,7 @@ class BLT_Toolkit_Admin {
 				return self::make_notice( 'warning', __( 'Settings saved. A number was outside its allowed range or not a number, so the nearest allowed value, or the previous value, was saved instead. Check the values below.', 'blt-toolkit' ) );
 
 			case 'modules_saved':
-				return self::make_notice( 'success', __( 'Modules saved. A module that is switched off loads no code.', 'blt-toolkit' ) );
+				return self::make_notice( 'success', __( 'Modules saved. A module that is switched off loads no code; protection for administrators and the activity log keep running.', 'blt-toolkit' ) );
 
 			case 'token_saved':
 				return self::make_notice( 'success', __( 'Settings saved. The GitHub token is stored encrypted. Use Test connection to check it.', 'blt-toolkit' ) );

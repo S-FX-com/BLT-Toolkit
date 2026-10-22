@@ -20,14 +20,14 @@ Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) se
 | [`blt_toolkit_role_renamed`](#blt_toolkit_role_renamed) | action | RO-31 | Planned (Phase 4) | After a role's display name changes |
 | [`blt_toolkit_post_type_isolated`](#blt_toolkit_post_type_isolated) | action | RS-30 | Planned (Phase 5) | A post type was given separate permissions |
 | [`blt_toolkit_post_type_shared`](#blt_toolkit_post_type_shared) | action | RS-32 | Planned (Phase 5) | A post type shares Posts' permissions again |
-| [`blt_toolkit_before_job`](#blt_toolkit_before_job) | action | JOB-1 to JOB-5 | Planned (Phase 3) | A background job starts |
-| [`blt_toolkit_after_job`](#blt_toolkit_after_job) | action | JOB-1 to JOB-5 | Planned (Phase 3) | A background job ends |
-| [`blt_toolkit_logged`](#blt_toolkit_logged) | action | LOG-6 | Planned (Phase 1) | After a log row is written |
+| [`blt_toolkit_before_job`](#blt_toolkit_before_job) | action | JOB-1 to JOB-5 | Available | A background job starts |
+| [`blt_toolkit_after_job`](#blt_toolkit_after_job) | action | JOB-1 to JOB-5 | Available | A background job ends |
+| [`blt_toolkit_logged`](#blt_toolkit_logged) | action | LOG-6 | Available | After a log row is written |
 | [`switch_to_user`](#user-switching-compatibility) | action | SW-19 | Planned (Phase 2) | User Switching compatibility |
 | [`switch_back_user`](#user-switching-compatibility) | action | SW-19 | Planned (Phase 2) | User Switching compatibility |
 | [`switch_off_user`](#user-switching-compatibility) | action | SW-19 | Planned (Phase 2) | User Switching compatibility |
 | [`blt_toolkit_modules`](#blt_toolkit_modules) | filter | SPEC 4.1 | Available | The module registry |
-| [`blt_toolkit_is_toolkit_admin`](#blt_toolkit_is_toolkit_admin) | filter | SPEC 5.2 | Planned (Phase 1) | Who counts as an administrator |
+| [`blt_toolkit_is_toolkit_admin`](#blt_toolkit_is_toolkit_admin) | filter | SPEC 5.2 | Available | Who counts as an administrator |
 | [`blt_toolkit_switch_redirect`](#blt_toolkit_switch_redirect) | filter | SW-9 | Planned (Phase 2) | Where a switch lands |
 | [`blt_toolkit_switch_show_footer_link`](#blt_toolkit_switch_show_footer_link) | filter | SW-17 | Planned (Phase 2) | The fixed "Switch back" link on the site |
 | [`blt_toolkit_switch_send_cookies`](#blt_toolkit_switch_send_cookies) | filter | SW-3 | Planned (Phase 2) | Whether switch cookies are sent |
@@ -38,16 +38,16 @@ Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) se
 | [`blt_toolkit_username_email`](#blt_toolkit_username_email) | filter | UN-15 | Planned (Phase 3) | The rename notification email |
 | [`blt_toolkit_bulk_rename_max_rows`](#blt_toolkit_bulk_rename_max_rows) | filter | UN-30 | Planned (Phase 3) | Bulk rename CSV row cap |
 | [`blt_toolkit_risky_caps`](#blt_toolkit_risky_caps) | filter | SPEC 5.4, SEC-10, SEC-11 | Planned (Phase 4) | Capability risk tiers |
-| [`blt_toolkit_lockout_critical_caps`](#blt_toolkit_lockout_critical_caps) | filter | SEC-12 | Planned (Phase 1) | Capabilities administrator always keeps |
+| [`blt_toolkit_lockout_critical_caps`](#blt_toolkit_lockout_critical_caps) | filter | SEC-12 | Available | Capabilities administrator always keeps |
 | [`blt_toolkit_capability_labels`](#blt_toolkit_capability_labels) | filter | RO-12 | Planned (Phase 4) | Plain-English capability labels |
 | [`blt_toolkit_capability_groups`](#blt_toolkit_capability_groups) | filter | RO-11, RO-13 | Planned (Phase 4) | Named capability groups |
 | [`blt_toolkit_simple_controls`](#blt_toolkit_simple_controls) | filter | RS-3 | Planned (Phase 5) | Simple view controls |
 | [`blt_toolkit_isolation_excluded_types`](#blt_toolkit_isolation_excluded_types) | filter | RS-30, RS-35 | Planned (Phase 5) | Post types that cannot get separate permissions |
 | [`blt_toolkit_isolation_caps`](#blt_toolkit_isolation_caps) | filter | RS-31 | Planned (Phase 5) | Arguments applied to an isolated post type |
-| [`blt_toolkit_hide_admins_from_non_admins`](#blt_toolkit_hide_admins_from_non_admins) | filter | SEC-6 | Planned (Phase 1) | Hide administrators in the Users list and REST |
-| [`blt_toolkit_snapshot_retention`](#blt_toolkit_snapshot_retention) | filter | SNAP-3 | Planned (Phase 1) | Snapshots kept besides the baseline |
-| [`blt_toolkit_log_retention_days`](#blt_toolkit_log_retention_days) | filter | LOG-4 | Planned (Phase 1) | Days log rows are kept |
-| [`blt_toolkit_tick_budget`](#blt_toolkit_tick_budget) | filter | JOB-2 | Planned (Phase 3) | Seconds one job tick may run |
+| [`blt_toolkit_hide_admins_from_non_admins`](#blt_toolkit_hide_admins_from_non_admins) | filter | SEC-6 | Available | Hide administrators in the Users list and REST |
+| [`blt_toolkit_snapshot_retention`](#blt_toolkit_snapshot_retention) | filter | SNAP-3 | Available | Snapshots kept besides the baseline |
+| [`blt_toolkit_log_retention_days`](#blt_toolkit_log_retention_days) | filter | LOG-4 | Available | Days log rows are kept |
+| [`blt_toolkit_tick_budget`](#blt_toolkit_tick_budget) | filter | JOB-2 | Available | Seconds one job tick may run |
 | [`current_user_switched()`](#current_user_switched) | function | SW-19 | Planned (Phase 2) | User Switching compatibility shim |
 
 ---
@@ -196,23 +196,23 @@ Requirement RS-32. Status: Planned (Phase 5).
 
 ### `blt_toolkit_before_job`
 
-Fires once when a background job starts, after its settings are pinned (JOB-3) and before its first item.
+Fires once when a background job starts, after its settings are pinned (JOB-3) and before its first item, and again when a "Retry failed" pass starts.
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `$job` | array | The job state as stored in `blt_toolkit_job_{id}`. Its type is one of `username_bulk`, `role_reassign`, `log_prune` or `count_no_role` (JOB-5). |
+| `$job` | array | The job state as stored in `blt_toolkit_job_{id}` (`id`, `type`, `mode`, `status`, `owner`, `pinned`, `cursor` and the counters). Its type is one of `username_bulk`, `role_reassign`, `log_prune` or `count_no_role` (JOB-5); in this release only `log_prune` is registered, the others arrive with their modules. |
 
-Requirement JOB-1 to JOB-5. Status: Planned (Phase 3).
+Requirement JOB-1 to JOB-5. Status: Available. The job runner landed in Phase 1 for the daily log prune (LOG-4).
 
 ### `blt_toolkit_after_job`
 
-Fires once when a background job ends, whether it finished or was cancelled. Items that finished before a cancel are kept (JOB-4).
+Fires once when a background job ends, whether it finished, was cancelled or was stopped by an error, and again at the end of each "Retry failed" pass. Items that finished before a cancel are kept (JOB-4).
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `$job` | array | The final job state, including done and failed counts. |
+| `$job` | array | The final job state, including done and failed counts; `status` is `done`, `cancelled` or `failed`. |
 
-Requirement JOB-1 to JOB-5. Status: Planned (Phase 3).
+Requirement JOB-1 to JOB-5. Status: Available.
 
 ### `blt_toolkit_logged`
 
@@ -232,13 +232,15 @@ Fires after each row is written to the activity log, so other logging plugins ca
 | `acting_as_id` | int | The current user while switched, otherwise `0` (LOG-2). |
 | `object_type`, `object_id` | string, string | What was acted on (a user ID, a role ID, a post type). |
 | `summary` | string | One line a person can read. |
-| `details` | array | *Proposed:* the decoded JSON details (before and after values, diff, the chain of switched users). |
+| `details` | array | The details as stored, decoded (not the JSON string): what the module recorded (before and after values, a `BLT_Toolkit_Role_Diff::diff()` result). While the actor is switched, a `switch_chain` entry is added: each user's `id` and `login`, oldest first, the current user last (LOG-2). Details too large or too deeply nested to store arrive as the stored marker (`truncated`, `bytes` and the top-level `keys`), and values JSON cannot hold arrive as stored (invalid UTF-8 replaced, for example). An empty array when nothing was recorded. |
 | `snapshot_id` | int\|null | The snapshot taken for a role change. |
 | `ip` | string | Empty when IP recording is off (LOG-5). |
 | `status` | string | `success` by default. |
 | `source` | string | Empty for native rows; the plugin's name for imported rows (`username-changer`). |
 
-Requirement LOG-6. Status: Planned (Phase 1).
+A listener that throws is reported to the PHP error log and otherwise ignored: the row is already written.
+
+Requirement LOG-6. Status: Available.
 
 ---
 
@@ -263,7 +265,9 @@ Whether a user counts as an administrator for the protection rules (SEC-1, SEC-2
 | `$is_admin` | bool | Whether the user has the `administrator` role on this site | Return the answer. |
 | `$user` | WP_User | | The user. |
 
-Requirement SPEC 5.2. Status: Planned (Phase 1). `BLT_Toolkit_Guard::is_toolkit_admin()` already applies the filter, but no code path calls it until the Guard's rules (SEC-1, SEC-2) and recovery (SEC-14) arrive.
+The Guard calls it on every guarded capability check (`edit_user`, `delete_user`, `remove_user`, `promote_user`, `blt_switch_to_user`, `blt_change_username`), for the actor and then the target, and in `editable_roles`, SEC-6 hiding and recovery, so keep a callback cheap. Hiding (SEC-6) works by the `administrator` role: users this filter adds are protected by SEC-1 but still listed.
+
+Requirement SPEC 5.2. Status: Available.
 
 ### `blt_toolkit_switch_redirect`
 
@@ -391,7 +395,9 @@ The capabilities that can never be removed from the `administrator` role, and th
 | --- | --- | --- | --- |
 | `$caps` | string[] | `read`, `manage_options`, `list_users`, `edit_users`, `promote_users`, `activate_plugins`, `blt_edit_roles`, `blt_edit_capabilities` | Capability names. |
 
-Requirement SEC-12. Status: Planned (Phase 1). `BLT_Toolkit_Caps::lockout_critical()` already applies the filter, but nothing enforces the set until recovery (SEC-14) arrives in Phase 1 and the Advanced view's lockout check (SEC-12) in Phase 4. Until then, adding a capability here protects nothing.
+Used by recovery mode (SEC-14), by snapshot restore (which always leaves `administrator` holding the set) and by `BLT_Toolkit_Guard::check_role_change()` for SEC-12, which the role editor calls from Phase 4.
+
+Requirement SEC-12. Status: Available.
 
 ### `blt_toolkit_capability_labels`
 
@@ -452,9 +458,11 @@ Whether administrators are hidden from non-administrators in the Users list and 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
 | `$hide` | bool | The Settings > Roles toggle **Hide administrators from everyone else** (`roles.hide_admins`, default `true`) | Return `false` to show them. |
-| `$user` | WP_User | | *Proposed.* The current user. |
+| `$user` | WP_User | | The user who is looking: never a toolkit admin (administrators always see everyone, and the filter is not called for them), and `WP_User` 0 for an anonymous REST request. |
 
-Requirement SEC-6. Status: Planned (Phase 1).
+The REST users collection is filtered for anonymous visitors too, so the public `/wp/v2/users` no longer lists administrator authors; return `false` when `$user->ID === 0` to keep listing administrator authors to visitors.
+
+Requirement SEC-6. Status: Available.
 
 ### `blt_toolkit_snapshot_retention`
 
@@ -462,9 +470,11 @@ How many role snapshots are kept, newest first, besides the baseline, which is n
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$count` | int | The Settings > Roles field **Snapshots to keep** (`roles.snapshot_retention`, default `50`) | Snapshots. |
+| `$count` | int | The Settings > Roles field **Snapshots to keep** (`roles.snapshot_retention`, default `50`) | Snapshots. A value below 1 is read as 1: the newest snapshot is always kept. |
 
-Requirement SNAP-3. Status: Planned (Phase 1).
+Applied after each new snapshot, when older ones are pruned.
+
+Requirement SNAP-3. Status: Available.
 
 ### `blt_toolkit_log_retention_days`
 
@@ -472,9 +482,11 @@ How many days activity log rows are kept. A daily event prunes older rows in bat
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$days` | int | The Settings > Activity log field **Keep entries for** (`log.retention_days`, default `365`) | Days. |
+| `$days` | int | The Settings > Activity log field **Keep entries for** (`log.retention_days`, default `365`) | Days. A value below 1 keeps every row: nothing is pruned. |
 
-Requirement LOG-4. Status: Planned (Phase 1).
+Read once a day when the prune starts; the cutoff is pinned for that run (JOB-3).
+
+Requirement LOG-4. Status: Available.
 
 ### `blt_toolkit_tick_budget`
 
@@ -482,9 +494,11 @@ Seconds one background job tick may run before it saves its state and yields (JO
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$seconds` | int | `15` | Seconds. |
+| `$seconds` | int | `15` | Seconds, at least 1. Capped at 60 percent of PHP's `max_execution_time` when one is set. A value that is not a positive number means the default. |
 
-Requirement JOB-2. Status: Planned (Phase 3).
+It also bounds the log prune's inline fallback, which runs inside the cron event when the job runner cannot start a job, read the same way.
+
+Requirement JOB-2. Status: Available.
 
 ---
 

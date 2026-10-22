@@ -62,12 +62,27 @@ class BLT_Toolkit_Plugin {
 			return;
 		}
 
-		// Protection and the record of it hold with every module off.
+		// Shared services that hold with every module off (SPEC 4.1). Each only
+		// adds hooks here, so a front-end page view pays nothing for them.
+		//
+		// - The Guard: map_meta_cap, editable_roles and the user queries
+		//   (SEC-1 to SEC-6), plus the recovery check (SEC-14), hooked on
+		//   `init` priority 20 only while BLT_TOOLKIT_RECOVERY is set.
+		// - The log: its daily prune event (LOG-4), scheduled on `init` 20
+		//   on backend requests, and the `log_prune` job type, registered on
+		//   `init` 5 (JOB-5).
+		// - The job runner (SPEC 6.3) and the REST routes under
+		//   BLT_TOOLKIT_REST_NS, registered on `rest_api_init`.
 		BLT_Toolkit_Guard::register();
 		BLT_Toolkit_Log::register();
+		BLT_Toolkit_Jobs::register();
+		BLT_Toolkit_Rest::register();
 
-		// Idempotent schema upgrade for a plugin update by file copy, which
-		// never fires the activation hook. The version option is autoloaded.
+		// SPEC 4.2, step 3, on `init` in this order: the idempotent schema
+		// upgrade (priority 0; also covers a plugin update by file copy,
+		// which never fires the activation hook), the switch request handling
+		// a module adds at the default priority (SW-2), then the recovery
+		// check the Guard added above (priority 20), which needs the tables.
 		add_action( 'init', array( 'BLT_Toolkit_Schema', 'maybe_upgrade' ), 0 );
 
 		foreach ( self::modules() as $key => $class_name ) {
@@ -282,11 +297,9 @@ class BLT_Toolkit_Plugin {
 
 		BLT_Toolkit_Settings::seed();
 
-		if ( 0 === BLT_Toolkit_Snapshots::baseline() ) {
+		if ( 0 === BLT_Toolkit_Snapshots::baseline() || is_wp_error( BLT_Toolkit_Caps::grant_admin() ) ) {
 			self::refuse_activation( __( 'BLT Toolkit could not save a copy of your roles before changing them, so it was not activated and your roles were not changed. Activate it again; if this keeps happening, the PHP error log says why.', 'blt-toolkit' ) );
 		}
-
-		BLT_Toolkit_Caps::grant_admin();
 	}
 
 	/**
@@ -314,13 +327,16 @@ class BLT_Toolkit_Plugin {
 	 * Deactivation hook.
 	 *
 	 * Changes no data (SPEC 14.6): settings, tables, snapshots, role edits and
-	 * capabilities all stay. It only clears this plugin's scheduled events, so
-	 * nothing runs while the code is inactive.
+	 * capabilities all stay. It only clears this plugin's scheduled events,
+	 * WP-Cron and Action Scheduler alike (JOB-1), so nothing runs while the
+	 * code is inactive. A job that was still live is queued again by the
+	 * daily prune after reactivation (BLT_Toolkit_Jobs::resume_stalled()).
 	 *
 	 * @return void
 	 */
 	public static function deactivate() {
 		self::clear_cron();
+		BLT_Toolkit_Jobs::unschedule_all();
 	}
 
 	/**

@@ -66,12 +66,10 @@ $views          = array(
 <div class="blt-card">
 	<div class="blt-card-header">
 		<h2><?php esc_html_e( 'Protection', 'blt-toolkit' ); ?></h2>
-		<p><?php esc_html_e( 'Once protection arrives, people who are not administrators can never edit, delete, rename or switch into an administrator, whatever is set here.', 'blt-toolkit' ); ?></p>
+		<p><?php esc_html_e( 'People who are not administrators can never edit, delete, rename or switch into an administrator, or change the roles of someone with more access than they have, whatever is set here.', 'blt-toolkit' ); ?></p>
 	</div>
 	<div class="blt-card-body">
 		<?php
-		// Kept on the form although it has no effect yet: save_tab() reads a
-		// toggle that is not submitted as "off".
 		BLT_Toolkit_Admin::toggle(
 			$field . '[hide_admins]',
 			$roles_settings['hide_admins'],
@@ -80,7 +78,6 @@ $views          = array(
 		);
 		?>
 	</div>
-	<?php BLT_Toolkit_Admin_Settings::later( __( 'Protection for administrators, including hiding them as set here. Your choice is saved now and applies once protection arrives.', 'blt-toolkit' ) ); ?>
 </div>
 
 <div class="blt-card">

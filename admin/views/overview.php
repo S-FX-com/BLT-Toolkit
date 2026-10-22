@@ -34,7 +34,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<?php
 				printf(
 					/* translators: %s: constant name. */
-					esc_html__( '%s is set in wp-config.php. Remove that line as soon as administrators can manage roles again; it is meant for emergencies only.', 'blt-toolkit' ),
+					esc_html__( '%s is set in wp-config.php: whenever an administrator opens an admin page, the Administrator role gets back any capability it needs to manage the site, or any BLT Toolkit capability, that it lacks. Remove that line as soon as administrators can manage roles again; it is meant for emergencies only.', 'blt-toolkit' ),
 					'<code>BLT_TOOLKIT_RECOVERY</code>'
 				);
 				?>
@@ -48,7 +48,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<div class="blt-card">
 			<div class="blt-card-header">
 				<h2><?php esc_html_e( 'Modules', 'blt-toolkit' ); ?></h2>
-				<p><?php esc_html_e( 'Switch off what this site does not need. A module that is off loads no code. Protection for administrators and the activity log are still to come; once they arrive, they run whatever is switched off here.', 'blt-toolkit' ); ?></p>
+				<p><?php esc_html_e( 'Switch off what this site does not need. A module that is off loads no code. Protection for administrators and the activity log always run, whatever is switched off here.', 'blt-toolkit' ); ?></p>
 				<div class="blt-card-header-badges">
 					<?php
 					$running_badge = BLT_Toolkit_Admin::badge(

@@ -157,20 +157,19 @@ $disable_php  = "define( 'BLT_TOOLKIT_DISABLE_MODULES', 'switch,usernames' );";
 <div class="blt-card">
 	<div class="blt-card-header">
 		<h2><?php esc_html_e( 'Recovery', 'blt-toolkit' ); ?></h2>
-		<p><?php esc_html_e( 'If a module misbehaves, a line in wp-config.php switches it off, even when you cannot open this screen. A line that gets administrators back in after a role change locks them out is coming soon.', 'blt-toolkit' ); ?></p>
+		<p><?php esc_html_e( 'Lines in wp-config.php that work even when you cannot open this screen: one gets administrators back in after a role change locks them out, the other switches off a module that misbehaves.', 'blt-toolkit' ); ?></p>
 	</div>
 	<div class="blt-card-body">
 		<div class="blt-field">
 			<div class="blt-field-label">
 				<?php esc_html_e( 'Restore administrator access', 'blt-toolkit' ); ?>
-				<br /><?php echo BLT_Toolkit_Admin::badge( 'pending', __( 'Coming soon', 'blt-toolkit' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in badge(). ?>
 				<?php if ( $recovery ) : ?>
 					<br /><?php echo BLT_Toolkit_Admin::badge( 'pending', __( 'Set now', 'blt-toolkit' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in badge(). ?>
 				<?php endif; ?>
 			</div>
 			<div>
 				<code class="blt-code"><?php echo esc_html( $recovery_php ); ?></code>
-				<p class="blt-field-desc"><?php esc_html_e( 'This line does nothing yet; it arrives with protection for administrators. Then: add it, and open any admin page as a user with the Administrator role. BLT Toolkit takes a snapshot, gives the Administrator role back the capabilities it needs to manage the site and every BLT Toolkit capability, and records it in the activity log. Nothing else changes. Remove the line afterwards; a notice reminds you while it is there.', 'blt-toolkit' ); ?></p>
+				<p class="blt-field-desc"><?php esc_html_e( 'Add it, then open any admin page as a user with the Administrator role. BLT Toolkit takes a snapshot, gives the Administrator role back the capabilities it needs to manage the site and every BLT Toolkit capability, and records it in the activity log. Nothing else changes. Remove the line afterwards; a notice reminds you while it is there.', 'blt-toolkit' ); ?></p>
 			</div>
 		</div>
 		<div class="blt-field">
@@ -186,7 +185,7 @@ $disable_php  = "define( 'BLT_TOOLKIT_DISABLE_MODULES', 'switch,usernames' );";
 					<?php
 					printf(
 						/* translators: 1: module key, 2: module key, 3: module key. */
-						esc_html__( 'Turns off the named modules whatever the settings say, for example during an incident. Use any of %1$s, %2$s and %3$s, separated by commas.', 'blt-toolkit' ),
+						esc_html__( 'Turns off the named modules whatever the settings say, for example during an incident. Use any of %1$s, %2$s and %3$s, separated by commas. Protection for administrators and the activity log keep running.', 'blt-toolkit' ),
 						'<code>switch</code>',
 						'<code>usernames</code>',
 						'<code>roles</code>'

@@ -4,7 +4,7 @@ BLT Toolkit gives WordPress site administrators three user-management tools in o
 
 Part of the BLT family of WordPress plugins by S-FX.com. It is deliberately narrow: two tables, no front end beyond a "Switch back" link and an optional username form, a REST namespace used only by its own admin screens, and no runtime dependencies.
 
-> **Status: in development.** BLT Toolkit is built phase by phase per [SPEC.md](SPEC.md) section 17. **Phase 0 (scaffold) is in progress.** This README describes the plugin as specified; a feature is available only once the phase that delivers it has passed its acceptance criteria. Progress is tracked in [tasks/todo.md](tasks/todo.md).
+> **Status: in development.** BLT Toolkit is built phase by phase per [SPEC.md](SPEC.md) section 17. **Phase 0 (scaffold) and Phase 1 (protection for administrators, recovery mode, the activity log and role snapshots) are built; Phase 2 (switch) is next.** This README describes the plugin as specified; a feature is available only once the phase that delivers it has passed its acceptance criteria. Progress is tracked in [tasks/todo.md](tasks/todo.md).
 
 ## Requirements
 
@@ -101,7 +101,7 @@ No block or Bricks element is planned for v1.
 | Roles | Additional default roles | None | Roles every new user receives besides WordPress's default role, on every registration path (US-2). |
 | Roles | Snapshots to keep | 50 | Plus the baseline, which is never pruned (SNAP-3). |
 | Activity log | Keep entries for | 365 days | Pruned daily in batches (LOG-4, D9). |
-| Activity log | Record IP addresses | On | From `REMOTE_ADDR`. `CF-Connecting-IP` is used only for requests that arrive from Cloudflare's published ranges, and only if BLT Secure's range check can be reused without forking the family layer (LOG-5). |
+| Activity log | Record IP addresses | On | From `REMOTE_ADDR`. `CF-Connecting-IP` is used only for requests that arrive from Cloudflare's published ranges, checked with a copy of the BLT family's range check (LOG-5). |
 | Advanced | Delete all plugin data on uninstall | Off | See [Data](#data). |
 | Advanced | GitHub token | None | Stored encrypted, with **Test Connection**. |
 | Advanced | Check for Updates | | Asks GitHub immediately. |
@@ -142,7 +142,12 @@ Namespace `blt-toolkit/v1`. The routes serve BLT Toolkit's own admin screens; ev
 | --- | --- | --- |
 | `/switch/users?search=` | GET | Toolbar "Switch to…" typeahead. At least 2 characters, at most 20 results (`blt_toolkit_switch_search_limit`), only users the current user may switch to, each with a nonced switch URL generated on the server (SW-20). |
 | `/usernames/check` | GET | Live, advisory validation of a new username while typing (UN-16). The server validates again when the form is saved. |
+| `/jobs/{id}` | GET | A background job's progress: status, done and total, elapsed time, estimate, current item, failed items and warnings (JOB-4). |
 | `/jobs/{id}/tick` | POST | Drives a background job while its screen is open (JOB-1). |
+| `/jobs/{id}/cancel` | POST | Cancels a job; items that finished stay finished (JOB-4). |
+| `/jobs/{id}/retry` | POST | Starts another pass over a finished job's failed items (JOB-4). |
+
+The four job routes need the capability of the job's type (`BLT_Toolkit_Jobs::current_user_can_use()`: `manage_options` for the log prune) and a REST nonce; a job whose module is off answers to nobody.
 
 BLT Toolkit also adds a `blt_toolkit_switch_url` field to core's `user` REST object: the switch URL, or `null` unless the current user may switch to that user (SW-27). Core's own users endpoint is covered by the protection rules: the role a non-administrator may assign is limited (SEC-4), and administrators are hidden from non-administrators (SEC-6).
 
@@ -203,15 +208,15 @@ Requirements and phases are in [SPEC.md](SPEC.md), repository conventions for co
 ## Data
 
 - **Tables.** `{prefix}blt_toolkit_log`: one row per switch, rename or role change, with module, action, actor, "acting as", object, a one-line summary, a JSON details blob (before and after, diff, the chain of switched users), an optional snapshot ID, IP, status and source (empty for native rows, the plugin name for imported ones). `{prefix}blt_toolkit_snapshots`: the complete roles array as canonical JSON with its SHA-256, the actor, the reason and a baseline flag. Times are UTC.
-- **Options.** `blt_toolkit_settings` and `blt_toolkit_db_version` (autoloaded; the Guard reads the settings on most requests), `blt_toolkit_secrets` (the encrypted GitHub token), `blt_toolkit_job_{id}` (state of a background job), `blt_toolkit_legacy_imports` (what was imported from the legacy plugins, and when). The transient `blt_toolkit_no_role_count` caches the "users without a role" count for an hour.
+- **Options.** `blt_toolkit_settings` and `blt_toolkit_db_version` (autoloaded; the Guard reads the settings on most requests), `blt_toolkit_secrets` (the encrypted GitHub token), `blt_toolkit_job_{id}` (state of a background job), `blt_toolkit_legacy_imports` (what was imported from the legacy plugins, and when). Transients: `blt_toolkit_no_role_count` caches the "users without a role" count for an hour, `blt_toolkit_log_menus` the Activity screen's filter menus for up to a week (refreshed from new rows on each view, dropped by the prune), and `blt_toolkit_recovery_in_code` notes for a day that recovery mode repaired roles defined in code, so that is logged once a day rather than on every request.
 - **User meta.** `blt_toolkit_editor_mode` (Simple or Advanced), `blt_toolkit_columns` (Advanced matrix columns), `blt_toolkit_previous_nicenames` (old author slugs, for redirects), `blt_toolkit_username_changed_at` (cooldown).
 - **Session data** in WordPress's `session_tokens`: `blt_switched_from_id` and `blt_switched_from_session` on the session created for a switch target; `blt_switched_into` and `blt_switched_at` on the session of the person who switched.
 - **Cookies.** `wordpress_blt_sw_{COOKIEHASH}` and `wordpress_blt_sw_secure_{COOKIEHASH}` hold the stack of the originating users' auth cookies; `wordpress_blt_sw_olduser_{COOKIEHASH}` holds a logged-in cookie for the most recent one. All `HttpOnly` and `SameSite=Lax`, and `Secure` when WordPress's own auth cookies are. Like core's auth cookies, they contain the originating user's username.
 - **Roles and capabilities** stay in WordPress's own storage: the `{prefix}user_roles` option and the `{prefix}capabilities` user meta. There is no parallel copy. BLT Toolkit adds its nine capabilities to `administrator` on activation, and `blt_readonly_{plural}` marker capabilities to roles given View access to a content type with separate permissions.
-- **Cron.** A daily event prunes the log, and single events drive background jobs. All are named `blt_toolkit_*`.
+- **Cron.** A daily event prunes the log, and single events drive background jobs (Action Scheduler actions in the `blt-toolkit` group instead, on sites that have it). All are named `blt_toolkit_*`, and deactivation clears them.
 - **Privacy.** A suggested privacy policy paragraph, a personal data exporter for log rows where the person is the actor, the "acting as" user or the object, and an eraser that blanks the stored username and IP on those rows and reports them as retained for security.
 - **Deactivation** changes no data. Role edits persist, because they are WordPress's data. Content types given separate permissions go back to sharing Posts' permissions on the next request (the Plugins screen warns before this). Read-only enforcement stops: a role at View keeps `edit_{plural}` without create, so its users still cannot add items or edit others' items, and can edit only items an administrator assigned to them. A switched session becomes an ordinary session as the target user; the original user signs in again normally.
-- **Uninstall** deletes nothing unless **Delete all plugin data on uninstall** is on. When it is, both tables, the plugin's options, transient, user meta and job state, its scheduled events and its update-checker state are removed, along with BLT Toolkit's own nine capabilities and every `blt_readonly_*` marker from all roles and users. It never restores a snapshot, never reverts the owner's role edits, never deletes a role, never removes another BLT plugin's capabilities, and never touches the shared BLT family store.
+- **Uninstall** deletes nothing unless **Delete all plugin data on uninstall** is on. When it is, both tables, the plugin's options, transients, user meta and job state, its scheduled events and Action Scheduler actions, and its update-checker state are removed, along with BLT Toolkit's own nine capabilities and every `blt_readonly_*` marker from all roles and users. It never restores a snapshot, never reverts the owner's role edits, never deletes a role, never removes another BLT plugin's capabilities, and never touches the shared BLT family store.
 - **Multisite:** deferred. Activation is refused.
 
 ## Architecture notes and decisions

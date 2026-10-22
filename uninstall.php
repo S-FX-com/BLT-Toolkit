@@ -7,12 +7,13 @@
  * loses nothing.
  *
  * With it on, this removes what BLT Toolkit itself created: its two tables,
- * options, transient, user meta, job state, scheduled events, update-checker
- * state, and its own capabilities and read-only markers from every role and
- * user. It never restores a snapshot, never reverts the owner's role edits,
- * never deletes a role, and never touches another BLT plugin's `blt_*`
- * capabilities or the shared BLT family store (`blt_family_shared`,
- * `blt_family_opt_in`), which other BLT plugins may still read.
+ * options, transients, user meta, job state, scheduled events (WP-Cron and
+ * Action Scheduler), update-checker state, and its own capabilities and
+ * read-only markers from every role and user. It never restores a
+ * snapshot, never reverts the owner's role edits, never deletes a role, and
+ * never touches another BLT plugin's `blt_*` capabilities or the shared BLT
+ * family store (`blt_family_shared`, `blt_family_opt_in`), which other BLT
+ * plugins may still read.
  *
  * WordPress runs this file without loading the plugin, so it is
  * self-contained.
@@ -55,7 +56,7 @@ foreach ( array( 'blt_toolkit_log', 'blt_toolkit_snapshots' ) as $blt_toolkit_ta
 }
 
 // Options, including every job's state.
-$blt_toolkit_options = array( 'blt_toolkit_settings', 'blt_toolkit_db_version', 'blt_toolkit_secrets', 'blt_toolkit_legacy_imports' );
+$blt_toolkit_options = array( 'blt_toolkit_settings', 'blt_toolkit_db_version', 'blt_toolkit_secrets', 'blt_toolkit_legacy_imports', 'blt_toolkit_log_failure' );
 
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-off lookup during uninstall.
 $blt_toolkit_jobs = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( 'blt_toolkit_job_' ) . '%' ) );
@@ -64,7 +65,9 @@ foreach ( array_merge( $blt_toolkit_options, (array) $blt_toolkit_jobs ) as $blt
 	delete_option( $blt_toolkit_option );
 }
 
-delete_transient( 'blt_toolkit_no_role_count' );
+foreach ( array( 'blt_toolkit_no_role_count', 'blt_toolkit_recovery_in_code', 'blt_toolkit_log_menus' ) as $blt_toolkit_transient ) {
+	delete_transient( $blt_toolkit_transient );
+}
 
 // The plugin's own capabilities (SPEC 5.1) and every read-only marker. Other
 // BLT plugins' blt_* capabilities (blt_view_activity_log, say) stay.
@@ -167,6 +170,14 @@ if ( is_array( $blt_toolkit_crons ) ) {
 	foreach ( array_keys( $blt_toolkit_hooks ) as $blt_toolkit_hook ) {
 		wp_unschedule_hook( $blt_toolkit_hook );
 	}
+}
+
+// Job ticks queued with Action Scheduler (JOB-1), on sites that have it. The
+// plugin that ships Action Scheduler is loaded during an uninstall request.
+// By hook alone: with a group and empty arguments, Action Scheduler would
+// cancel only actions without arguments, and every tick carries its job ID.
+if ( function_exists( 'as_unschedule_all_actions' ) ) {
+	as_unschedule_all_actions( 'blt_toolkit_job_as_tick' );
 }
 
 // plugin-update-checker state.

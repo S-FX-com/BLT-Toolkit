@@ -38,10 +38,11 @@ $log = $settings['log'];
 					$field . '[record_ip]',
 					$log['record_ip'],
 					__( 'Record IP addresses', 'blt-toolkit' ),
-					__( 'Stores the address each change came from, for security reviews. Applies to new entries. WordPress\'s personal data export and erase tools cover these entries.', 'blt-toolkit' )
+					__( 'Stores the address each change came from, for security reviews. Applies to new entries.', 'blt-toolkit' )
 				);
 				?>
 			</div>
 		</div>
 	</div>
+	<?php BLT_Toolkit_Admin_Settings::later( __( 'Coverage by WordPress\'s personal data export and erase tools, so a person\'s entries, usernames and IP addresses can be exported or erased on request.', 'blt-toolkit' ) ); ?>
 </div>

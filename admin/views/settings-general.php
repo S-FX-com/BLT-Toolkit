@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 <div class="blt-card">
 	<div class="blt-card-header">
 		<h2><?php esc_html_e( 'Modules', 'blt-toolkit' ); ?></h2>
-		<p><?php esc_html_e( 'Switch off what this site does not need. A module that is off loads no code. Protection for administrators and the activity log are still to come; once they arrive, they run whatever is switched off here.', 'blt-toolkit' ); ?></p>
+		<p><?php esc_html_e( 'Switch off what this site does not need. A module that is off loads no code. Protection for administrators and the activity log always run, whatever is switched off here.', 'blt-toolkit' ); ?></p>
 	</div>
 	<div class="blt-card-body">
 		<?php foreach ( $modules as $key => $module ) : ?>
