@@ -47,12 +47,12 @@ $views          = array(
 		<div class="blt-field">
 			<div class="blt-field-label"><label for="blt-toolkit-default-view"><?php esc_html_e( 'Opens in', 'blt-toolkit' ); ?></label></div>
 			<div>
-				<select id="blt-toolkit-default-view" name="<?php echo esc_attr( $field ); ?>[default_view]">
+				<select id="blt-toolkit-default-view" aria-describedby="blt-toolkit-default-view-desc" name="<?php echo esc_attr( $field ); ?>[default_view]">
 					<?php foreach ( $views as $value => $label ) : ?>
 						<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $roles_settings['default_view'], $value ); ?>><?php echo esc_html( $label ); ?></option>
 					<?php endforeach; ?>
 				</select>
-				<p class="blt-field-desc"><?php esc_html_e( 'The view the Roles screen opens in for someone who has not picked one yet. Each person\'s choice is remembered. People who cannot use Advanced view always see Simple.', 'blt-toolkit' ); ?></p>
+				<p class="blt-field-desc" id="blt-toolkit-default-view-desc"><?php esc_html_e( 'The view the Roles screen opens in for someone who has not picked one yet. Each person\'s choice is remembered. People who cannot use Advanced view always see Simple.', 'blt-toolkit' ); ?></p>
 			</div>
 		</div>
 		<div class="blt-field">
@@ -103,8 +103,8 @@ $views          = array(
 		<div class="blt-field">
 			<div class="blt-field-label"><label for="blt-toolkit-snapshot-retention"><?php esc_html_e( 'Snapshots to keep', 'blt-toolkit' ); ?></label></div>
 			<div>
-				<?php BLT_Toolkit_Admin_Settings::number( 'roles', 'snapshot_retention', $roles_settings['snapshot_retention'], 'blt-toolkit-snapshot-retention' ); ?>
-				<p class="blt-field-desc"><?php esc_html_e( 'From 1 to 500. The newest ones are kept, plus the baseline taken when BLT Toolkit was first activated, which is never removed.', 'blt-toolkit' ); ?></p>
+				<?php BLT_Toolkit_Admin_Settings::number( 'roles', 'snapshot_retention', $roles_settings['snapshot_retention'], 'blt-toolkit-snapshot-retention', 'blt-toolkit-snapshot-retention-desc' ); ?>
+				<p class="blt-field-desc" id="blt-toolkit-snapshot-retention-desc"><?php esc_html_e( 'From 1 to 500. The newest ones are kept, plus the baseline taken when BLT Toolkit was first activated and any User Role Editor backup you imported, which are never removed.', 'blt-toolkit' ); ?></p>
 			</div>
 		</div>
 	</div>

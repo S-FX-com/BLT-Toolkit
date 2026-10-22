@@ -80,6 +80,21 @@ class BLT_Toolkit_Switch_Cookies {
 	const MAX_DEPTH = 10;
 
 	/**
+	 * Session key the Switch module writes on a switched session: who
+	 * switched in (SPEC 14.4, BLT_Toolkit_Switch::FROM_ID). Named here rather
+	 * than read from BLT_Toolkit_Switch, so end_sessions() never loads the
+	 * module's code while the module is off; tests/test-switch-session.php
+	 * checks the names match.
+	 */
+	const SESSION_FROM_ID = 'blt_switched_from_id';
+
+	/**
+	 * Log action for a switched session BLT Toolkit ended by itself
+	 * (record_end()).
+	 */
+	const ENDED_ACTION = 'switch_ended';
+
+	/**
 	 * Values written this request: kind => value ('' after a clear). Reads
 	 * prefer these over `$_COOKIE`.
 	 *
@@ -565,35 +580,165 @@ class BLT_Toolkit_Switch_Cookies {
 	 * cookie this site made can end a session. Returns at once, without a
 	 * query, when the browser sent no switch cookie.
 	 *
+	 * The switched session this browser was in ends too (SW-5): a sign-in
+	 * replaces the browser's logged-in cookie, so the session made for the
+	 * switch target could never be used again, and leaving it in the
+	 * target's session list until its 48 hours ran out kept it visible to
+	 * the duplicate-switch check and to "Log out everywhere else". It is
+	 * found from the request's own logged-in cookie, validated, and ended
+	 * only when it carries `blt_switched_from_id` (a session a switch made);
+	 * the end is logged (record_end()). On a sign-out core has already
+	 * destroyed it.
+	 *
+	 * @param string $reason Why, for the log: `signed_in` (a sign-in, the default; on a sign-out
+	 *                       there is nothing left to end) or `origin_ended` (what is left of a
+	 *                       switch whose origin ended).
 	 * @return void
 	 */
-	public static function end_sessions() {
+	public static function end_sessions( $reason = 'signed_in' ) {
 		if ( ! self::present() ) {
 			return;
 		}
 
-		$cookies = array();
+		// Read before anything is destroyed.
+		$switched = self::request_switched_session();
+		$cookies  = array();
 
 		foreach ( array( self::AUTH, self::SECURE ) as $kind ) {
 			foreach ( self::parse( self::value( $kind ) ) as $entry ) {
-				$cookies[] = array( $entry, self::scheme( $kind ) );
+				$cookies[] = array( $entry, self::scheme( $kind ), true );
 			}
 		}
 
 		if ( '' !== self::olduser() ) {
-			$cookies[] = array( self::olduser(), 'logged_in' );
+			$cookies[] = array( self::olduser(), 'logged_in', false );
 		}
+
+		// The users the stack names, oldest first: the switch chain.
+		$origin = array();
 
 		foreach ( $cookies as $cookie ) {
 			$user_id = (int) wp_validate_auth_cookie( $cookie[0], $cookie[1] );
 			$parts   = $user_id > 0 ? wp_parse_auth_cookie( $cookie[0], $cookie[1] ) : false;
 
 			if ( is_array( $parts ) && ! empty( $parts['token'] ) ) {
+				if ( $cookie[2] ) {
+					$origin[] = $user_id;
+				}
+
 				WP_Session_Tokens::get_instance( $user_id )->destroy( (string) $parts['token'] );
 			}
 		}
 
+		if ( null !== $switched ) {
+			WP_Session_Tokens::get_instance( $switched['user_id'] )->destroy( $switched['token'] );
+
+			$chain   = array() !== $origin ? $origin : array( $switched['from_id'] );
+			$chain[] = $switched['user_id'];
+
+			self::record_end( $switched['user_id'], $switched['from_id'], $chain, $reason );
+		}
+
 		self::clear();
+	}
+
+	/**
+	 * The switched session named by the request's own logged-in cookie: its
+	 * user, token and who switched in. Null when the cookie is missing or
+	 * does not validate, or names a session no switch made.
+	 *
+	 * @return array{user_id:int,token:string,from_id:int}|null
+	 */
+	private static function request_switched_session() {
+		if ( ! defined( 'LOGGED_IN_COOKIE' ) || empty( $_COOKIE[ LOGGED_IN_COOKIE ] ) ) {
+			return null;
+		}
+
+		// '' reads the request's own logged-in cookie, which is what is meant here.
+		$user_id = (int) wp_validate_auth_cookie( '', 'logged_in' );
+		$parts   = $user_id > 0 ? wp_parse_auth_cookie( '', 'logged_in' ) : false;
+
+		if ( ! is_array( $parts ) || empty( $parts['token'] ) ) {
+			return null;
+		}
+
+		$session = WP_Session_Tokens::get_instance( $user_id )->get( (string) $parts['token'] );
+		$from_id = is_array( $session ) && isset( $session[ self::SESSION_FROM_ID ] ) && is_numeric( $session[ self::SESSION_FROM_ID ] ) ? (int) $session[ self::SESSION_FROM_ID ] : 0;
+
+		if ( $from_id <= 0 ) {
+			return null;
+		}
+
+		return array(
+			'user_id' => $user_id,
+			'token'   => (string) $parts['token'],
+			'from_id' => $from_id,
+		);
+	}
+
+	/**
+	 * Log a switched session BLT Toolkit ended by itself, rather than by a
+	 * switch back (LOG-1, LOG-2): `switch` / `switch_ended`, about the user
+	 * whose switched session it was. The row is the system's (actor 0),
+	 * since nobody asked for it in this request; the people involved are in
+	 * its details: `from` (who switched into that user), `to` (that user)
+	 * and `switch_chain` (oldest first, ending with that user), the shape
+	 * switch rows use.
+	 *
+	 * @param int    $user_id The user whose switched session ended.
+	 * @param int    $from_id Who switched into it.
+	 * @param int[]  $chain   The switch chain, oldest first, ending with `$user_id`.
+	 * @param string $reason  `signed_in` (a sign-in over the switched browser) or `origin_ended`
+	 *                        (the session it was switched from, or one further up, had ended).
+	 * @return void
+	 */
+	public static function record_end( $user_id, $from_id, array $chain, $reason ) {
+		$user   = get_userdata( (int) $user_id );
+		$name   = $user instanceof WP_User ? (string) $user->display_name : '#' . (int) $user_id;
+		$reason = 'signed_in' === $reason ? 'signed_in' : 'origin_ended';
+		$people = array();
+
+		foreach ( BLT_Toolkit_Log::clean_chain( $chain ) as $id ) {
+			$people[] = self::person( $id );
+		}
+
+		$summary = 'signed_in' === $reason
+			/* translators: %s: display name of the user whose switched session ended. */
+			? sprintf( __( 'The switched session as %s ended because someone signed in on the same browser.', 'blt-toolkit' ), $name )
+			/* translators: %s: display name of the user whose switched session ended. */
+			: sprintf( __( 'The switched session as %s ended because the session it was switched from had ended.', 'blt-toolkit' ), $name );
+
+		BLT_Toolkit_Log::record(
+			array(
+				'module'      => 'switch',
+				'action'      => self::ENDED_ACTION,
+				'object_type' => 'user',
+				'object_id'   => (string) (int) $user_id,
+				'summary'     => $summary,
+				'details'     => array(
+					'reason'       => $reason,
+					'from'         => self::person( (int) $from_id ),
+					'to'           => self::person( (int) $user_id ),
+					'switch_chain' => $people,
+				),
+				'system'      => true,
+			)
+		);
+	}
+
+	/**
+	 * A user as the log stores them: ID and login.
+	 *
+	 * @param int $user_id User ID.
+	 * @return array{id:int,login:string}
+	 */
+	private static function person( $user_id ) {
+		$user = (int) $user_id > 0 ? get_userdata( (int) $user_id ) : false;
+
+		return array(
+			'id'    => (int) $user_id,
+			'login' => $user instanceof WP_User ? (string) $user->user_login : '',
+		);
 	}
 
 	/**

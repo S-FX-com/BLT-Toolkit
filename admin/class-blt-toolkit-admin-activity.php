@@ -594,7 +594,9 @@ class BLT_Toolkit_Admin_Activity {
 			'switched_to'           => __( 'Switched to a user', 'blt-toolkit' ),
 			'switched_back'         => __( 'Switched back', 'blt-toolkit' ),
 			'switched_off'          => __( 'Switched off', 'blt-toolkit' ),
+			'switch_ended'          => __( 'Switched session ended', 'blt-toolkit' ),
 			'username_changed'      => __( 'Username changed', 'blt-toolkit' ),
+			'password_locked'       => __( 'Username change paused', 'blt-toolkit' ),
 			'bulk_rename'           => __( 'Bulk rename', 'blt-toolkit' ),
 			'bulk_rename_cancelled' => __( 'Bulk rename cancelled', 'blt-toolkit' ),
 			'bulk_rename_retried'   => __( 'Bulk rename retried', 'blt-toolkit' ),
@@ -623,6 +625,9 @@ class BLT_Toolkit_Admin_Activity {
 			'log_exported'          => __( 'Activity exported', 'blt-toolkit' ),
 			'log_pruned'            => __( 'Old entries removed', 'blt-toolkit' ),
 			'legacy_imported'       => __( 'Imported from another plugin', 'blt-toolkit' ),
+			'personal_data_erased'  => __( 'Personal data erased', 'blt-toolkit' ),
+			'log_failure_cleared'   => __( 'Log warning cleared', 'blt-toolkit' ),
+			'tables_repaired'       => __( 'Tables created again', 'blt-toolkit' ),
 		);
 
 		return isset( $labels[ $key ] ) ? $labels[ $key ] : self::humanize( $key );
@@ -834,9 +839,10 @@ class BLT_Toolkit_Admin_Activity {
 			}
 
 			// A snapshot's reason reads as its label (`baseline` is "Baseline,
-			// before BLT Toolkit changed anything"); other text stays as it is.
+			// before BLT Toolkit changed anything"), as does why a switched
+			// session ended; other text stays as it is.
 			if ( 'reason' === $key && is_string( $value ) ) {
-				$value = BLT_Toolkit_Snapshots::reason_label( $value );
+				$value = self::reason_label( $value );
 			}
 
 			$items .= '<dt>' . esc_html( $label ) . '</dt><dd>' . $this->value_html( $value, $depth + 1 ) . '</dd>';
@@ -904,6 +910,25 @@ class BLT_Toolkit_Admin_Activity {
 		}
 
 		return (string) $value;
+	}
+
+	/**
+	 * A `reason` value as words: why a switched session ended
+	 * (`switch_ended` rows), else a snapshot's reason
+	 * (BLT_Toolkit_Snapshots::reason_label()), else the value itself.
+	 *
+	 * @param string $reason Reason code.
+	 * @return string
+	 */
+	private static function reason_label( $reason ) {
+		switch ( (string) $reason ) {
+			case 'signed_in':
+				return __( 'Someone signed in on the same browser', 'blt-toolkit' );
+			case 'origin_ended':
+				return __( 'The session it was switched from had ended', 'blt-toolkit' );
+		}
+
+		return BLT_Toolkit_Snapshots::reason_label( $reason );
 	}
 
 	/**

@@ -147,7 +147,7 @@ endif;
 		<div class="blt-card">
 			<div class="blt-card-header">
 				<h2><?php esc_html_e( 'Roles backup', 'blt-toolkit' ); ?></h2>
-				<p><?php esc_html_e( 'User Role Editor saved a copy of the roles when it was first activated. It is stored as a snapshot, which you can view and restore on the Snapshots tab. No role changes now.', 'blt-toolkit' ); ?></p>
+				<p><?php esc_html_e( 'User Role Editor saved a copy of the roles when it was first activated. It is stored as a snapshot, which you can view and restore on the Snapshots tab, and like the baseline it is never removed to make room for newer snapshots. No role changes now.', 'blt-toolkit' ); ?></p>
 				<?php if ( $blt_tk_backup['imported'] > 0 ) : ?>
 					<div class="blt-card-header-badges"><?php echo BLT_Toolkit_Admin::badge( 'confirmed', __( 'Imported', 'blt-toolkit' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in badge(). ?></div>
 				<?php endif; ?>

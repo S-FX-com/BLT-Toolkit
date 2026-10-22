@@ -51,6 +51,73 @@ class Test_Snapshots extends TestCase {
 	}
 
 	/**
+	 * SNAP-3 with SPEC 15 (decided in the Phase 7 backlog): the baseline and
+	 * User Role Editor's imported backup are never pruned and do not count
+	 * toward the newest ones kept; everything else beyond them goes.
+	 *
+	 * @return void
+	 */
+	public function test_snap3_legacy_ure_backup_is_never_pruned() {
+		$rows = array(
+			array(
+				'id'          => '1',
+				'reason'      => 'baseline',
+				'is_baseline' => '1',
+			),
+			array(
+				'id'          => '2',
+				'reason'      => 'before_save',
+				'is_baseline' => '0',
+			),
+			array(
+				'id'          => '3',
+				'reason'      => 'legacy_ure_backup',
+				'is_baseline' => '0',
+			),
+			array(
+				'id'          => '4',
+				'reason'      => 'before_restore',
+				'is_baseline' => '0',
+			),
+			array(
+				'id'          => '7',
+				'reason'      => 'before_save',
+				'is_baseline' => '0',
+			),
+			array(
+				'id'          => '6',
+				'reason'      => 'before_import',
+				'is_baseline' => '0',
+			),
+		);
+
+		$this->assertSame( array( 2, 4 ), BLT_Toolkit_Snapshots::prunable( $rows, 2 ), 'Keep 7 and 6; the baseline and the backup stay.' );
+		$this->assertSame( array( 2, 4, 6 ), BLT_Toolkit_Snapshots::prunable( $rows, 1 ) );
+		$this->assertSame( array(), BLT_Toolkit_Snapshots::prunable( $rows, 4 ), 'Four others: nothing to prune.' );
+		$this->assertSame( array( 2, 4, 6 ), BLT_Toolkit_Snapshots::prunable( $rows, 0 ), 'At least one is always kept.' );
+
+		// 60 backups and 60 saves with retention 50: every backup stays.
+		$many = array();
+
+		for ( $i = 1; $i <= 120; $i++ ) {
+			$many[] = array(
+				'id'          => $i,
+				'reason'      => 0 === $i % 2 ? 'legacy_ure_backup' : 'before_save',
+				'is_baseline' => 0,
+			);
+		}
+
+		$pruned = BLT_Toolkit_Snapshots::prunable( $many, 50 );
+
+		$this->assertSame( array( 1, 3, 5, 7, 9, 11, 13, 15, 17, 19 ), $pruned, 'The 10 oldest saves.' );
+
+		$this->assertTrue( BLT_Toolkit_Snapshots::is_kept( array( 'is_baseline' => true ) ) );
+		$this->assertTrue( BLT_Toolkit_Snapshots::is_kept( array( 'reason' => 'legacy_ure_backup' ) ) );
+		$this->assertFalse( BLT_Toolkit_Snapshots::is_kept( array( 'reason' => 'before_save', 'is_baseline' => 0 ) ) );
+		$this->assertSame( array(), BLT_Toolkit_Snapshots::prunable( array( 'junk', array( 'id' => 0 ) ), 1 ) );
+	}
+
+	/**
 	 * SNAP-4 with SEC-12: restoring a baseline taken before BLT Toolkit
 	 * existed keeps the administrator's lockout-critical capabilities and
 	 * gives back the BLT Toolkit ones; other roles come back as they were.

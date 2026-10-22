@@ -357,7 +357,8 @@ class BLT_Toolkit_Settings {
 	 * screens read one query each later on (SEC-9): the update token's
 	 * secrets and the family opt-in (github_token(), `init` priority 1), the
 	 * update checker's state (UPDATE_STATE_OPTION, read by `menu.php` on
-	 * every admin screen that counts updates), and whatever prime_also()
+	 * every admin screen that counts updates), the activity log's failure
+	 * flag (read once by a request that writes a log row), and whatever prime_also()
 	 * added for this request. An option that does not exist is remembered
 	 * as missing, as get_option() would. Nothing is read twice: options
 	 * already cached are skipped. Needs wp_prime_option_caches() (WordPress
@@ -370,7 +371,9 @@ class BLT_Toolkit_Settings {
 			return;
 		}
 
-		$names = array( self::SECRETS_OPTION, self::UPDATE_STATE_OPTION );
+		// The log's failure flag (LOG-3) is read after the first successful
+		// write of a request (BLT_Toolkit_Log::note_recovery()).
+		$names = array( self::SECRETS_OPTION, self::UPDATE_STATE_OPTION, BLT_Toolkit_Log::FAILURE_OPTION );
 
 		if ( class_exists( 'BLT_Family' ) && defined( 'BLT_Family::OPT_IN_OPTION' ) ) {
 			$names[] = BLT_Family::OPT_IN_OPTION;

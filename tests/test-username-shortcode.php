@@ -88,6 +88,7 @@ class Test_Username_Shortcode extends TestCase {
 			'UN-21 cooldown'          => array( 'blt_toolkit_username_cooldown', 'cooldown' ),
 			'not allowed'             => array( 'blt_toolkit_username_forbidden', 'forbidden' ),
 			'UN-22 password'          => array( 'blt_toolkit_username_password', 'password' ),
+			'UN-22 throttled'         => array( 'blt_toolkit_username_password_locked', 'locked' ),
 			'UN-12 switched'          => array( 'blt_toolkit_username_switched', 'switched' ),
 			'no such user'            => array( 'blt_toolkit_username_no_user', 'failed' ),
 			'not saved'               => array( 'blt_toolkit_username_not_saved', 'failed' ),

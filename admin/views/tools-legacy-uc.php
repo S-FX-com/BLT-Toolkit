@@ -181,6 +181,13 @@ endif;
 					</div>
 				<?php endforeach; ?>
 
+				<?php if ( array() !== $blt_tk_roles['add'] ) : ?>
+					<div class="blt-callout">
+						<strong><?php esc_html_e( 'Username Changer never applied this setting', 'blt-toolkit' ); ?></strong>
+						<span><?php esc_html_e( 'Username Changer 3.3.1 did not enforce Allowed Roles: a defect in its permission check let only administrators change their own username, whatever the setting said. Importing it lets the roles under "Get the permission" change their own username for the first time. This step is off until you turn it on; you can also give the permission later in Settings > Usernames.', 'blt-toolkit' ); ?></span>
+					</div>
+				<?php endif; ?>
+
 				<?php if ( ! $blt_tk_shown ) : ?>
 					<div class="blt-empty">
 						<span class="blt-empty-title"><?php esc_html_e( 'No allowed roles', 'blt-toolkit' ); ?></span>

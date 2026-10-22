@@ -317,6 +317,20 @@ class BLT_Toolkit_Admin {
 				'method' => 'handle_remove_ure_caps',
 				'cap'    => 'manage_options',
 			),
+			// Site Health buttons (LOG-3, SPEC 14.3), handled by
+			// BLT_Toolkit_Site_Health, which redirects back to Site Health.
+			'blt_toolkit_clear_log_failure'      => array(
+				'screen' => 'overview',
+				'class'  => 'BLT_Toolkit_Site_Health',
+				'method' => 'handle_clear_log_failure',
+				'cap'    => 'manage_options',
+			),
+			'blt_toolkit_repair_tables'          => array(
+				'screen' => 'overview',
+				'class'  => 'BLT_Toolkit_Site_Health',
+				'method' => 'handle_repair_tables',
+				'cap'    => 'manage_options',
+			),
 		);
 	}
 
@@ -540,17 +554,20 @@ class BLT_Toolkit_Admin {
 	/**
 	 * Print a toggle switch (DESIGN 2, Toggle switch) for a boolean.
 	 *
-	 * @param string $name    Field name.
-	 * @param bool   $checked Whether it is on.
-	 * @param string $label   Label.
-	 * @param string $desc    Optional description under the label.
-	 * @param string $id      Optional id for the checkbox.
+	 * @param string $name        Field name.
+	 * @param bool   $checked     Whether it is on.
+	 * @param string $label       Label.
+	 * @param string $desc        Optional description under the label.
+	 * @param string $id          Optional id for the checkbox.
+	 * @param string $describedby Optional id(s) of instructions printed outside
+	 *                            the label, such as a warning under the toggle,
+	 *                            space-separated (WCAG 1.3.1).
 	 * @return void
 	 */
-	public static function toggle( $name, $checked, $label, $desc = '', $id = '' ) {
+	public static function toggle( $name, $checked, $label, $desc = '', $id = '', $describedby = '' ) {
 		?>
 		<label class="blt-toggle">
-			<input type="checkbox" name="<?php echo esc_attr( $name ); ?>" value="1"<?php echo '' !== $id ? ' id="' . esc_attr( $id ) . '"' : ''; ?> <?php checked( (bool) $checked ); ?> />
+			<input type="checkbox" name="<?php echo esc_attr( $name ); ?>" value="1"<?php echo '' !== $id ? ' id="' . esc_attr( $id ) . '"' : ''; ?><?php echo '' !== $describedby ? ' aria-describedby="' . esc_attr( $describedby ) . '"' : ''; ?> <?php checked( (bool) $checked ); ?> />
 			<span class="blt-toggle-track" aria-hidden="true"><span class="blt-toggle-thumb"></span></span>
 			<span class="blt-toggle-text">
 				<span class="blt-toggle-label"><?php echo esc_html( $label ); ?></span>

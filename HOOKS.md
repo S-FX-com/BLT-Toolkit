@@ -2,9 +2,9 @@
 
 Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) section 16. A shipped hook name is never renamed.
 
-**Status.** BLT Toolkit is built phase by phase (SPEC 17). "Planned (Phase N)" means the hook is specified and arrives with that phase; it becomes "Available" when the phase lands. Until then, code that adds a callback to a planned hook is harmless but nothing calls it.
+**Status.** Every hook listed here is Available: something in the plugin fires or applies it. The list matches the code exactly: every `do_action()` and `apply_filters()` whose name starts with `blt_toolkit_`, the three User Switching compatibility actions, core's `shortcode_atts_blt_toolkit_username_form` (applied by `shortcode_atts()` for the username form) and the `current_user_switched()` shim, and nothing that does not exist. A change to a hook updates this file in the same commit (`AGENTS.md`); `grep -rnE "(do_action|apply_filters)\(" includes admin templates` lists the calls, some of which put the name on the next line.
 
-**Signatures.** SPEC 16 fixes the name and, for most hooks, the arguments and default. Where it fixes only the first argument, any further argument shown here is marked *proposed*: it is confirmed, and this file corrected, when the hook ships.
+**Signatures.** SPEC 16 fixes the name and, for most hooks, the arguments and default. Where it fixes only the first argument, the further arguments below are the ones the code passes, checked against the code that fires or applies each hook.
 
 | Hook | Type | Requirement | Status | Purpose |
 | --- | --- | --- | --- | --- |
@@ -37,6 +37,7 @@ Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) se
 | [`blt_toolkit_disallowed_usernames`](#blt_toolkit_disallowed_usernames) | filter | UN-4 | Available | Disallowed usernames |
 | [`blt_toolkit_username_email`](#blt_toolkit_username_email) | filter | UN-15 | Available | The rename notification email |
 | [`blt_toolkit_bulk_rename_max_rows`](#blt_toolkit_bulk_rename_max_rows) | filter | UN-30 | Available | Bulk rename CSV row cap |
+| [`blt_toolkit_username_password_throttle`](#blt_toolkit_username_password_throttle) | filter | UN-22 | Available | Wrong current passwords allowed in the username forms |
 | [`shortcode_atts_blt_toolkit_username_form`](#shortcode_atts_blt_toolkit_username_form) | filter | UN-23 | Available | The username form's shortcode attributes (core's filter) |
 | [`blt_toolkit_risky_caps`](#blt_toolkit_risky_caps) | filter | SPEC 5.4, SEC-10, SEC-11 | Available | Capability risk tiers |
 | [`blt_toolkit_lockout_critical_caps`](#blt_toolkit_lockout_critical_caps) | filter | SEC-12 | Available | Capabilities administrator always keeps |
@@ -212,7 +213,7 @@ Fires once when a background job starts, after its settings are pinned (JOB-3) a
 | --- | --- | --- |
 | `$job` | array | The job state as stored in `blt_toolkit_job_{id}` (`id`, `type`, `mode`, `status`, `owner`, `pinned`, `cursor` and the counters). Its type is one of `username_bulk`, `role_reassign`, `log_prune` or `count_no_role` (JOB-5), or `legacy_uc_log` (copying Username Changer's audit log, SPEC 15); `log_prune` and `legacy_uc_log` are always registered, `username_bulk` while the Usernames module runs, `role_reassign` and `count_no_role` while the Roles module runs. `chain` holds the switch chain of the request that started the job (user IDs, oldest first; empty when not switched), which every log row its ticks write is attributed to (LOG-2). |
 
-Requirement JOB-1 to JOB-5. Status: Available. The job runner landed in Phase 1 for the daily log prune (LOG-4).
+Requirement JOB-1 to JOB-5. Status: Available. The daily log prune (LOG-4) runs as a job too (`log_prune`).
 
 ### `blt_toolkit_after_job`
 
@@ -249,6 +250,8 @@ Fires after each row is written to the activity log, so other logging plugins ca
 | `source` | string | Empty for native rows; the plugin's name for imported rows (`username-changer`). |
 
 A listener that throws is reported to the PHP error log and otherwise ignored: the row is already written.
+
+Rows BLT Toolkit writes by itself, whoever is signed in, have `actor_id` 0 and `acting_as_id` 0: for example `switch` / `switch_ended`, written when a switched session is ended because the session it was switched from ended, or because someone signed in on the same browser (the people involved are in `details`: `from`, `to`, `switch_chain` and `reason`, `origin_ended` or `signed_in`).
 
 Requirement LOG-6. Status: Available.
 
@@ -379,6 +382,19 @@ The most rows with a new username one bulk rename CSV may contain (UN-30). Rows 
 
 Requirement UN-30. Status: Available.
 
+### `blt_toolkit_username_password_throttle`
+
+How many wrong current passwords someone may enter in the username forms (the profile's **Change username** section and `[blt_toolkit_username_form]`) when **Ask for their current password** (`usernames.require_password`, UN-22) is on. After `limit` wrong passwords within `window` seconds, that person's self-service renames pause until the oldest of them is `window` seconds old: the password is not checked at all meanwhile, so the form cannot be used to guess it, and the error says when to try again (`blt_toolkit_username_password_locked`, HTTP 429). The attempt that reaches the limit is logged (`usernames` / `password_locked`, status `warning`); a correct password clears the count. Sign-in is not affected. The attempts are kept in the user meta `blt_toolkit_password_failures` (times only), which uninstall removes.
+
+| Argument | Type | Default | Description |
+| --- | --- | --- | --- |
+| `$throttle` | array | `array( 'limit' => 5, 'window' => 900 )` | `limit`: wrong passwords allowed within the window, 0 to 100 (0 turns the throttle off). `window`: seconds, 1 to 86400. A missing or non-numeric value takes the default. |
+| `$user` | WP_User | | The person renaming themselves. |
+
+Applied each time the current password is checked.
+
+Requirement UN-22. Status: Available.
+
 ### `shortcode_atts_blt_toolkit_username_form`
 
 Core's `shortcode_atts_{$shortcode}` filter for `[blt_toolkit_username_form]` (UN-23), applied by `shortcode_atts()` each time the shortcode renders, and also when the page's content is checked early to decide whether the stylesheet goes in the head (`wp_enqueue_scripts`). Use it to set a site-wide default, such as `style="none"` on every form, which then also keeps the stylesheet off the page.
@@ -420,7 +436,7 @@ The capabilities that can never be removed from the `administrator` role, and th
 | --- | --- | --- | --- |
 | `$caps` | string[] | `read`, `manage_options`, `list_users`, `edit_users`, `promote_users`, `activate_plugins`, `blt_edit_roles`, `blt_edit_capabilities` | Capability names. |
 
-Used by recovery mode (SEC-14), by snapshot restore (which always leaves `administrator` holding the set) and by `BLT_Toolkit_Guard::check_role_change()` for SEC-12, which the role editor calls from Phase 4.
+Used by recovery mode (SEC-14), by snapshot restore (which always leaves `administrator` holding the set) and by `BLT_Toolkit_Guard::check_role_change()` for SEC-12, which the role store runs on every role write.
 
 Requirement SEC-12. Status: Available.
 
@@ -442,9 +458,9 @@ Named groups of capabilities for the Advanced view's group tree (RO-13). A capab
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$groups` | array | WooCommerce's `manage_woocommerce` and `view_woocommerce_reports` (key `woocommerce`) while WooCommerce is active, and Gravity Forms' `GFCommon::all_caps()` (key `gravityforms`) while Gravity Forms is active | Group key => `array( 'label' => string, 'caps' => string[] )`. The key becomes the tree node `plugin-{key}` (lowercase letters, digits, `_` and `-`); a missing label is the key humanized; groups without capabilities are dropped. |
+| `$groups` | array | While WooCommerce is active, its core capability set (key `woocommerce`): `WC_Install::get_core_capabilities()` merged with the same list built in (`manage_woocommerce`, `view_woocommerce_reports`, `create_customers` and the product, order, coupon and term capabilities, 54 names), so none of them reads as orphaned. While Gravity Forms is active, `GFCommon::all_caps()` (key `gravityforms`). | Group key => `array( 'label' => string, 'caps' => string[] )`. The key becomes the tree node `plugin-{key}` (lowercase letters, digits, `_` and `-`); a missing label is the key humanized; groups without capabilities are dropped. |
 
-A capability declared here that core, a post type or a taxonomy also registers keeps that as its source and is also listed in the group's node. Capabilities nobody declares that share a prefix with two or more others (`gravityforms_*`, `manage_woocommerce` and `view_woocommerce_reports`) are grouped by that prefix too, but stay flagged as orphaned.
+A capability declared here that core, a post type or a taxonomy also registers keeps that as its source and is also listed in the group's node. Capabilities nobody declares that share a prefix with two or more others (`gravityforms_*` while Gravity Forms is inactive, say) are grouped by that prefix too, but stay flagged as orphaned. Post types with separate permissions that are not in effect get a group of their own after this filter (not filterable), so their strings are never offered for deletion either.
 
 ```php
 add_filter(
@@ -540,7 +556,7 @@ Requirement SEC-6. Status: Available.
 
 ### `blt_toolkit_snapshot_retention`
 
-How many role snapshots are kept, newest first, besides the baseline, which is never pruned (SNAP-2, SNAP-3).
+How many role snapshots are kept, newest first, besides the baseline and User Role Editor's imported backup (reason `legacy_ure_backup`, SPEC 15), which are never pruned and do not count toward this number (SNAP-2, SNAP-3).
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |

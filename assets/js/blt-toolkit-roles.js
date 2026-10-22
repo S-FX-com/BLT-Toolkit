@@ -5,7 +5,8 @@
  * plain form, the toolbar is a GET form and every review is its own page.
  * With it:
  *
- * - the save bar counts unsaved changes in a polite live region;
+ * - the save bar counts unsaved changes in a polite live region, which
+ *   also speaks an RS-7 hint that a change has just shown;
  * - Discard puts every control back as it was drawn, without a reload;
  * - leaving the page (a link, a tab, a reload) with unsaved changes asks
  *   first (`beforeunload`), which also covers RS-2's view switch;
@@ -455,6 +456,7 @@
 		var thenCtl = form.querySelector( '[data-blt-then-ctl]' );
 		var controls = [];
 		var submitting = false;
+		var ready = false;
 		var dirty = 0;
 		var pendingHref = '';
 
@@ -728,8 +730,13 @@
 
 		/**
 		 * Show the hints that apply now (RS-7, RS-17).
+		 *
+		 * @return {Array} Text of each hint this call showed that was
+		 *                 hidden before, once each, for the live region.
 		 */
 		function updateHints() {
+			var shown = [];
+
 			Array.prototype.forEach.call( form.querySelectorAll( '[data-blt-hint]' ), function ( hint ) {
 				var when = {};
 
@@ -742,9 +749,16 @@
 				var active = Object.keys( when ).some( function ( id ) {
 					return isOn( id, when[ id ] );
 				} ) && ! isOn( hint.getAttribute( 'data-needs' ), 'view' );
+				var text = hint.querySelector( '.blt-toolkit-simple-hint-text' );
+
+				if ( active && hint.hidden && text && -1 === shown.indexOf( text.textContent.trim() ) ) {
+					shown.push( text.textContent.trim() );
+				}
 
 				hint.hidden = ! active;
 			} );
+
+			return shown;
 		}
 
 		/**
@@ -789,15 +803,26 @@
 				}
 			} );
 
+			var shown = updateHints();
+
 			if ( count ) {
 				count.textContent = 0 === dirty ? strings.noChanges || '' : format( strings.changes, [ dirty ] );
+
+				// A hint that a change just showed is spoken with the count
+				// (WCAG 4.1.3): the save bar is the polite live region, and
+				// the hidden copy leaves what it shows as it was.
+				if ( ready && shown.length ) {
+					var spoken = document.createElement( 'span' );
+
+					spoken.className = 'screen-reader-text';
+					spoken.textContent = ' ' + shown.join( ' ' );
+					count.appendChild( spoken );
+				}
 			}
 
 			if ( wrap.classList ) {
 				wrap.classList.toggle( 'is-dirty', dirty > 0 );
 			}
-
-			updateHints();
 		}
 
 		controls = data.controls.map( bind ).filter( Boolean );
@@ -1187,6 +1212,10 @@
 		} );
 
 		update();
+
+		// From now on a hint that appears is a change to speak, not the
+		// page as it was drawn.
+		ready = true;
 	}
 
 	/**

@@ -77,10 +77,12 @@ foreach ( array( 'blt_toolkit_no_role_count', 'blt_toolkit_recovery_in_code', 'b
 // form's result (UN-23), five minutes each; the Roles screen's pending review
 // or refused save (an hour), its one-time result notice and the role
 // lifecycle's (ten minutes), the Users list's bulk role result (US-3,
-// five minutes), the Tools screen's one-time result notice (ten minutes) and
-// a role import's stored upload (RO-45, an hour, compressed). Found by
-// prefix in the options table, with their timeouts; on a site with a
-// persistent object cache they live there instead and expire on their own.
+// five minutes), the Tools screen's one-time result notice (ten minutes),
+// a role import's stored upload (RO-45, an hour, compressed) and a personal
+// data erasure in progress (SPEC 14.5, an hour; named with the ID of the
+// person being erased). Found by prefix in the options table, with their
+// timeouts; on a site with a persistent object cache they live there
+// instead and expire on their own.
 $blt_toolkit_prefixes = array(
 	'blt_toolkit_bulk_plan_',
 	'blt_toolkit_username_notice_',
@@ -90,6 +92,7 @@ $blt_toolkit_prefixes = array(
 	'blt_toolkit_bulk_roles_notice_',
 	'blt_toolkit_tools_notice_',
 	'blt_toolkit_import_',
+	'blt_toolkit_privacy_erase_',
 );
 
 foreach ( $blt_toolkit_prefixes as $blt_toolkit_prefix ) {
@@ -154,7 +157,7 @@ if ( $blt_toolkit_changed && $blt_toolkit_use_db ) {
 // User-level data. User meta is shared by every site of a network, so it is
 // left alone there (the plugin never runs on multisite in any case).
 if ( ! is_multisite() ) {
-	foreach ( array( 'blt_toolkit_editor_mode', 'blt_toolkit_columns', 'blt_toolkit_previous_nicenames', 'blt_toolkit_username_changed_at' ) as $blt_toolkit_meta_key ) {
+	foreach ( array( 'blt_toolkit_editor_mode', 'blt_toolkit_columns', 'blt_toolkit_previous_nicenames', 'blt_toolkit_username_changed_at', 'blt_toolkit_password_failures' ) as $blt_toolkit_meta_key ) {
 		delete_metadata( 'user', 0, $blt_toolkit_meta_key, '', true );
 	}
 

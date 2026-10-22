@@ -16,6 +16,7 @@
  * @var int      $last_check   Time of the last update check, or 0.
  * @var string[] $disabled     Modules named in BLT_TOOLKIT_DISABLE_MODULES.
  * @var bool     $recovery     Whether BLT_TOOLKIT_RECOVERY is set.
+ * @var bool     $file_mods    Whether WordPress may update plugin files (false under DISALLOW_FILE_MODS).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -42,6 +43,7 @@ switch ( $token_status ) {
 }
 
 $can_remove   = in_array( $token_status, array( 'stored', 'undecryptable' ), true );
+$token_desc   = in_array( $token_status, array( 'undecryptable', 'shared' ), true ) ? 'blt-toolkit-github-token-state blt-toolkit-github-token-desc' : 'blt-toolkit-github-token-desc';
 $date_format  = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
 $recovery_php = "define( 'BLT_TOOLKIT_RECOVERY', true );";
 $disable_php  = "define( 'BLT_TOOLKIT_DISABLE_MODULES', 'switch,usernames' );";
@@ -57,10 +59,12 @@ $disable_php  = "define( 'BLT_TOOLKIT_DISABLE_MODULES', 'switch,usernames' );";
 			$field . '[delete_data_on_uninstall]',
 			$advanced['delete_data_on_uninstall'],
 			__( 'Delete all plugin data on uninstall', 'blt-toolkit' ),
-			__( 'Off by default, so deleting and reinstalling the plugin loses nothing.', 'blt-toolkit' )
+			__( 'Off by default, so deleting and reinstalling the plugin loses nothing.', 'blt-toolkit' ),
+			'',
+			'blt-toolkit-uninstall-warning'
 		);
 		?>
-		<p class="blt-field-desc">
+		<p class="blt-field-desc" id="blt-toolkit-uninstall-warning">
 			<span class="blt-text-danger"><?php esc_html_e( 'Warning:', 'blt-toolkit' ); ?></span>
 			<?php esc_html_e( 'with this on, deleting the plugin permanently removes the activity log, every role snapshot including the baseline, the settings and the stored token, and takes every BLT Toolkit capability off every role and user. It cannot be undone. Your roles, and the changes you made to them, stay as they are.', 'blt-toolkit' ); ?>
 		</p>
@@ -70,7 +74,19 @@ $disable_php  = "define( 'BLT_TOOLKIT_DISABLE_MODULES', 'switch,usernames' );";
 <div class="blt-card">
 	<div class="blt-card-header">
 		<h2><?php esc_html_e( 'Updates', 'blt-toolkit' ); ?></h2>
-		<p><?php esc_html_e( 'BLT Toolkit checks GitHub for a new version once a day, at midnight site time. A token is needed only while the repository is private.', 'blt-toolkit' ); ?></p>
+		<?php if ( $file_mods ) : ?>
+			<p><?php esc_html_e( 'BLT Toolkit checks GitHub for a new version once a day, at midnight site time. A token is needed only while the repository is private.', 'blt-toolkit' ); ?></p>
+		<?php else : ?>
+			<p>
+				<?php
+				printf(
+					/* translators: %s: constant name. */
+					esc_html__( 'File changes are turned off on this site by %s, so new versions of BLT Toolkit arrive with your deployment. WordPress does not offer or install updates here.', 'blt-toolkit' ),
+					'<code>DISALLOW_FILE_MODS</code>'
+				);
+				?>
+			</p>
+		<?php endif; ?>
 		<div class="blt-card-header-badges">
 			<?php echo $token_badge; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in badge(). ?>
 		</div>
@@ -96,21 +112,21 @@ $disable_php  = "define( 'BLT_TOOLKIT_DISABLE_MODULES', 'switch,usernames' );";
 						?>
 					</p>
 				<?php else : ?>
-					<input type="password" id="blt-toolkit-github-token" class="regular-text" name="<?php echo esc_attr( BLT_Toolkit_Admin_Settings::TOKEN_FIELD ); ?>" value="" autocomplete="new-password" spellcheck="false" placeholder="<?php echo esc_attr( $can_remove ? __( 'Saved. Leave blank to keep it', 'blt-toolkit' ) : __( 'Not set', 'blt-toolkit' ) ); ?>" />
+					<input type="password" id="blt-toolkit-github-token" class="regular-text" name="<?php echo esc_attr( BLT_Toolkit_Admin_Settings::TOKEN_FIELD ); ?>" value="" autocomplete="new-password" spellcheck="false" placeholder="<?php echo esc_attr( $can_remove ? __( 'Saved. Leave blank to keep it', 'blt-toolkit' ) : __( 'Not set', 'blt-toolkit' ) ); ?>" aria-describedby="<?php echo esc_attr( $token_desc ); ?>" />
 					<?php if ( 'undecryptable' === $token_status ) : ?>
-						<p class="blt-field-desc blt-text-danger"><?php esc_html_e( 'The stored token can no longer be read, because the security keys in wp-config.php changed since it was saved. Enter it again.', 'blt-toolkit' ); ?></p>
+						<p class="blt-field-desc blt-text-danger" id="blt-toolkit-github-token-state"><?php esc_html_e( 'The stored token can no longer be read, because the security keys in wp-config.php changed since it was saved. Enter it again.', 'blt-toolkit' ); ?></p>
 					<?php elseif ( 'shared' === $token_status ) : ?>
-						<p class="blt-field-desc"><?php esc_html_e( 'Using the token from the shared BLT settings. A token saved here takes precedence over it.', 'blt-toolkit' ); ?></p>
+						<p class="blt-field-desc" id="blt-toolkit-github-token-state"><?php esc_html_e( 'Using the token from the shared BLT settings. A token saved here takes precedence over it.', 'blt-toolkit' ); ?></p>
 					<?php endif; ?>
-					<p class="blt-field-desc"><?php esc_html_e( 'A fine-grained personal access token with read-only Contents access to the repository is enough. It is stored encrypted with your site\'s security keys and never shown again. A blank field keeps the stored token.', 'blt-toolkit' ); ?></p>
+					<p class="blt-field-desc" id="blt-toolkit-github-token-desc"><?php esc_html_e( 'A fine-grained personal access token with read-only Contents access to the repository is enough. It is stored encrypted with your site\'s security keys and never shown again. A blank field keeps the stored token.', 'blt-toolkit' ); ?></p>
 				<?php endif; ?>
 				<p class="blt-stack-top">
-					<button type="submit" class="button" form="<?php echo esc_attr( BLT_Toolkit_Admin_Settings::FORM_TEST ); ?>"><?php esc_html_e( 'Test connection', 'blt-toolkit' ); ?></button>
+					<button type="submit" class="button" form="<?php echo esc_attr( BLT_Toolkit_Admin_Settings::FORM_TEST ); ?>" aria-describedby="blt-toolkit-test-connection-desc"><?php esc_html_e( 'Test connection', 'blt-toolkit' ); ?></button>
 					<?php if ( $can_remove ) : ?>
 						<button type="submit" class="button" form="<?php echo esc_attr( BLT_Toolkit_Admin_Settings::FORM_REMOVE ); ?>"><?php esc_html_e( 'Remove token', 'blt-toolkit' ); ?></button>
 					<?php endif; ?>
 				</p>
-				<p class="blt-field-desc">
+				<p class="blt-field-desc" id="blt-toolkit-test-connection-desc">
 					<?php
 					printf(
 						/* translators: %s: GitHub repository, such as S-FX-com/BLT-Toolkit. */
@@ -138,14 +154,24 @@ $disable_php  = "define( 'BLT_TOOLKIT_DISABLE_MODULES', 'switch,usernames' );";
 				<?php endif; ?>
 				<p class="blt-field-desc">
 					<?php
-					if ( $last_check > 0 ) {
+					// The "checking now" sentence goes with the button, which is
+					// absent without update_plugins (and under DISALLOW_FILE_MODS).
+					if ( $last_check > 0 && '' !== $update_url ) {
 						printf(
 							/* translators: %s: date and time of the last update check. */
 							esc_html__( 'Last checked %s. Checking now runs at once and ends on the Plugins screen with the result.', 'blt-toolkit' ),
 							esc_html( wp_date( $date_format, $last_check ) )
 						);
-					} else {
+					} elseif ( $last_check > 0 ) {
+						printf(
+							/* translators: %s: date and time of the last update check. */
+							esc_html__( 'Last checked %s.', 'blt-toolkit' ),
+							esc_html( wp_date( $date_format, $last_check ) )
+						);
+					} elseif ( '' !== $update_url ) {
 						esc_html_e( 'Not checked yet. Checking now runs at once and ends on the Plugins screen with the result.', 'blt-toolkit' );
+					} else {
+						esc_html_e( 'Not checked yet.', 'blt-toolkit' );
 					}
 					?>
 				</p>

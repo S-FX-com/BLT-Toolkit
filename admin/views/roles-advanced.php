@@ -196,8 +196,8 @@ $blt_tk_cols    = max( 1, min( 3, (int) $state['cols'] ) );
 					</div>
 				</div>
 				<div class="blt-field">
-					<div class="blt-field-label"><?php esc_html_e( 'Roles that get it', 'blt-toolkit' ); ?></div>
-					<div class="blt-toggle-stack">
+					<div class="blt-field-label" id="blt-tk-cap-roles-label"><?php esc_html_e( 'Roles that get it', 'blt-toolkit' ); ?></div>
+					<div class="blt-toggle-stack" role="group" aria-labelledby="blt-tk-cap-roles-label">
 						<?php foreach ( $add_cap['roles'] as $blt_tk_id => $blt_tk_role_name ) : ?>
 							<label class="blt-toggle">
 								<input type="checkbox" name="cap_roles[]" value="<?php echo esc_attr( (string) $blt_tk_id ); ?>" <?php checked( (string) $blt_tk_id === $add_cap['checked'] ); ?> />

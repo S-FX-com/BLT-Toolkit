@@ -12,7 +12,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Stores the complete roles array before it is written (SNAP-1), plus the
  * baseline taken on first activation (SNAP-2), keeps the newest of them
- * (SNAP-3), lists them with what differs from the roles today, and restores
+ * (SNAP-3; the baseline and User Role Editor's imported backup are never
+ * pruned), lists them with what differs from the roles today, and restores
  * one (SNAP-4).
  *
  * Each row holds `$wp_roles->roles` as canonical JSON with its SHA-256, so two
@@ -53,6 +54,14 @@ class BLT_Toolkit_Snapshots {
 	 * lockout-critical set (SEC-12).
 	 */
 	const ADMIN_ROLE = 'administrator';
+
+	/**
+	 * Reasons whose snapshots SNAP-3 never prunes, like the baseline: User
+	 * Role Editor's first-activation backup (SPEC 15) cannot be made again
+	 * once User Role Editor is deleted. Decided in the Phase 7 backlog
+	 * (tasks/lessons.md). They do not count toward the newest ones kept.
+	 */
+	const KEPT_REASONS = array( 'legacy_ure_backup' );
 
 	/**
 	 * Store a snapshot of the current roles (SNAP-1), then prune (SNAP-3).
@@ -190,9 +199,10 @@ class BLT_Toolkit_Snapshots {
 	// ---------- Retention (SNAP-3) ----------
 
 	/**
-	 * How many snapshots to keep besides the baseline: the Settings > Roles
-	 * field (`roles.snapshot_retention`) through
-	 * `blt_toolkit_snapshot_retention`, never below 1.
+	 * How many snapshots to keep besides the baseline and User Role Editor's
+	 * backup (KEPT_REASONS): the Settings > Roles field
+	 * (`roles.snapshot_retention`) through `blt_toolkit_snapshot_retention`,
+	 * never below 1.
 	 *
 	 * At least one is always kept: take() compares with the newest snapshot,
 	 * and a restore needs the copy it just took.
@@ -205,7 +215,8 @@ class BLT_Toolkit_Snapshots {
 
 		/**
 		 * Filter how many role snapshots are kept, newest first, besides the
-		 * baseline, which is never pruned (SNAP-2, SNAP-3).
+		 * baseline and User Role Editor's backup, which are never pruned
+		 * (SNAP-2, SNAP-3).
 		 *
 		 * @param int $count The Settings > Roles field "Snapshots to keep" (default 50).
 		 */
@@ -229,11 +240,14 @@ class BLT_Toolkit_Snapshots {
 	}
 
 	/**
-	 * Delete every snapshot but the newest retention() ones and the baseline
-	 * (SNAP-3). Runs after each insert by take().
+	 * Delete every snapshot but the newest retention() ones, the baseline and
+	 * those kept for their reason (KEPT_REASONS) (SNAP-3). Runs after each
+	 * insert by take() and store().
 	 *
-	 * Two queries: find the oldest snapshot that is kept, then delete the
-	 * non-baseline rows older than it.
+	 * Two queries: the IDs, reasons and baseline flags of every row (the
+	 * table holds about retention() rows, since every insert prunes), then
+	 * one delete of the rows prunable() picks. The delete repeats the
+	 * baseline and reason conditions, so a kept row is never removed.
 	 *
 	 * @return int Rows deleted.
 	 */
@@ -241,19 +255,65 @@ class BLT_Toolkit_Snapshots {
 		global $wpdb;
 
 		$table = BLT_Toolkit_Schema::table( 'snapshots' );
-		$keep  = self::retention();
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Our own table; values are bound.
-		$oldest_kept = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE is_baseline = 0 ORDER BY id DESC LIMIT 1 OFFSET %d", $keep - 1 ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Our own table; no values.
+		$rows = $wpdb->get_results( "SELECT id, reason, is_baseline FROM {$table}", ARRAY_A );
+		$ids  = self::prunable( is_array( $rows ) ? $rows : array(), self::retention() );
 
-		if ( $oldest_kept <= 0 ) {
+		if ( array() === $ids ) {
 			return 0;
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Our own table; values are bound.
-		$deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE is_baseline = 0 AND id < %d", $oldest_kept ) );
+		$id_list     = implode( ', ', array_fill( 0, count( $ids ), '%d' ) );
+		$reason_list = implode( ', ', array_fill( 0, count( self::KEPT_REASONS ), '%s' ) );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Our own table; the placeholder lists are built from the counts of the values bound.
+		$deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE is_baseline = 0 AND reason NOT IN ({$reason_list}) AND id IN ({$id_list})", array_merge( self::KEPT_REASONS, $ids ) ) );
 
 		return false === $deleted ? 0 : (int) $deleted;
+	}
+
+	/**
+	 * The snapshot IDs SNAP-3 prunes: every row but the baseline, the rows
+	 * kept for their reason (KEPT_REASONS) and the newest `$keep` of the
+	 * rest. Pure.
+	 *
+	 * @param array[] $rows Each with `id`, `reason` and `is_baseline`, in any order.
+	 * @param int     $keep How many of the other rows to keep (at least 1).
+	 * @return int[] IDs to delete, ascending.
+	 */
+	public static function prunable( array $rows, $keep ) {
+		$keep  = max( 1, (int) $keep );
+		$other = array();
+
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) || ! isset( $row['id'] ) || (int) $row['id'] <= 0 ) {
+				continue;
+			}
+
+			if ( ! self::is_kept( $row ) ) {
+				$other[] = (int) $row['id'];
+			}
+		}
+
+		rsort( $other );
+
+		$ids = array_slice( $other, $keep );
+
+		sort( $ids );
+
+		return $ids;
+	}
+
+	/**
+	 * Whether SNAP-3 never prunes a snapshot: the baseline, and the reasons
+	 * in KEPT_REASONS. Pure.
+	 *
+	 * @param array $snapshot With `is_baseline` and `reason`.
+	 * @return bool
+	 */
+	public static function is_kept( array $snapshot ) {
+		return ! empty( $snapshot['is_baseline'] ) || ( isset( $snapshot['reason'] ) && in_array( (string) $snapshot['reason'], self::KEPT_REASONS, true ) );
 	}
 
 	// ---------- Reading (SNAP-4) ----------

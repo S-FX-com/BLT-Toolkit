@@ -351,4 +351,104 @@ class Test_Username_Changer extends TestCase {
 			)
 		);
 	}
+	/**
+	 * UN-22 throttle: wrong current passwords within the window are counted,
+	 * oldest first, at most the limit's worth; reaching the limit pauses
+	 * renames until the oldest of them is a window old (a sliding window).
+	 *
+	 * @return void
+	 */
+	public function test_un22_throttle_pauses_after_the_limit() {
+		$now = 100000;
+
+		$this->assertSame(
+			array(
+				'failures'     => array(),
+				'locked_until' => 0,
+			),
+			BLT_Toolkit_Username_Changer::throttle_state( '', $now, 5, 900 ),
+			'Nothing stored (get_user_meta() gives an empty string).'
+		);
+
+		$four = array( $now - 800, $now - 600, $now - 400, $now - 10 );
+
+		$this->assertSame(
+			array(
+				'failures'     => $four,
+				'locked_until' => 0,
+			),
+			BLT_Toolkit_Username_Changer::throttle_state( $four, $now, 5, 900 ),
+			'Four wrong passwords: one more try.'
+		);
+
+		$five = array_merge( $four, array( $now ) );
+
+		$this->assertSame(
+			array(
+				'failures'     => $five,
+				'locked_until' => $now - 800 + 900,
+			),
+			BLT_Toolkit_Username_Changer::throttle_state( $five, $now, 5, 900 ),
+			'The fifth within 15 minutes pauses until the first is 15 minutes old.'
+		);
+
+		// One second after the oldest leaves the window, one try is back.
+		$later = BLT_Toolkit_Username_Changer::throttle_state( $five, $now + 100, 5, 900 );
+
+		$this->assertSame( 0, $later['locked_until'] );
+		$this->assertCount( 4, $later['failures'] );
+
+		// Old, future, malformed and surplus entries are dropped; order fixed.
+		$messy = array( 'x', $now + 60, $now - 5000, $now - 1, null, $now - 3, $now - 2, array( 1 ), $now - 50, $now - 40, $now - 30 );
+		$state = BLT_Toolkit_Username_Changer::throttle_state( $messy, $now, 5, 900 );
+
+		$this->assertSame( array( $now - 40, $now - 30, $now - 3, $now - 2, $now - 1 ), $state['failures'], 'The newest five, oldest first.' );
+		$this->assertSame( $now - 40 + 900, $state['locked_until'] );
+
+		// A limit of 0 turns the throttle off and keeps nothing.
+		$this->assertSame(
+			array(
+				'failures'     => array(),
+				'locked_until' => 0,
+			),
+			BLT_Toolkit_Username_Changer::throttle_state( $five, $now, 0, 900 )
+		);
+	}
+
+	/**
+	 * UN-22 throttle: the filtered value is two bounded integers, with the
+	 * default for anything missing or not a number (5 within 15 minutes).
+	 *
+	 * @return void
+	 */
+	public function test_un22_throttle_filter_value_is_cleaned() {
+		$default = array(
+			'limit'  => 5,
+			'window' => 900,
+		);
+
+		$this->assertSame( $default, BLT_Toolkit_Username_Changer::clean_throttle( null ) );
+		$this->assertSame( $default, BLT_Toolkit_Username_Changer::clean_throttle( array( 'limit' => 'many' ) ) );
+		$this->assertSame(
+			array(
+				'limit'  => 0,
+				'window' => 900,
+			),
+			BLT_Toolkit_Username_Changer::clean_throttle( array( 'limit' => -3 ) ),
+			'Off.'
+		);
+		$this->assertSame(
+			array(
+				'limit'  => 100,
+				'window' => 86400,
+			),
+			BLT_Toolkit_Username_Changer::clean_throttle(
+				array(
+					'limit'  => '1000',
+					'window' => 10 * 86400,
+				)
+			)
+		);
+		$this->assertSame( 1, BLT_Toolkit_Username_Changer::clean_throttle( array( 'window' => 0 ) )['window'] );
+	}
 }

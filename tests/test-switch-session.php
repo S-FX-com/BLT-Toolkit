@@ -207,4 +207,118 @@ class Test_Switch_Session extends TestCase {
 		$this->assertSame( 0, BLT_Toolkit_Switch::live_switch_from( $this->sessions['2|v-ua'], 5, $lookup ) );
 		$this->assertSame( 0, BLT_Toolkit_Switch::live_switch_from( $this->sessions['3|v-ub'], 5, $lookup ), 'Broken further up the chain.' );
 	}
+
+	/**
+	 * LOG-2, SW-5: a switched session that ends because its origin ended is
+	 * logged with the person it started from, although that person's
+	 * session is gone: named_links() keeps the user at the broken link.
+	 *
+	 * @return void
+	 */
+	public function test_log2_named_links_keep_the_user_whose_session_ended() {
+		$lookup = array( $this, 'lookup' );
+
+		$this->assertSame(
+			array(
+				'ids'    => array( 1, 2 ),
+				'intact' => true,
+				'named'  => array( 1, 2 ),
+			),
+			BLT_Toolkit_Switch::named_links( $this->sessions['3|v-ub'], $lookup ),
+			'Intact: named is the chain.'
+		);
+
+		unset( $this->sessions['1|v-a'] );
+
+		$this->assertSame(
+			array(
+				'ids'    => array( 2 ),
+				'intact' => false,
+				'named'  => array( 1, 2 ),
+			),
+			BLT_Toolkit_Switch::named_links( $this->sessions['3|v-ub'], $lookup ),
+			'admin\'s session ended: admin is still named.'
+		);
+
+		$this->assertSame( array( 1 ), BLT_Toolkit_Switch::named_links( $this->sessions['2|v-ua'], $lookup )['named'] );
+
+		// A middle link gone: only the user whose session is missing is known.
+		$this->setUp();
+		unset( $this->sessions['2|v-ua'] );
+
+		$this->assertSame( array( 2 ), BLT_Toolkit_Switch::named_links( $this->sessions['3|v-ub'], $lookup )['named'] );
+		$this->assertSame( array(), BLT_Toolkit_Switch::named_links( $this->sessions['1|v-a'], $lookup )['named'], 'Not switched.' );
+	}
+
+	/**
+	 * SW-8 and the dead-session cleanup: a target's switched sessions are
+	 * live (someone else's switch, a duplicate) or dead (their origin ended,
+	 * so the switch request ends them); the actor's own live switch and
+	 * sessions no switch made are neither.
+	 *
+	 * @return void
+	 */
+	public function test_sw8_classify_switches_live_and_dead() {
+		$lookup = array( $this, 'lookup' );
+
+		// userb (3) holds: its own sign-in, a switch from usera (2, live), a
+		// switch from admin2 (5) whose session ended, and one with a link
+		// that has no verifier.
+		$sessions = array(
+			'v-own'  => array( 'expiration' => 2000000000 ),
+			'v-ub'   => $this->sessions['3|v-ub'],
+			'v-dead' => array(
+				'blt_switched_from_id'      => '5',
+				'blt_switched_from_session' => 'v-gone',
+			),
+			'v-bad'  => array( 'blt_switched_from_id' => 4 ),
+		);
+
+		$this->assertSame(
+			array(
+				'live' => array( 'v-ub' => 2 ),
+				'dead' => array(
+					'v-dead' => array(
+						'from'  => 5,
+						'named' => array( 5 ),
+					),
+					'v-bad'  => array(
+						'from'  => 4,
+						'named' => array(),
+					),
+				),
+			),
+			BLT_Toolkit_Switch::classify_switches( $sessions, 7, $lookup )
+		);
+
+		$this->assertSame( array(), BLT_Toolkit_Switch::classify_switches( $sessions, 2, $lookup )['live'], 'usera\'s own switch is no duplicate for usera.' );
+
+		// admin's session ended (a sign-in over the switched browser): the
+		// switch from usera is dead too, and still names admin.
+		unset( $this->sessions['1|v-a'] );
+
+		$sorted = BLT_Toolkit_Switch::classify_switches( $sessions, 7, $lookup );
+
+		$this->assertSame( array(), $sorted['live'] );
+		$this->assertSame(
+			array(
+				'from'  => 2,
+				'named' => array( 1, 2 ),
+			),
+			$sorted['dead']['v-ub']
+		);
+		$this->assertSame( array(), BLT_Toolkit_Switch::classify_switches( array( 'v-own' => array( 'expiration' => 1 ) ), 7, $lookup )['dead'] );
+	}
+
+	/**
+	 * SW-10, UN-12: the session key a switch writes is spelled the same in
+	 * the classes that read it without loading the Switch module.
+	 *
+	 * @return void
+	 */
+	public function test_sw10_session_key_names_match() {
+		$this->assertSame( BLT_Toolkit_Switch::FROM_ID, BLT_Toolkit_Switch_Cookies::SESSION_FROM_ID );
+		$this->assertSame( BLT_Toolkit_Switch::FROM_ID, BLT_Toolkit_Username_Changer::SESSION_FROM_ID );
+		$this->assertSame( BLT_Toolkit_Switch::FROM_SESSION, BLT_Toolkit_Username_Changer::SESSION_FROM_SESSION );
+	}
 }

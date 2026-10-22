@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: BLT Toolkit 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/S-FX-com/BLT-Toolkit/issues\n"
-"POT-Creation-Date: 2026-10-22 14:43+0000\n"
+"POT-Creation-Date: 2026-10-22 17:20+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -21,29 +21,30 @@ msgstr ""
 #: admin/class-blt-toolkit-admin-isolation.php:192
 #: admin/class-blt-toolkit-admin-isolation.php:409
 #: admin/class-blt-toolkit-admin-isolation.php:420
-#: admin/class-blt-toolkit-admin-legacy.php:454
+#: admin/class-blt-toolkit-admin-legacy.php:457
 #: admin/class-blt-toolkit-admin-role-lifecycle.php:161
 #: admin/class-blt-toolkit-admin-role-lifecycle.php:267
 #: admin/class-blt-toolkit-admin-role-lifecycle.php:807
 #: admin/class-blt-toolkit-admin-roles.php:242
 #: admin/class-blt-toolkit-admin-roles.php:253
-#: admin/class-blt-toolkit-admin.php:355
-#: admin/class-blt-toolkit-admin.php:356
-#: admin/class-blt-toolkit-admin.php:475
-#: admin/class-blt-toolkit-admin.php:809
-#: admin/class-blt-toolkit-admin.php:820
+#: admin/class-blt-toolkit-admin.php:369
+#: admin/class-blt-toolkit-admin.php:370
+#: admin/class-blt-toolkit-admin.php:489
+#: admin/class-blt-toolkit-admin.php:826
+#: admin/class-blt-toolkit-admin.php:837
 #: admin/views/header.php:23
 #: includes/class-blt-toolkit-capability-catalog.php:684
 #: includes/class-blt-toolkit-capability-catalog.php:708
-#: includes/class-blt-toolkit-capability-catalog.php:1807
+#: includes/class-blt-toolkit-capability-catalog.php:1808
 #: includes/class-blt-toolkit-jobs.php:908
 #: includes/class-blt-toolkit-jobs.php:916
 #: includes/class-blt-toolkit-jobs.php:920
-#: includes/class-blt-toolkit-plugin.php:510
+#: includes/class-blt-toolkit-plugin.php:521
 #: includes/class-blt-toolkit-simple-controls.php:147
+#: includes/class-blt-toolkit-site-health.php:540
 #: includes/class-blt-toolkit-user-roles.php:1971
 #: includes/class-blt-toolkit-user-roles.php:1982
-#: includes/class-blt-toolkit-username-shortcode.php:621
+#: includes/class-blt-toolkit-username-shortcode.php:624
 msgid "BLT Toolkit"
 msgstr ""
 
@@ -70,6 +71,7 @@ msgstr ""
 #: admin/class-blt-toolkit-admin-activity-table.php:70
 #: admin/views/usernames-recent.php:51
 #: admin/views/usernames-recent.php:73
+#: includes/class-blt-toolkit-privacy.php:304
 msgid "What happened"
 msgstr ""
 
@@ -77,11 +79,12 @@ msgstr ""
 #: admin/views/activity-details.php:23
 #: admin/views/usernames-recent.php:49
 #: admin/views/usernames-recent.php:59
+#: includes/class-blt-toolkit-privacy.php:296
 msgid "When"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity-table.php:72
-#: admin/class-blt-toolkit-admin-activity.php:953
+#: admin/class-blt-toolkit-admin-activity.php:978
 #: admin/views/activity-details.php:48
 #: admin/views/activity.php:107
 #: admin/views/usernames-recent.php:50
@@ -131,7 +134,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: admin/class-blt-toolkit-admin-activity.php:336
-#: admin/class-blt-toolkit-admin-activity.php:946
+#: admin/class-blt-toolkit-admin-activity.php:971
 msgid "ID"
 msgstr ""
 
@@ -144,13 +147,13 @@ msgid "Time (UTC)"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:339
-#: admin/class-blt-toolkit-admin-activity.php:951
+#: admin/class-blt-toolkit-admin-activity.php:976
 #: admin/views/activity.php:87
 msgid "Module"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:340
-#: admin/class-blt-toolkit-admin-activity.php:952
+#: admin/class-blt-toolkit-admin-activity.php:977
 #: admin/views/activity.php:97
 #: admin/views/tools-transfer-preview.php:162
 #: admin/views/tools-transfer-preview.php:332
@@ -170,7 +173,7 @@ msgid "Acting as ID"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:344
-#: admin/class-blt-toolkit-admin-activity.php:954
+#: admin/class-blt-toolkit-admin-activity.php:979
 #: admin/views/activity-details.php:52
 #: admin/views/activity.php:122
 msgid "Acting as"
@@ -197,7 +200,7 @@ msgid "IP"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:351
-#: admin/class-blt-toolkit-admin-activity.php:940
+#: admin/class-blt-toolkit-admin-activity.php:965
 msgid "Source"
 msgstr ""
 
@@ -252,182 +255,205 @@ msgid "Switched off"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:597
-msgid "Username changed"
+msgid "Switched session ended"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:598
-msgid "Bulk rename"
+msgid "Username changed"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:599
-msgid "Bulk rename cancelled"
+msgid "Username change paused"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:600
-msgid "Bulk rename retried"
+msgid "Bulk rename"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:601
-msgid "Role saved"
+msgid "Bulk rename cancelled"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:602
-msgid "Roles saved"
+msgid "Bulk rename retried"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:603
-msgid "Role created"
+msgid "Role saved"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:604
-msgid "Role deleted"
+msgid "Roles saved"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:605
-msgid "Role renamed"
+msgid "Role created"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:606
-msgid "Role copied"
+msgid "Role deleted"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:607
-msgid "Roles merged"
+msgid "Role renamed"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:608
-msgid "Roles reset"
+msgid "Role copied"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:609
-msgid "Roles imported"
+msgid "Roles merged"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:610
-msgid "Roles exported"
+msgid "Roles reset"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:611
-msgid "Snapshot restored"
+msgid "Roles imported"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:612
-msgid "Capability added"
+msgid "Roles exported"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:613
-msgid "Capability deleted"
+msgid "Snapshot restored"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:614
-msgid "User roles changed"
+msgid "Capability added"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:615
-msgid "User capabilities changed"
+msgid "Capability deleted"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:616
-msgid "Role details saved"
+msgid "User roles changed"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:617
-msgid "Role reassignment cancelled"
+msgid "User capabilities changed"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:618
-msgid "Role reassignment retried"
+msgid "Role details saved"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:619
-msgid "Separate permissions on"
+msgid "Role reassignment cancelled"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:620
-msgid "Separate permissions off"
+msgid "Role reassignment retried"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:621
-msgid "Administrator synced"
+msgid "Separate permissions on"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:622
-msgid "Recovery mode"
+msgid "Separate permissions off"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:623
-msgid "Activity exported"
+msgid "Administrator synced"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:624
-msgid "Old entries removed"
+msgid "Recovery mode"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:625
+msgid "Activity exported"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-activity.php:626
+msgid "Old entries removed"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-activity.php:627
 msgid "Imported from another plugin"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:640
+#: admin/class-blt-toolkit-admin-activity.php:628
+msgid "Personal data erased"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-activity.php:629
+msgid "Log warning cleared"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-activity.php:630
+msgid "Tables created again"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-activity.php:645
 msgid "Failed"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:642
+#: admin/class-blt-toolkit-admin-activity.php:647
 #: admin/views/usernames-plan.php:129
 msgid "Warning"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:645
+#: admin/class-blt-toolkit-admin-activity.php:650
 msgid "Success"
 msgstr ""
 
 #. translators: %s: a user's name.
 #. translators: %s: username.
-#: admin/class-blt-toolkit-admin-activity.php:667
+#: admin/class-blt-toolkit-admin-activity.php:672
 #: admin/views/tools-legacy-ure.php:275
 msgid "User: %s"
 msgstr ""
 
 #. translators: %s: role ID, such as editor.
 #. translators: %s: role name.
-#: admin/class-blt-toolkit-admin-activity.php:674
+#: admin/class-blt-toolkit-admin-activity.php:679
 #: admin/views/tools-legacy-ure.php:254
 msgid "Role: %s"
 msgstr ""
 
 #. translators: 1: role name, 2: role ID.
-#: admin/class-blt-toolkit-admin-activity.php:678
+#: admin/class-blt-toolkit-admin-activity.php:683
 msgid "Role: %1$s (%2$s)"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:681
+#: admin/class-blt-toolkit-admin-activity.php:686
 #: admin/class-blt-toolkit-admin-settings.php:111
 #: admin/views/activity.php:37
 #: admin/views/settings-log.php:21
+#: includes/class-blt-toolkit-privacy.php:196
 msgid "Activity log"
 msgstr ""
 
 #. translators: %d: snapshot number.
-#: admin/class-blt-toolkit-admin-activity.php:685
+#: admin/class-blt-toolkit-admin-activity.php:690
 #: admin/views/tools-snapshots.php:75
 msgid "Snapshot %d"
 msgstr ""
 
 #. translators: 1: kind of thing, such as Post type, 2: its ID.
 #. translators: 1: module name, 2: action name.
+#. translators: 1: module name, such as Roles. 2: action name, such as Role saved.
 #. translators: 1: role name, 2: why it cannot be deleted.
-#: admin/class-blt-toolkit-admin-activity.php:689
+#: admin/class-blt-toolkit-admin-activity.php:694
 #: admin/views/activity-details.php:40
+#: includes/class-blt-toolkit-privacy.php:291
 #: includes/class-blt-toolkit-role-lifecycle.php:1803
 msgid "%1$s: %2$s"
 msgstr ""
 
 #. translators: %s: a span of time, such as "3 hours".
-#: admin/class-blt-toolkit-admin-activity.php:747
+#: admin/class-blt-toolkit-admin-activity.php:752
 #: admin/class-blt-toolkit-admin-tools.php:864
 msgid "%s ago"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:859
+#: admin/class-blt-toolkit-admin-activity.php:865
 #: admin/views/roles-delete-cap.php:65
 #: admin/views/roles-delete-cap.php:79
 #: admin/views/roles-user.php:82
@@ -436,104 +462,112 @@ msgstr ""
 msgid "None"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:863
-#: admin/class-blt-toolkit-admin-activity.php:903
+#: admin/class-blt-toolkit-admin-activity.php:869
+#: admin/class-blt-toolkit-admin-activity.php:909
 msgid "No"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:863
-#: admin/class-blt-toolkit-admin-activity.php:903
+#: admin/class-blt-toolkit-admin-activity.php:869
+#: admin/class-blt-toolkit-admin-activity.php:909
 msgid "Yes"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:878
+#: admin/class-blt-toolkit-admin-activity.php:884
 msgid "changed to"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:917
+#: admin/class-blt-toolkit-admin-activity.php:926
+msgid "Someone signed in on the same browser"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-activity.php:928
+msgid "The session it was switched from had ended"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-activity.php:942
 msgid "Before"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:918
+#: admin/class-blt-toolkit-admin-activity.php:943
 msgid "After"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:919
+#: admin/class-blt-toolkit-admin-activity.php:944
 msgid "Old username"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:920
+#: admin/class-blt-toolkit-admin-activity.php:945
 #: includes/class-blt-toolkit-username-profile.php:198
 #: includes/class-blt-toolkit-username-profile.php:263
 #: templates/username-form.php:91
 msgid "New username"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:921
-#: admin/class-blt-toolkit-admin-activity.php:922
+#: admin/class-blt-toolkit-admin-activity.php:946
+#: admin/class-blt-toolkit-admin-activity.php:947
 msgid "Changes"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:923
+#: admin/class-blt-toolkit-admin-activity.php:948
 msgid "Reason"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:924
-#: admin/views/tools-legacy-uc.php:227
+#: admin/class-blt-toolkit-admin-activity.php:949
+#: admin/views/tools-legacy-uc.php:234
 msgid "Entries"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:925
+#: admin/class-blt-toolkit-admin-activity.php:950
 msgid "Filters"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:926
+#: admin/class-blt-toolkit-admin-activity.php:951
 msgid "Entries removed"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:927
+#: admin/class-blt-toolkit-admin-activity.php:952
 msgid "Older than (UTC)"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:928
+#: admin/class-blt-toolkit-admin-activity.php:953
 msgid "Keep entries for (days)"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:929
+#: admin/class-blt-toolkit-admin-activity.php:954
 #: admin/class-blt-toolkit-admin-usernames.php:270
 msgid "Error"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:930
+#: admin/class-blt-toolkit-admin-activity.php:955
 msgid "Too large to keep in full"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:931
+#: admin/class-blt-toolkit-admin-activity.php:956
 msgid "Size in bytes"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:932
+#: admin/class-blt-toolkit-admin-activity.php:957
 msgid "Recorded fields"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:933
+#: admin/class-blt-toolkit-admin-activity.php:958
 msgid "Capabilities granted"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:934
+#: admin/class-blt-toolkit-admin-activity.php:959
 msgid "Capabilities denied"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:935
+#: admin/class-blt-toolkit-admin-activity.php:960
 msgid "Back to what the roles give"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:936
+#: admin/class-blt-toolkit-admin-activity.php:961
 #: admin/views/tools-legacy-ure.php:30
 msgid "Added"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:937
+#: admin/class-blt-toolkit-admin-activity.php:962
 #: admin/class-blt-toolkit-admin-roles.php:4759
 #: admin/views/isolation-change.php:24
 #: admin/views/roles-review.php:40
@@ -541,103 +575,103 @@ msgstr ""
 msgid "Removed"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:938
+#: admin/class-blt-toolkit-admin-activity.php:963
 #: admin/views/tools-transfer-preview.php:35
 msgid "Unchanged"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:939
+#: admin/class-blt-toolkit-admin-activity.php:964
 #: admin/views/tools-transfer-preview.php:495
 #: admin/views/tools-transfer-preview.php:509
 #: admin/views/usernames-plan.php:48
 msgid "Skipped"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:941
+#: admin/class-blt-toolkit-admin-activity.php:966
 msgid "Where"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:942
+#: admin/class-blt-toolkit-admin-activity.php:967
 msgid "Role created again"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:943
+#: admin/class-blt-toolkit-admin-activity.php:968
 msgid "Snapshot could not be saved"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:944
+#: admin/class-blt-toolkit-admin-activity.php:969
 #: admin/views/tools-reset.php:121
 #: admin/views/tools-snapshot-restore.php:100
 #: admin/views/tools-sync.php:65
 msgid "Roles defined in code"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:945
+#: admin/class-blt-toolkit-admin-activity.php:970
 msgid "Restored snapshot"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:947
+#: admin/class-blt-toolkit-admin-activity.php:972
 msgid "Taken (UTC)"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:948
+#: admin/class-blt-toolkit-admin-activity.php:973
 msgid "How much changed"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:949
+#: admin/class-blt-toolkit-admin-activity.php:974
 #: admin/class-blt-toolkit-admin-settings.php:110
 #: admin/class-blt-toolkit-admin.php:170
-#: admin/class-blt-toolkit-admin.php:393
-#: admin/class-blt-toolkit-admin.php:394
+#: admin/class-blt-toolkit-admin.php:407
+#: admin/class-blt-toolkit-admin.php:408
 #: admin/views/isolation-isolate.php:207
-#: admin/views/overview.php:141
+#: admin/views/overview.php:157
 #: admin/views/roles-sidebar.php:21
 #: admin/views/roles-sidebar.php:26
 #: admin/views/settings-roles.php:40
 #: admin/views/tools-transfer-preview.php:153
-#: includes/class-blt-toolkit-plugin.php:307
+#: includes/class-blt-toolkit-plugin.php:318
 msgid "Roles"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:950
+#: admin/class-blt-toolkit-admin-activity.php:975
 #: admin/views/tools-transfer.php:43
 #: includes/class-blt-toolkit-user-caps.php:147
 msgid "Capabilities"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:955
+#: admin/class-blt-toolkit-admin-activity.php:980
 #: admin/views/activity.php:134
 msgid "From"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:956
+#: admin/class-blt-toolkit-admin-activity.php:981
 #: admin/views/activity.php:139
 msgid "To"
 msgstr ""
 
 #. translators: %d: position in a list, starting at 1.
 #. translators: %d: the item's position in the job, starting at 1.
-#: admin/class-blt-toolkit-admin-activity.php:961
+#: admin/class-blt-toolkit-admin-activity.php:986
 #: includes/class-blt-toolkit-jobs.php:1924
 msgid "Item %d"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:1014
+#: admin/class-blt-toolkit-admin-activity.php:1039
 msgid "No role or capability changed."
 msgstr ""
 
 #. translators: %s: role name, in bold.
-#: admin/class-blt-toolkit-admin-activity.php:1021
+#: admin/class-blt-toolkit-admin-activity.php:1046
 msgid "Role added: %s"
 msgstr ""
 
 #. translators: %s: role name, in bold.
-#: admin/class-blt-toolkit-admin-activity.php:1023
+#: admin/class-blt-toolkit-admin-activity.php:1048
 msgid "Role removed: %s"
 msgstr ""
 
 #. translators: %s: number of capabilities.
-#: admin/class-blt-toolkit-admin-activity.php:1034
+#: admin/class-blt-toolkit-admin-activity.php:1059
 #: admin/views/tools-reset.php:145
 #: admin/views/tools-snapshot-restore.php:119
 #: admin/views/tools-snapshot-view.php:77
@@ -648,26 +682,26 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of capabilities.
-#: admin/class-blt-toolkit-admin-activity.php:1036
+#: admin/class-blt-toolkit-admin-activity.php:1061
 msgid "%s capability it had"
 msgid_plural "%s capabilities it had"
 msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: old role name, 2: new role name.
-#: admin/class-blt-toolkit-admin-activity.php:1070
+#: admin/class-blt-toolkit-admin-activity.php:1095
 msgid "Renamed from “%1$s” to “%2$s”."
 msgstr ""
 
 #. translators: %s: number of capabilities.
-#: admin/class-blt-toolkit-admin-activity.php:1078
+#: admin/class-blt-toolkit-admin-activity.php:1103
 msgid "%s capability added"
 msgid_plural "%s capabilities added"
 msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of capabilities.
-#: admin/class-blt-toolkit-admin-activity.php:1083
+#: admin/class-blt-toolkit-admin-activity.php:1108
 #: admin/class-blt-toolkit-admin-roles.php:4030
 #: includes/class-blt-toolkit-role-store.php:1030
 msgid "%s capability removed"
@@ -675,22 +709,22 @@ msgid_plural "%s capabilities removed"
 msgstr[0] ""
 msgstr[1] ""
 
-#: admin/class-blt-toolkit-admin-activity.php:1092
+#: admin/class-blt-toolkit-admin-activity.php:1117
 msgid "now denied (was granted)"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:1092
+#: admin/class-blt-toolkit-admin-activity.php:1117
 msgid "now granted (was denied)"
 msgstr ""
 
 #. translators: %s: number of capabilities.
-#: admin/class-blt-toolkit-admin-activity.php:1099
+#: admin/class-blt-toolkit-admin-activity.php:1124
 msgid "%s capability switched between granted and denied"
 msgid_plural "%s capabilities switched between granted and denied"
 msgstr[0] ""
 msgstr[1] ""
 
-#: admin/class-blt-toolkit-admin-activity.php:1126
+#: admin/class-blt-toolkit-admin-activity.php:1151
 msgid "(denied)"
 msgstr ""
 
@@ -698,7 +732,7 @@ msgstr ""
 #: admin/class-blt-toolkit-admin-isolation.php:191
 #: admin/class-blt-toolkit-admin-role-lifecycle.php:160
 #: admin/class-blt-toolkit-admin-role-lifecycle.php:266
-#: admin/class-blt-toolkit-admin.php:474
+#: admin/class-blt-toolkit-admin.php:488
 msgid "Sorry, you are not allowed to access this page."
 msgstr ""
 
@@ -730,18 +764,18 @@ msgstr ""
 
 #: admin/class-blt-toolkit-admin-isolation.php:408
 #: admin/class-blt-toolkit-admin-roles.php:241
-#: admin/class-blt-toolkit-admin.php:808
+#: admin/class-blt-toolkit-admin.php:825
 #: includes/class-blt-toolkit-jobs.php:908
 #: includes/class-blt-toolkit-user-roles.php:1970
-#: includes/class-blt-toolkit-username-shortcode.php:620
+#: includes/class-blt-toolkit-username-shortcode.php:623
 msgid "This action needs a form submission."
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-isolation.php:419
-#: admin/class-blt-toolkit-admin-legacy.php:453
+#: admin/class-blt-toolkit-admin-legacy.php:456
 #: admin/class-blt-toolkit-admin-role-lifecycle.php:806
 #: admin/class-blt-toolkit-admin-roles.php:252
-#: admin/class-blt-toolkit-admin.php:819
+#: admin/class-blt-toolkit-admin.php:836
 #: includes/class-blt-toolkit-guard.php:2451
 #: includes/class-blt-toolkit-jobs.php:920
 #: includes/class-blt-toolkit-rest.php:208
@@ -786,75 +820,75 @@ msgstr ""
 
 #. translators: %s: the reason.
 #: admin/class-blt-toolkit-admin-isolation.php:622
-#: admin/class-blt-toolkit-admin-legacy.php:472
+#: admin/class-blt-toolkit-admin-legacy.php:475
 #: admin/class-blt-toolkit-admin-role-lifecycle.php:1362
 #: admin/class-blt-toolkit-admin-roles.php:3937
 #: admin/class-blt-toolkit-admin-tools.php:698
 msgid "Nothing was changed: %s"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-legacy.php:230
+#: admin/class-blt-toolkit-admin-legacy.php:233
 msgid "no one signed in"
 msgstr ""
 
 #. translators: 1: date and time, 2: a person's name.
-#: admin/class-blt-toolkit-admin-legacy.php:235
+#: admin/class-blt-toolkit-admin-legacy.php:238
 msgid "Imported %1$s by %2$s"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-legacy.php:253
+#: admin/class-blt-toolkit-admin-legacy.php:256
 #: admin/class-blt-toolkit-admin.php:178
-#: admin/class-blt-toolkit-admin.php:449
-#: admin/views/overview.php:37
+#: admin/class-blt-toolkit-admin.php:463
+#: admin/views/overview.php:53
 #: admin/views/settings-support-agent.php:31
 #: admin/views/settings.php:26
 #: admin/views/tools-legacy-uc.php:59
 msgid "Settings"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-legacy.php:255
+#: admin/class-blt-toolkit-admin-legacy.php:258
 #: admin/views/tools-legacy-uc.php:137
 msgid "Who may change their own username"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-legacy.php:257
-#: admin/views/tools-legacy-uc.php:204
+#: admin/class-blt-toolkit-admin-legacy.php:260
+#: admin/views/tools-legacy-uc.php:211
 msgid "Audit log"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-legacy.php:259
+#: admin/class-blt-toolkit-admin-legacy.php:262
 #: admin/views/tools-legacy-ure.php:75
 msgid "Other default roles"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-legacy.php:261
+#: admin/class-blt-toolkit-admin-legacy.php:264
 #: admin/views/tools-legacy-ure.php:82
 msgid "Hidden admin bar"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-legacy.php:263
+#: admin/class-blt-toolkit-admin-legacy.php:266
 #: admin/views/tools-legacy-ure.php:149
 msgid "Roles backup"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-legacy.php:265
+#: admin/class-blt-toolkit-admin-legacy.php:268
 #: admin/views/tools-legacy-ure.php:219
 msgid "User Role Editor's capabilities"
 msgstr ""
 
 #. translators: %d: snapshot number.
-#: admin/class-blt-toolkit-admin-legacy.php:384
+#: admin/class-blt-toolkit-admin-legacy.php:387
 #: admin/class-blt-toolkit-admin-tools.php:685
 msgid "Preview restoring snapshot %d"
 msgstr ""
 
 #. translators: 1: what was being imported, 2: the reason.
-#: admin/class-blt-toolkit-admin-legacy.php:415
+#: admin/class-blt-toolkit-admin-legacy.php:418
 msgid "%1$s: not imported. %2$s"
 msgstr ""
 
 #. translators: %d: snapshot number.
-#: admin/class-blt-toolkit-admin-legacy.php:437
+#: admin/class-blt-toolkit-admin-legacy.php:440
 msgid "View snapshot %d"
 msgstr ""
 
@@ -887,7 +921,8 @@ msgstr ""
 
 #: admin/class-blt-toolkit-admin-overview.php:232
 #: admin/class-blt-toolkit-admin-overview.php:242
-#: admin/class-blt-toolkit-admin.php:706
+#: admin/class-blt-toolkit-admin.php:723
+#: includes/class-blt-toolkit-site-health.php:169
 msgid "Go to Plugins"
 msgstr ""
 
@@ -1018,7 +1053,7 @@ msgstr ""
 
 #: admin/class-blt-toolkit-admin-role-lifecycle.php:843
 #: admin/class-blt-toolkit-admin-role-lifecycle.php:926
-#: admin/class-blt-toolkit-admin.php:1017
+#: admin/class-blt-toolkit-admin.php:1034
 msgid "Nothing was changed: type the role name exactly as shown to confirm."
 msgstr ""
 
@@ -1743,70 +1778,65 @@ msgstr ""
 
 #: admin/class-blt-toolkit-admin-settings.php:109
 #: admin/class-blt-toolkit-admin.php:172
-#: includes/class-blt-toolkit-plugin.php:303
+#: includes/class-blt-toolkit-plugin.php:314
 msgid "Usernames"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-settings.php:149
-#: admin/views/settings-advanced.php:137
+#: admin/views/settings-advanced.php:153
 msgid "Check for Updates"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:533
+#: admin/class-blt-toolkit-admin-settings.php:539
 msgid "This site's roles are defined in code, so they cannot be changed here."
 msgstr ""
 
 #. translators: %l: list of role names, such as "Author and Editor".
-#: admin/class-blt-toolkit-admin-settings.php:627
+#: admin/class-blt-toolkit-admin-settings.php:633
 msgid "now allowed for %l"
 msgstr ""
 
 #. translators: %l: list of role names, such as "Author and Editor".
-#: admin/class-blt-toolkit-admin-settings.php:632
+#: admin/class-blt-toolkit-admin-settings.php:638
 msgid "no longer allowed for %l"
 msgstr ""
 
 #. translators: %s: what changed, such as "now allowed for Author; no longer allowed for Subscriber".
-#: admin/class-blt-toolkit-admin-settings.php:639
+#: admin/class-blt-toolkit-admin-settings.php:645
 msgid "Changed who can change their own username: %s."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:673
+#: admin/class-blt-toolkit-admin-settings.php:679
 msgid "Support Agent"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:733
+#: admin/class-blt-toolkit-admin-settings.php:739
 #: includes/class-blt-toolkit-capability-catalog.php:371
 msgid "Sign in to the dashboard and edit their own profile"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:734
+#: admin/class-blt-toolkit-admin-settings.php:740
 #: includes/class-blt-toolkit-capability-catalog.php:424
 #: includes/class-blt-toolkit-simple-controls.php:915
 msgid "See the list of users"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:735
+#: admin/class-blt-toolkit-admin-settings.php:741
 msgid "Switch to users"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:810
-#: admin/class-blt-toolkit-admin-settings.php:825
+#: admin/class-blt-toolkit-admin-settings.php:816
+#: admin/class-blt-toolkit-admin-settings.php:831
 msgid "The Support Agent role already exists."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:815
+#: admin/class-blt-toolkit-admin-settings.php:821
 msgid "This site's roles are defined in code, so a role cannot be added here."
 msgstr ""
 
 #. translators: %s: role name, such as Support Agent.
-#: admin/class-blt-toolkit-admin-settings.php:845
+#: admin/class-blt-toolkit-admin-settings.php:851
 msgid "Created the %s role: it can sign in, see the list of users and switch to users who have no more access than itself."
-msgstr ""
-
-#: admin/class-blt-toolkit-admin-settings.php:970
-#: admin/views/placeholder.php:46
-msgid "Coming soon"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-tools.php:125
@@ -1830,6 +1860,7 @@ msgid "Sync administrator"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-tools.php:132
+#: includes/class-blt-toolkit-site-health.php:165
 msgid "Import from legacy plugins"
 msgstr ""
 
@@ -2077,11 +2108,12 @@ msgid "The file is too large: it can be at most %s. Split it into smaller files.
 msgstr ""
 
 #: admin/class-blt-toolkit-admin.php:168
-#: admin/views/overview.php:34
+#: admin/views/overview.php:50
 msgid "Overview"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin.php:174
+#: includes/class-blt-toolkit-privacy.php:300
 msgid "Activity"
 msgstr ""
 
@@ -2090,214 +2122,214 @@ msgid "Tools"
 msgstr ""
 
 #. translators: %s: screen name, such as Roles or Settings.
-#: admin/class-blt-toolkit-admin.php:370
+#: admin/class-blt-toolkit-admin.php:384
 msgid "BLT Toolkit %s"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:659
+#: admin/class-blt-toolkit-admin.php:676
 #: admin/views/usernames-plan.php:197
 #: admin/views/usernames-plan.php:201
-#: includes/class-blt-toolkit-legacy.php:2471
+#: includes/class-blt-toolkit-legacy.php:2472
 msgid "On"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:661
+#: admin/class-blt-toolkit-admin.php:678
 msgid "Conflict"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:663
+#: admin/class-blt-toolkit-admin.php:680
 msgid "Disabled in wp-config.php"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:666
+#: admin/class-blt-toolkit-admin.php:683
 #: admin/views/usernames-plan.php:197
 #: admin/views/usernames-plan.php:201
-#: includes/class-blt-toolkit-legacy.php:2471
+#: includes/class-blt-toolkit-legacy.php:2472
 msgid "Off"
 msgstr ""
 
 #. translators: 1: other plugin's name, such as User Switching, 2: module name.
-#: admin/class-blt-toolkit-admin.php:682
+#: admin/class-blt-toolkit-admin.php:699
 msgid "%1$s is active, so the %2$s module is not running. Deactivate %1$s to use it."
 msgstr ""
 
 #. translators: %s: constant name.
-#: admin/class-blt-toolkit-admin.php:692
+#: admin/class-blt-toolkit-admin.php:709
 msgid "It is also switched off by %s in wp-config.php; remove it from that constant too."
 msgstr ""
 
 #. translators: 1: module name, 2: constant name.
-#: admin/class-blt-toolkit-admin.php:715
+#: admin/class-blt-toolkit-admin.php:732
 msgid "The %1$s module is switched off by %2$s in wp-config.php, whatever its setting says. Remove it from that constant to use the module again."
 msgstr ""
 
 #. translators: %s: module name.
-#: admin/class-blt-toolkit-admin.php:724
+#: admin/class-blt-toolkit-admin.php:741
 msgid "The %s module is switched off, so its features are not available."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:729
+#: admin/class-blt-toolkit-admin.php:746
 msgid "Turn it on in Settings"
 msgstr ""
 
 #. translators: %s: module name, such as Roles.
-#: admin/class-blt-toolkit-admin.php:775
+#: admin/class-blt-toolkit-admin.php:792
 msgid "The %s module is not running"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:961
+#: admin/class-blt-toolkit-admin.php:978
 msgid "Settings saved."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:964
+#: admin/class-blt-toolkit-admin.php:981
 msgid "Settings saved. A number was outside its allowed range or not a number, so the nearest allowed value, or the previous value, was saved instead. Check the values below."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:968
+#: admin/class-blt-toolkit-admin.php:985
 msgid "Settings saved, but no role was changed: you are not allowed to change who can change their own username for one of the roles you chose. BLT Toolkit protects the Administrator role, your own roles and roles with more access than yours."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:971
+#: admin/class-blt-toolkit-admin.php:988
 msgid "Settings saved, but no role was changed: a copy of the roles could not be saved first. Try again; if this keeps happening, the PHP error log says why."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:974
+#: admin/class-blt-toolkit-admin.php:991
 msgid "Settings saved, but no role was changed: this site's roles are defined in code, so who can change their own username must be set there."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:977
+#: admin/class-blt-toolkit-admin.php:994
 msgid "Settings saved, but the roles could not be saved. Check who can change their own username below and try again."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:980
+#: admin/class-blt-toolkit-admin.php:997
 msgid "Modules saved. A module that is switched off loads no code; protection for administrators and the activity log keep running."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:983
+#: admin/class-blt-toolkit-admin.php:1000
 msgid "Settings saved. The GitHub token is stored encrypted. Use Test connection to check it."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:986
+#: admin/class-blt-toolkit-admin.php:1003
 msgid "Settings saved, but the token was not: it does not look like a GitHub token. Paste it exactly as GitHub showed it."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:989
+#: admin/class-blt-toolkit-admin.php:1006
 msgid "Settings saved, but the token was not: this server has neither libsodium nor OpenSSL AES-GCM, so it cannot be stored encrypted. Define BLT_TOOLKIT_GITHUB_TOKEN in wp-config.php instead."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:992
+#: admin/class-blt-toolkit-admin.php:1009
 msgid "Settings saved, but the token could not be encrypted, so it was not stored. Try again."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:995
+#: admin/class-blt-toolkit-admin.php:1012
 msgid "The stored GitHub token was removed. A token in wp-config.php or in the shared BLT settings, if there is one, still applies."
 msgstr ""
 
 #. translators: %s: error code from the HTTP library, such as http_request_failed.
-#: admin/class-blt-toolkit-admin.php:1005
+#: admin/class-blt-toolkit-admin.php:1022
 msgid "GitHub could not be reached from this server (%s). Check that the host allows outgoing HTTPS requests to api.github.com."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1011
+#: admin/class-blt-toolkit-admin.php:1028
 msgid "The Support Agent role was created. Give it to someone from their profile or from the Users screen."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1014
+#: admin/class-blt-toolkit-admin.php:1031
 msgid "The Support Agent role already exists, so nothing was changed."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1020
+#: admin/class-blt-toolkit-admin.php:1037
 msgid "Nothing was changed: a copy of the roles could not be saved first. Try again; if this keeps happening, the PHP error log says why."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1023
+#: admin/class-blt-toolkit-admin.php:1040
 msgid "Nothing was changed: creating this role needs the \"Create roles\" permission and every capability the role would have."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1026
+#: admin/class-blt-toolkit-admin.php:1043
 msgid "The Support Agent role could not be created. Try again."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1030
+#: admin/class-blt-toolkit-admin.php:1047
 msgid "The bulk rename has started. It keeps running in the background if you leave this page; come back here to see how it went."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1033
+#: admin/class-blt-toolkit-admin.php:1050
 msgid "Nothing was renamed: confirm that you have a recent backup of this site first."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1036
+#: admin/class-blt-toolkit-admin.php:1053
 msgid "Nothing was renamed: another bulk rename is still running. Start this one when it has finished, or cancel the other."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1039
+#: admin/class-blt-toolkit-admin.php:1056
 msgid "Nothing was renamed: no row of the file is ready."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1042
+#: admin/class-blt-toolkit-admin.php:1059
 msgid "Nothing was renamed: the bulk rename could not be started. Try again."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1045
+#: admin/class-blt-toolkit-admin.php:1062
 msgid "Nothing was renamed: that dry run is no longer available. It expires after an hour, or when you upload another file. Upload the file again."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1048
+#: admin/class-blt-toolkit-admin.php:1065
 msgid "The file was checked, but the dry run could not be saved. Try again; if this keeps happening, upload fewer rows at a time."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1051
+#: admin/class-blt-toolkit-admin.php:1068
 msgid "The dry run was discarded. Nothing was renamed."
 msgstr ""
 
 #. translators: %s: the largest file accepted, such as 2 MB.
-#: admin/class-blt-toolkit-admin.php:1058
+#: admin/class-blt-toolkit-admin.php:1075
 msgid "Nothing was uploaded: the file is larger than this server accepts. It can be at most %s; split it into smaller files."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1064
+#: admin/class-blt-toolkit-admin.php:1081
 msgid "Nothing was changed: the request could not be completed. Try again."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1080
+#: admin/class-blt-toolkit-admin.php:1097
 msgid "with the token from wp-config.php"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1083
+#: admin/class-blt-toolkit-admin.php:1100
 msgid "with the token stored here"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1086
+#: admin/class-blt-toolkit-admin.php:1103
 msgid "with the token from the shared BLT settings"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1089
+#: admin/class-blt-toolkit-admin.php:1106
 msgid "without a token"
 msgstr ""
 
 #. translators: 1: GitHub repository such as S-FX-com/BLT-Toolkit, 2: how the request was made, such as "with the token stored here".
-#: admin/class-blt-toolkit-admin.php:1099
+#: admin/class-blt-toolkit-admin.php:1116
 msgid "Connected. GitHub answered HTTP 200 for %1$s %2$s, so update checks will work."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1108
+#: admin/class-blt-toolkit-admin.php:1125
 msgid "GitHub rejected the token. It may have expired or been revoked; create a new one and save it here."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1112
+#: admin/class-blt-toolkit-admin.php:1129
 msgid "GitHub refused the request. The token may lack access to the repository, or this server reached GitHub's hourly limit for requests; try again later."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1115
+#: admin/class-blt-toolkit-admin.php:1132
 msgid "GitHub did not find the repository. For a private repository this means the token cannot see it: use a fine-grained token with read-only Contents access to it."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:1118
+#: admin/class-blt-toolkit-admin.php:1135
 msgid "GitHub may be having trouble. Try again in a few minutes."
 msgstr ""
 
 #. translators: 1: HTTP status code, 2: GitHub repository, 3: how the request was made, 4: advice.
-#: admin/class-blt-toolkit-admin.php:1125
+#: admin/class-blt-toolkit-admin.php:1142
 msgid "GitHub answered HTTP %1$d for %2$s %3$s. %4$s"
 msgstr ""
 
@@ -2325,6 +2357,7 @@ msgid "Snapshot %d, taken just before this change"
 msgstr ""
 
 #: admin/views/activity-details.php:86
+#: includes/class-blt-toolkit-privacy.php:323
 msgid "IP address"
 msgstr ""
 
@@ -2565,7 +2598,7 @@ msgstr ""
 #: admin/views/roles-simple-dialogs.php:86
 #: admin/views/roles-simple-review.php:223
 #: admin/views/settings-support-agent.php:159
-#: admin/views/tools-legacy-uc.php:297
+#: admin/views/tools-legacy-uc.php:304
 #: admin/views/tools-legacy-ure.php:209
 #: admin/views/tools-reset.php:208
 #: admin/views/tools-snapshot-restore.php:192
@@ -2715,62 +2748,74 @@ msgstr ""
 msgid "last 30 days"
 msgstr ""
 
-#: admin/views/overview.php:46
+#: admin/views/overview.php:41
+msgid "switch into another account in the last 30 days"
+msgid_plural "switches into another account in the last 30 days"
+msgstr[0] ""
+msgstr[1] ""
+
+#: admin/views/overview.php:44
+msgid "username change in the last 30 days"
+msgid_plural "username changes in the last 30 days"
+msgstr[0] ""
+msgstr[1] ""
+
+#: admin/views/overview.php:62
 msgid "Recovery mode is on"
 msgstr ""
 
 #. translators: %s: constant name.
-#: admin/views/overview.php:51
+#: admin/views/overview.php:67
 msgid "%s is set in wp-config.php: whenever an administrator opens an admin page, the Administrator role gets back any capability it needs to manage the site, or any BLT Toolkit capability, that it lacks. Remove that line as soon as administrators can manage roles again; it is meant for emergencies only."
 msgstr ""
 
-#: admin/views/overview.php:62
+#: admin/views/overview.php:78
 msgid "Moving from other plugins"
 msgstr ""
 
-#: admin/views/overview.php:63
+#: admin/views/overview.php:79
 msgid "BLT Toolkit replaces User Switching, Username Changer and User Role Editor. Roles need no import: they live in WordPress itself. Imports show what they would change first and never change the other plugin's data."
 msgstr ""
 
-#: admin/views/overview.php:83
+#: admin/views/overview.php:99
 #: admin/views/settings-general.php:19
 msgid "Modules"
 msgstr ""
 
-#: admin/views/overview.php:84
+#: admin/views/overview.php:100
 #: admin/views/settings-general.php:20
 msgid "Switch off what this site does not need. A module that is off loads no code. Protection for administrators and the activity log always run, whatever is switched off here."
 msgstr ""
 
 #. translators: 1: modules running, 2: modules in total.
-#: admin/views/overview.php:91
+#: admin/views/overview.php:107
 msgid "%1$d of %2$d running"
 msgstr ""
 
 #. translators: %s: module name, such as Switch.
-#: admin/views/overview.php:119
+#: admin/views/overview.php:135
 #: admin/views/settings-general.php:32
 msgid "%s module"
 msgstr ""
 
-#: admin/views/overview.php:130
+#: admin/views/overview.php:146
 msgid "Save modules"
 msgstr ""
 
-#: admin/views/overview.php:136
+#: admin/views/overview.php:152
 msgid "At a glance"
 msgstr ""
 
-#: admin/views/overview.php:143
+#: admin/views/overview.php:159
 msgid "defined on this site"
 msgstr ""
 
-#: admin/views/overview.php:156
+#: admin/views/overview.php:172
 msgid "Not available"
 msgstr ""
 
-#: admin/views/overview.php:167
-#: admin/views/settings-advanced.php:125
+#: admin/views/overview.php:183
+#: admin/views/settings-advanced.php:141
 msgid "Version"
 msgstr ""
 
@@ -2933,7 +2978,7 @@ msgstr ""
 
 #: admin/views/roles-delete-cap.php:35
 #: includes/class-blt-toolkit-capability-catalog.php:894
-#: includes/class-blt-toolkit-capability-catalog.php:1808
+#: includes/class-blt-toolkit-capability-catalog.php:1809
 msgid "Orphaned"
 msgstr ""
 
@@ -3667,7 +3712,7 @@ msgid "Test as…"
 msgstr ""
 
 #: admin/views/roles-test-as.php:39
-#: includes/class-blt-toolkit-plugin.php:299
+#: includes/class-blt-toolkit-plugin.php:310
 msgid "Switch"
 msgstr ""
 
@@ -3764,147 +3809,161 @@ msgstr ""
 msgid "Role editor view"
 msgstr ""
 
-#: admin/views/settings-advanced.php:29
+#: admin/views/settings-advanced.php:30
 msgid "Set in wp-config.php"
 msgstr ""
 
-#: admin/views/settings-advanced.php:32
+#: admin/views/settings-advanced.php:33
 msgid "Token stored"
 msgstr ""
 
-#: admin/views/settings-advanced.php:35
+#: admin/views/settings-advanced.php:36
 msgid "Shared BLT token"
 msgstr ""
 
-#: admin/views/settings-advanced.php:38
+#: admin/views/settings-advanced.php:39
 msgid "Needs re-entry"
 msgstr ""
 
-#: admin/views/settings-advanced.php:41
+#: admin/views/settings-advanced.php:42
 msgid "No token"
 msgstr ""
 
-#: admin/views/settings-advanced.php:51
+#: admin/views/settings-advanced.php:53
 msgid "Uninstall"
 msgstr ""
 
-#: admin/views/settings-advanced.php:52
+#: admin/views/settings-advanced.php:54
 msgid "What happens when BLT Toolkit is deleted from the Plugins screen. Deactivating it never deletes anything."
 msgstr ""
 
-#: admin/views/settings-advanced.php:59
+#: admin/views/settings-advanced.php:61
 msgid "Delete all plugin data on uninstall"
 msgstr ""
 
-#: admin/views/settings-advanced.php:60
+#: admin/views/settings-advanced.php:62
 msgid "Off by default, so deleting and reinstalling the plugin loses nothing."
 msgstr ""
 
-#: admin/views/settings-advanced.php:64
+#: admin/views/settings-advanced.php:68
 msgid "Warning:"
 msgstr ""
 
-#: admin/views/settings-advanced.php:65
+#: admin/views/settings-advanced.php:69
 msgid "with this on, deleting the plugin permanently removes the activity log, every role snapshot including the baseline, the settings and the stored token, and takes every BLT Toolkit capability off every role and user. It cannot be undone. Your roles, and the changes you made to them, stay as they are."
 msgstr ""
 
-#: admin/views/settings-advanced.php:72
+#: admin/views/settings-advanced.php:76
 msgid "Updates"
 msgstr ""
 
-#: admin/views/settings-advanced.php:73
+#: admin/views/settings-advanced.php:78
 msgid "BLT Toolkit checks GitHub for a new version once a day, at midnight site time. A token is needed only while the repository is private."
 msgstr ""
 
-#: admin/views/settings-advanced.php:82
+#. translators: %s: constant name.
 #: admin/views/settings-advanced.php:84
+msgid "File changes are turned off on this site by %s, so new versions of BLT Toolkit arrive with your deployment. WordPress does not offer or install updates here."
+msgstr ""
+
+#: admin/views/settings-advanced.php:98
+#: admin/views/settings-advanced.php:100
 msgid "GitHub token"
 msgstr ""
 
 #. translators: %s: constant name.
-#: admin/views/settings-advanced.php:93
+#: admin/views/settings-advanced.php:109
 msgid "Set by %s in wp-config.php, which takes precedence over a token saved here. Change it there."
 msgstr ""
 
-#: admin/views/settings-advanced.php:99
+#: admin/views/settings-advanced.php:115
 msgid "Not set"
 msgstr ""
 
-#: admin/views/settings-advanced.php:99
+#: admin/views/settings-advanced.php:115
 msgid "Saved. Leave blank to keep it"
 msgstr ""
 
-#: admin/views/settings-advanced.php:101
+#: admin/views/settings-advanced.php:117
 msgid "The stored token can no longer be read, because the security keys in wp-config.php changed since it was saved. Enter it again."
 msgstr ""
 
-#: admin/views/settings-advanced.php:103
+#: admin/views/settings-advanced.php:119
 msgid "Using the token from the shared BLT settings. A token saved here takes precedence over it."
 msgstr ""
 
-#: admin/views/settings-advanced.php:105
+#: admin/views/settings-advanced.php:121
 msgid "A fine-grained personal access token with read-only Contents access to the repository is enough. It is stored encrypted with your site's security keys and never shown again. A blank field keeps the stored token."
 msgstr ""
 
-#: admin/views/settings-advanced.php:108
+#: admin/views/settings-advanced.php:124
 msgid "Test connection"
 msgstr ""
 
-#: admin/views/settings-advanced.php:110
+#: admin/views/settings-advanced.php:126
 msgid "Remove token"
 msgstr ""
 
 #. translators: %s: GitHub repository, such as S-FX-com/BLT-Toolkit.
-#: admin/views/settings-advanced.php:117
+#: admin/views/settings-advanced.php:133
 msgid "Test connection asks GitHub for %s with the token update checks would use, and reports the answer. Save a new token first to test it."
 msgstr ""
 
 #. translators: %s: plugin version.
-#: admin/views/settings-advanced.php:131
+#: admin/views/settings-advanced.php:147
 msgid "Installed version: %s"
 msgstr ""
 
 #. translators: %s: date and time of the last update check.
-#: admin/views/settings-advanced.php:144
+#: admin/views/settings-advanced.php:162
 msgid "Last checked %s. Checking now runs at once and ends on the Plugins screen with the result."
 msgstr ""
 
-#: admin/views/settings-advanced.php:148
-msgid "Not checked yet. Checking now runs at once and ends on the Plugins screen with the result."
-msgstr ""
-
-#: admin/views/settings-advanced.php:159
-msgid "Recovery"
-msgstr ""
-
-#: admin/views/settings-advanced.php:160
-msgid "Lines in wp-config.php that work even when you cannot open this screen: one gets administrators back in after a role change locks them out, the other switches off a module that misbehaves."
-msgstr ""
-
-#: admin/views/settings-advanced.php:165
-msgid "Restore administrator access"
-msgstr ""
-
-#: admin/views/settings-advanced.php:167
-#: admin/views/settings-advanced.php:179
-msgid "Set now"
+#. translators: %s: date and time of the last update check.
+#: admin/views/settings-advanced.php:168
+msgid "Last checked %s."
 msgstr ""
 
 #: admin/views/settings-advanced.php:172
+msgid "Not checked yet. Checking now runs at once and ends on the Plugins screen with the result."
+msgstr ""
+
+#: admin/views/settings-advanced.php:174
+msgid "Not checked yet."
+msgstr ""
+
+#: admin/views/settings-advanced.php:185
+msgid "Recovery"
+msgstr ""
+
+#: admin/views/settings-advanced.php:186
+msgid "Lines in wp-config.php that work even when you cannot open this screen: one gets administrators back in after a role change locks them out, the other switches off a module that misbehaves."
+msgstr ""
+
+#: admin/views/settings-advanced.php:191
+msgid "Restore administrator access"
+msgstr ""
+
+#: admin/views/settings-advanced.php:193
+#: admin/views/settings-advanced.php:205
+msgid "Set now"
+msgstr ""
+
+#: admin/views/settings-advanced.php:198
 msgid "Add it, then open any admin page as a user with the Administrator role. BLT Toolkit takes a snapshot, gives the Administrator role back the capabilities it needs to manage the site and every BLT Toolkit capability, and records it in the activity log. Nothing else changes. Remove the line afterwards; a notice reminds you while it is there."
 msgstr ""
 
-#: admin/views/settings-advanced.php:177
+#: admin/views/settings-advanced.php:203
 msgid "Switch modules off"
 msgstr ""
 
 #. translators: 1: module key, 2: module key, 3: module key.
-#: admin/views/settings-advanced.php:188
+#: admin/views/settings-advanced.php:214
 msgid "Turns off the named modules whatever the settings say, for example during an incident. Use any of %1$s, %2$s and %3$s, separated by commas. Protection for administrators and the activity log keep running."
 msgstr ""
 
 #. translators: %s: comma-separated module keys.
-#: admin/views/settings-advanced.php:200
+#: admin/views/settings-advanced.php:226
 msgid "Switched off this way right now: %s"
 msgstr ""
 
@@ -3938,7 +3997,19 @@ msgid "Stores the address each change came from, for security reviews. Applies t
 msgstr ""
 
 #: admin/views/settings-log.php:47
-msgid "Coverage by WordPress's personal data export and erase tools, so a person's entries, usernames and IP addresses can be exported or erased on request."
+msgid "Personal data requests"
+msgstr ""
+
+#: admin/views/settings-log.php:49
+msgid "WordPress's personal data tools cover these entries. An export includes every entry a person made, that was made while someone had switched to their account, or that is about them. An erasure keeps those entries as a security record and removes the person's usernames and name from them, and the IP address stored with the entries they made."
+msgstr ""
+
+#: admin/views/settings-log.php:53
+msgid "Export Personal Data"
+msgstr ""
+
+#: admin/views/settings-log.php:56
+msgid "Erase Personal Data"
 msgstr ""
 
 #: admin/views/settings-roles.php:32
@@ -4007,7 +4078,7 @@ msgid "Snapshots to keep"
 msgstr ""
 
 #: admin/views/settings-roles.php:107
-msgid "From 1 to 500. The newest ones are kept, plus the baseline taken when BLT Toolkit was first activated, which is never removed."
+msgid "From 1 to 500. The newest ones are kept, plus the baseline taken when BLT Toolkit was first activated and any User Role Editor backup you imported, which are never removed."
 msgstr ""
 
 #: admin/views/settings-roles.php:115
@@ -4210,7 +4281,7 @@ msgid "Checked every time a username is changed, by an administrator, in bulk or
 msgstr ""
 
 #: admin/views/settings-usernames.php:33
-#: includes/class-blt-toolkit-legacy.php:2450
+#: includes/class-blt-toolkit-legacy.php:2451
 msgid "Minimum length"
 msgstr ""
 
@@ -4287,7 +4358,7 @@ msgid "Email"
 msgstr ""
 
 #: admin/views/settings-usernames.php:113
-#: includes/class-blt-toolkit-legacy.php:2452
+#: includes/class-blt-toolkit-legacy.php:2453
 msgid "Email the person about the change"
 msgstr ""
 
@@ -4296,7 +4367,7 @@ msgid "A plain-text email, sent through the site's normal mail setup, so an SMTP
 msgstr ""
 
 #: admin/views/settings-usernames.php:120
-#: includes/class-blt-toolkit-legacy.php:2454
+#: includes/class-blt-toolkit-legacy.php:2455
 msgid "Email subject"
 msgstr ""
 
@@ -4305,7 +4376,7 @@ msgid "Leave blank for the default subject, in the site's language."
 msgstr ""
 
 #: admin/views/settings-usernames.php:127
-#: includes/class-blt-toolkit-legacy.php:2456
+#: includes/class-blt-toolkit-legacy.php:2457
 msgid "Email message"
 msgstr ""
 
@@ -4350,7 +4421,7 @@ msgid "Ask for their current password"
 msgstr ""
 
 #: admin/views/settings-usernames.php:193
-msgid "Asked when people change their own username. People who sign in through single sign-on may not know a WordPress password, so leave this off on such sites."
+msgid "Asked when people change their own username. By default, after 5 wrong passwords within 15 minutes, their username changes pause until the first of those is 15 minutes old. People who sign in through single sign-on may not know a WordPress password, so leave this off on such sites."
 msgstr ""
 
 #: admin/views/settings.php:37
@@ -4383,7 +4454,7 @@ msgid "The minimum length and the notification email map to Settings > Usernames
 msgstr ""
 
 #: admin/views/tools-legacy-uc.php:62
-#: admin/views/tools-legacy-uc.php:213
+#: admin/views/tools-legacy-uc.php:220
 #: admin/views/tools-legacy-ure.php:96
 #: admin/views/tools-legacy-ure.php:152
 #: admin/views/tools-legacy.php:52
@@ -4465,89 +4536,97 @@ msgid "Not roles on this site, skipped"
 msgstr ""
 
 #: admin/views/tools-legacy-uc.php:186
-msgid "No allowed roles"
+msgid "Username Changer never applied this setting"
 msgstr ""
 
 #: admin/views/tools-legacy-uc.php:187
+msgid "Username Changer 3.3.1 did not enforce Allowed Roles: a defect in its permission check let only administrators change their own username, whatever the setting said. Importing it lets the roles under \"Get the permission\" change their own username for the first time. This step is off until you turn it on; you can also give the permission later in Settings > Usernames."
+msgstr ""
+
+#: admin/views/tools-legacy-uc.php:193
+msgid "No allowed roles"
+msgstr ""
+
+#: admin/views/tools-legacy-uc.php:194
 msgid "Username Changer lets only administrators change usernames here, so no role changes."
 msgstr ""
 
-#: admin/views/tools-legacy-uc.php:196
+#: admin/views/tools-legacy-uc.php:203
 msgid "Give these roles the permission"
 msgstr ""
 
-#: admin/views/tools-legacy-uc.php:205
+#: admin/views/tools-legacy-uc.php:212
 msgid "Each username change Username Changer recorded is copied into BLT Toolkit's activity log, marked as imported from Username Changer, with its original time and who made it, and with its IP address while Settings > Activity log records IP addresses."
 msgstr ""
 
-#: admin/views/tools-legacy-uc.php:209
+#: admin/views/tools-legacy-uc.php:216
 #: admin/views/tools-legacy.php:60
 msgid "Importing now"
 msgstr ""
 
-#: admin/views/tools-legacy-uc.php:211
+#: admin/views/tools-legacy-uc.php:218
 #: admin/views/tools-legacy.php:50
 msgid "Partly imported"
 msgstr ""
 
-#: admin/views/tools-legacy-uc.php:221
+#: admin/views/tools-legacy-uc.php:228
 msgid "No audit log found"
 msgstr ""
 
-#: admin/views/tools-legacy-uc.php:222
+#: admin/views/tools-legacy-uc.php:229
 msgid "Username Changer keeps one only with its Pro add-on, and its table is not in the database."
 msgstr ""
 
-#: admin/views/tools-legacy-uc.php:229
+#: admin/views/tools-legacy-uc.php:236
 msgid "in Username Changer's log"
 msgstr ""
 
-#: admin/views/tools-legacy-uc.php:232
+#: admin/views/tools-legacy-uc.php:239
 msgid "Still to import"
 msgstr ""
 
 #. translators: %s: entry number.
-#: admin/views/tools-legacy-uc.php:239
+#: admin/views/tools-legacy-uc.php:246
 msgid "imported up to entry %s"
 msgstr ""
 
-#: admin/views/tools-legacy-uc.php:243
+#: admin/views/tools-legacy-uc.php:250
 msgid "nothing imported yet"
 msgstr ""
 
-#: admin/views/tools-legacy-uc.php:252
+#: admin/views/tools-legacy-uc.php:259
 msgid "Older than the activity log keeps"
 msgstr ""
 
 #. translators: 1: number of entries, 2: number of days.
-#: admin/views/tools-legacy-uc.php:257
+#: admin/views/tools-legacy-uc.php:264
 msgid "%1$s entry is older than %2$s days, so the daily cleanup will remove it from the activity log after the import. To keep it, raise \"Keep entries for\" in Settings > Activity log first."
 msgid_plural "%1$s entries are older than %2$s days, so the daily cleanup will remove them from the activity log after the import. To keep them, raise \"Keep entries for\" in Settings > Activity log first."
 msgstr[0] ""
 msgstr[1] ""
 
-#: admin/views/tools-legacy-uc.php:267
+#: admin/views/tools-legacy-uc.php:274
 msgid "This many entries are copied in the background, in batches; you can leave the page while it runs."
 msgstr ""
 
-#: admin/views/tools-legacy-uc.php:275
+#: admin/views/tools-legacy-uc.php:282
 msgid "See username changes in the activity log"
 msgstr ""
 
-#: admin/views/tools-legacy-uc.php:284
+#: admin/views/tools-legacy-uc.php:291
 msgid "Copy the entries not imported yet"
 msgstr ""
 
-#: admin/views/tools-legacy-uc.php:285
+#: admin/views/tools-legacy-uc.php:292
 msgid "Every entry is already in the activity log."
 msgstr ""
 
-#: admin/views/tools-legacy-uc.php:296
+#: admin/views/tools-legacy-uc.php:303
 #: admin/views/tools-legacy-ure.php:208
 msgid "Import the selected items"
 msgstr ""
 
-#: admin/views/tools-legacy-uc.php:300
+#: admin/views/tools-legacy-uc.php:307
 msgid "There is nothing left to import from Username Changer."
 msgstr ""
 
@@ -4616,7 +4695,7 @@ msgid "Nothing to import"
 msgstr ""
 
 #: admin/views/tools-legacy-ure.php:150
-msgid "User Role Editor saved a copy of the roles when it was first activated. It is stored as a snapshot, which you can view and restore on the Snapshots tab. No role changes now."
+msgid "User Role Editor saved a copy of the roles when it was first activated. It is stored as a snapshot, which you can view and restore on the Snapshots tab, and like the baseline it is never removed to make room for newer snapshots. No role changes now."
 msgstr ""
 
 #: admin/views/tools-legacy-ure.php:158
@@ -4833,6 +4912,7 @@ msgstr ""
 
 #. translators: %s: content type name, such as Events.
 #: admin/views/tools-removed-roles.php:161
+#: includes/class-blt-toolkit-site-health.php:212
 msgid "Make %s share Posts' permissions again"
 msgstr ""
 
@@ -6257,7 +6337,6 @@ msgid "Media"
 msgstr ""
 
 #: includes/class-blt-toolkit-capability-catalog.php:1732
-#: includes/class-blt-toolkit-capability-catalog.php:1806
 #: includes/class-blt-toolkit-simple-controls.php:135
 msgid "Plugins"
 msgstr ""
@@ -6282,8 +6361,12 @@ msgstr ""
 msgid "Taxonomies"
 msgstr ""
 
+#: includes/class-blt-toolkit-capability-catalog.php:1807
+msgid "Plugins (detected)"
+msgstr ""
+
 #. translators: %s: content type name or key, such as Events.
-#: includes/class-blt-toolkit-capability-catalog.php:2097
+#: includes/class-blt-toolkit-capability-catalog.php:2098
 msgid "%s: separate permissions not in effect"
 msgstr ""
 
@@ -6373,8 +6456,8 @@ msgstr ""
 #: includes/class-blt-toolkit-rest.php:337
 #: includes/class-blt-toolkit-user-caps.php:331
 #: includes/class-blt-toolkit-username-bulk.php:334
-#: includes/class-blt-toolkit-username-changer.php:122
-#: includes/class-blt-toolkit-username-changer.php:133
+#: includes/class-blt-toolkit-username-changer.php:138
+#: includes/class-blt-toolkit-username-changer.php:149
 msgid "That user does not exist."
 msgstr ""
 
@@ -6581,6 +6664,7 @@ msgstr ""
 
 #. translators: 1: content type name, such as Events. 2: post type key. 3: expected capability. 4: capability found.
 #: includes/class-blt-toolkit-isolation.php:1591
+#: includes/class-blt-toolkit-site-health.php:404
 msgid "%1$s (%2$s): expected %3$s, found %4$s."
 msgstr ""
 
@@ -6985,105 +7069,189 @@ msgstr ""
 msgid "User Role Editor's backup is already stored as snapshot %d."
 msgstr ""
 
-#: includes/class-blt-toolkit-legacy.php:2173
+#: includes/class-blt-toolkit-legacy.php:2174
 msgid "User Role Editor's backup could not be stored as a snapshot. Try again."
 msgstr ""
 
 #. translators: %d: snapshot number.
-#: includes/class-blt-toolkit-legacy.php:2191
+#: includes/class-blt-toolkit-legacy.php:2192
 msgid "Stored User Role Editor's roles backup as snapshot %d."
 msgstr ""
 
 #. translators: %d: snapshot number.
-#: includes/class-blt-toolkit-legacy.php:2204
+#: includes/class-blt-toolkit-legacy.php:2205
 msgid "User Role Editor's backup is stored as snapshot %d. Find it on the Snapshots tab."
 msgstr ""
 
-#: includes/class-blt-toolkit-legacy.php:2246
+#: includes/class-blt-toolkit-legacy.php:2247
 msgid "No role or user holds a User Role Editor capability, so nothing was removed."
 msgstr ""
 
 #. translators: 1: number of capabilities, 2: a list of their names.
-#: includes/class-blt-toolkit-legacy.php:2264
+#: includes/class-blt-toolkit-legacy.php:2265
 msgid "Removed %1$s User Role Editor capability: %2$s."
 msgid_plural "Removed %1$s User Role Editor capabilities: %2$s."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/class-blt-toolkit-legacy.php:2356
+#: includes/class-blt-toolkit-legacy.php:2357
 msgid "Something changed since the preview was shown, so nothing was imported. Check the new preview and try again."
 msgstr ""
 
-#: includes/class-blt-toolkit-legacy.php:2479
+#: includes/class-blt-toolkit-legacy.php:2480
 msgid "(the default)"
 msgstr ""
 
-#: includes/class-blt-toolkit-legacy.php:2571
+#: includes/class-blt-toolkit-legacy.php:2572
 msgid "Another import is running. Try again in a minute."
 msgstr ""
 
 #. translators: 1: previous username, 2: new username.
-#: includes/class-blt-toolkit-legacy.php:2909
-#: includes/class-blt-toolkit-username-changer.php:1082
+#: includes/class-blt-toolkit-legacy.php:2910
+#: includes/class-blt-toolkit-username-changer.php:1278
 msgid "Changed their own username from %1$s to %2$s."
 msgstr ""
 
 #. translators: 1: previous username, 2: new username.
-#: includes/class-blt-toolkit-legacy.php:2912
-#: includes/class-blt-toolkit-username-changer.php:1089
+#: includes/class-blt-toolkit-legacy.php:2913
+#: includes/class-blt-toolkit-username-changer.php:1285
 msgid "Changed the username %1$s to %2$s."
 msgstr ""
 
 #. translators: %s: what happened, such as "Changed the username ann to anna."
-#: includes/class-blt-toolkit-legacy.php:2925
+#: includes/class-blt-toolkit-legacy.php:2926
 msgid "%s (Imported from Username Changer.)"
 msgstr ""
 
-#: includes/class-blt-toolkit-log.php:226
+#: includes/class-blt-toolkit-log.php:237
 msgid "Remove old activity log entries"
 msgstr ""
 
 #. translators: %s: number of days.
-#: includes/class-blt-toolkit-log.php:1601
+#: includes/class-blt-toolkit-log.php:1692
 msgid "%s day"
 msgid_plural "%s days"
 msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: number of entries, 2: an age such as "365 days".
-#: includes/class-blt-toolkit-log.php:1612
+#: includes/class-blt-toolkit-log.php:1703
 msgid "Removed %1$s activity log entry older than %2$s."
 msgid_plural "Removed %1$s activity log entries older than %2$s."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/class-blt-toolkit-plugin.php:300
+#: includes/class-blt-toolkit-plugin.php:311
 msgid "Switch to another user's account and back."
 msgstr ""
 
-#: includes/class-blt-toolkit-plugin.php:304
+#: includes/class-blt-toolkit-plugin.php:315
 msgid "Change a user's username, with old author links redirected."
 msgstr ""
 
-#: includes/class-blt-toolkit-plugin.php:308
+#: includes/class-blt-toolkit-plugin.php:319
 msgid "Create and edit roles and capabilities in a Simple or Advanced view."
 msgstr ""
 
-#: includes/class-blt-toolkit-plugin.php:480
+#: includes/class-blt-toolkit-plugin.php:491
 msgid "BLT Toolkit supports single-site installs only in this version, so it cannot be activated on a multisite network, either for the whole network or for one site."
 msgstr ""
 
-#: includes/class-blt-toolkit-plugin.php:484
+#: includes/class-blt-toolkit-plugin.php:495
 msgid "BLT Toolkit could not create its database tables, so it was not activated and your roles were not changed. Check that the database user may create tables, then activate it again."
 msgstr ""
 
-#: includes/class-blt-toolkit-plugin.php:490
+#: includes/class-blt-toolkit-plugin.php:501
 msgid "BLT Toolkit could not save a copy of your roles before changing them, so it was not activated and your roles were not changed. Activate it again; if this keeps happening, the PHP error log says why."
 msgstr ""
 
-#: includes/class-blt-toolkit-plugin.php:572
+#: includes/class-blt-toolkit-plugin.php:583
 msgid "BLT Toolkit supports single-site installs only in this version, so it is not running on this network. Deactivate it from the Plugins screen."
 msgstr ""
+
+#: includes/class-blt-toolkit-privacy.php:147
+#: includes/class-blt-toolkit-privacy.php:164
+#: includes/class-blt-toolkit-privacy.php:331
+#: includes/class-blt-toolkit-site-health.php:122
+msgid "BLT Toolkit activity log"
+msgstr ""
+
+#: includes/class-blt-toolkit-privacy.php:197
+msgid "This text suggests what to tell people about the record BLT Toolkit keeps. Review it and edit it to match how you use the site."
+msgstr ""
+
+#: includes/class-blt-toolkit-privacy.php:198
+msgid "When someone switches to another user's account, changes a username, or changes roles and permissions, we record it: who did it, whose account they were using if they had switched to another user, when, and what changed, including the usernames involved."
+msgstr ""
+
+#: includes/class-blt-toolkit-privacy.php:199
+msgid "The record does not include IP addresses."
+msgstr ""
+
+#: includes/class-blt-toolkit-privacy.php:199
+msgid "The record includes the IP address each change came from."
+msgstr ""
+
+#. translators: %s: number of days entries are kept.
+#: includes/class-blt-toolkit-privacy.php:205
+msgid "Entries are deleted automatically after %s day."
+msgid_plural "Entries are deleted automatically after %s days."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-blt-toolkit-privacy.php:211
+msgid "If you ask for a copy of your personal data, it includes the entries about you. If you ask us to erase your personal data, your username and IP address are removed from those entries, and the entries themselves are kept as a security record."
+msgstr ""
+
+#: includes/class-blt-toolkit-privacy.php:214
+msgid "Cookies"
+msgstr ""
+
+#: includes/class-blt-toolkit-privacy.php:215
+msgid "When a user with permission switches to another user's account, BLT Toolkit sets cookies that let them switch back. Like the cookies WordPress sets when you log in, they contain the username of the user who switched, an expiration time and a secure hash. They expire after two days at most, when the browser is closed unless that user chose \"Remember Me\" when logging in, and as soon as anyone logs in or out in that browser."
+msgstr ""
+
+#: includes/class-blt-toolkit-privacy.php:308
+msgid "Your part"
+msgstr ""
+
+#: includes/class-blt-toolkit-privacy.php:316
+msgid "Username recorded"
+msgstr ""
+
+#: includes/class-blt-toolkit-privacy.php:332
+msgid "Changes recorded by BLT Toolkit that you made, that were made while someone had switched to your account, or that are about you."
+msgstr ""
+
+#: includes/class-blt-toolkit-privacy.php:347
+msgid "Made by you"
+msgstr ""
+
+#: includes/class-blt-toolkit-privacy.php:349
+msgid "Made while someone had switched to your account"
+msgstr ""
+
+#: includes/class-blt-toolkit-privacy.php:351
+msgid "About your account"
+msgstr ""
+
+#: includes/class-blt-toolkit-privacy.php:354
+msgid "Names you"
+msgstr ""
+
+#. translators: %s: number of activity log entries.
+#: includes/class-blt-toolkit-privacy.php:455
+msgid "BLT Toolkit kept %s activity log entry as a security record. This person's username and IP address were removed from it."
+msgid_plural "BLT Toolkit kept %s activity log entries as a security record. This person's usernames and IP addresses were removed from them."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: number of entries, 2: user ID.
+#: includes/class-blt-toolkit-privacy.php:526
+msgid "Removed the username and IP address of user ID %2$d from %1$s activity log entry for a personal data erasure request. The entry was kept."
+msgid_plural "Removed the usernames and IP addresses of user ID %2$d from %1$s activity log entries for a personal data erasure request. The entries were kept."
+msgstr[0] ""
+msgstr[1] ""
 
 #: includes/class-blt-toolkit-rename-planner.php:125
 msgid "You cannot change this user's username."
@@ -7734,11 +7902,11 @@ msgstr ""
 msgid "No role changed."
 msgstr ""
 
-#: includes/class-blt-toolkit-settings.php:489
+#: includes/class-blt-toolkit-settings.php:492
 msgid "That does not look like a GitHub token. Paste it exactly as GitHub showed it."
 msgstr ""
 
-#: includes/class-blt-toolkit-settings.php:495
+#: includes/class-blt-toolkit-settings.php:498
 msgid "The token was not saved: this server has neither libsodium nor OpenSSL AES-GCM, so it cannot be stored encrypted. Define BLT_TOOLKIT_GITHUB_TOKEN in wp-config.php instead."
 msgstr ""
 
@@ -8070,61 +8238,265 @@ msgstr ""
 msgid "\"%1$s\" and \"%2$s\" share a capability (%3$s), and your changes set it both ways. Change one of them, save, then the other."
 msgstr ""
 
-#: includes/class-blt-toolkit-snapshots.php:404
+#: includes/class-blt-toolkit-site-health.php:102
+msgid "BLT Toolkit database tables"
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:107
+msgid "Plugins BLT Toolkit replaces"
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:112
+msgid "BLT Toolkit separate permissions"
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:117
+msgid "BLT Toolkit recovery mode"
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:140
+msgid "Create the tables again"
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:244
+msgid "Clear this warning"
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:248
+msgid "Open the activity log"
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:308
+msgid "BLT Toolkit's database tables are in place"
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:309
+msgid "The activity log and the role snapshots have their tables."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:322
+msgid "BLT Toolkit's database tables are missing"
+msgstr ""
+
+#. translators: %s: table names, in code formatting.
+#: includes/class-blt-toolkit-site-health.php:325
+msgid "These tables do not exist: %s."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:327
+msgid "Without the activity log table, nothing BLT Toolkit does is recorded."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:328
+msgid "Without the snapshots table, every change to roles is refused, because BLT Toolkit saves a copy of the roles before it changes them."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:329
+msgid "Create the tables again; if that fails, check that the database user may create tables."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:345
+msgid "No plugin that BLT Toolkit replaces is active"
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:346
+msgid "User Switching, Username Changer and User Role Editor are not active, so nothing keeps a BLT Toolkit module from running."
+msgstr ""
+
+#. translators: 1: plugin name, such as User Switching. 2: BLT Toolkit module name, such as Switch.
+#: includes/class-blt-toolkit-site-health.php:356
+msgid "%1$s is active, so BLT Toolkit's %2$s module is not running."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:366
+msgid "A plugin that BLT Toolkit replaces is still active"
+msgid_plural "Plugins that BLT Toolkit replaces are still active"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-blt-toolkit-site-health.php:367
+msgid "BLT Toolkit keeps a module off while the plugin it replaces is active, so the two never run side by side. Import what you need from the old plugin first, then deactivate it; the module starts on the next page load."
+msgstr ""
+
+#. translators: %s: number of content types.
+#: includes/class-blt-toolkit-site-health.php:385
+msgid "%s content type has separate permissions and is registered with them."
+msgid_plural "%s content types have separate permissions, and all are registered with them."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-blt-toolkit-site-health.php:388
+msgid "No content type has separate permissions."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:393
+msgid "Separate permissions for content types are in effect"
+msgstr ""
+
+#. translators: %s: date and time.
+#: includes/class-blt-toolkit-site-health.php:415
+msgid "Since %s."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:427
+msgid "A content type is not using its separate permissions"
+msgid_plural "Some content types are not using their separate permissions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-blt-toolkit-site-health.php:428
+msgid "These content types were given separate permissions, but they registered before BLT Toolkit loaded or another plugin changed their permissions. Until that is fixed, people may have the access Posts gives them instead of what the Roles screen shows, and their levels are switched off in Simple view. Fix the registration, or make the type share Posts' permissions again."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:446
+msgid "BLT Toolkit recovery mode is off"
+msgstr ""
+
+#. translators: %s: the wp-config.php line, in code formatting.
+#: includes/class-blt-toolkit-site-health.php:449
+msgid "Recovery mode is for an administrator who has been locked out of the site. If that happens, add %s to wp-config.php and open any admin page."
+msgstr ""
+
+#. translators: %s: the wp-config.php line, in code formatting.
+#: includes/class-blt-toolkit-site-health.php:457
+msgid "This site defines its roles in code, so recovery cannot save anything: the Administrator role has what it needs only while %s is in wp-config.php. Fix the Administrator role in that code, then remove the line."
+msgstr ""
+
+#. translators: %s: the wp-config.php line, in code formatting.
+#: includes/class-blt-toolkit-site-health.php:459
+msgid "While %s is in wp-config.php, every admin page an administrator opens gives the Administrator role back the capabilities it needs to manage the site and every BLT Toolkit capability. Remove the line once you can manage the site again; it is meant for emergencies only."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:464
+msgid "BLT Toolkit recovery mode is on"
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:481
+msgid "BLT Toolkit's activity log is being written"
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:482
+msgid "No entry has failed to save."
+msgstr ""
+
+#. translators: 1: number of entries, 2: date and time of the last failure.
+#: includes/class-blt-toolkit-site-health.php:492
+msgid "%1$s activity log entry could not be saved, most recently on %2$s. The changes themselves were made; only their record is missing."
+msgid_plural "%1$s activity log entries could not be saved, most recently on %2$s. The changes themselves were made; only their record is missing."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: the database error, in code formatting.
+#: includes/class-blt-toolkit-site-health.php:501
+msgid "The database said: %s"
+msgstr ""
+
+#. translators: %s: date and time.
+#: includes/class-blt-toolkit-site-health.php:510
+msgid "Entries have been saved again since %s, so the cause may be fixed. Clear this warning once you have checked."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:515
+msgid "No entry has been saved since. Check the database table and the PHP error log, which has a line for each failure; then clear this warning."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:521
+msgid "BLT Toolkit cannot save activity log entries"
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:521
+msgid "BLT Toolkit's activity log missed some entries"
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:596
+msgid "Cleared the Site Health warning about activity log entries that could not be saved."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:619
+msgid "Created BLT Toolkit's database tables again from Site Health."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:661
+msgid "BLT Toolkit: the activity log warning was cleared, and a test entry was saved."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:665
+msgid "BLT Toolkit: the warning was cleared, but saving a test entry failed again, so it is back. Check the database table and the PHP error log."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:669
+msgid "BLT Toolkit: the database tables are in place."
+msgstr ""
+
+#: includes/class-blt-toolkit-site-health.php:673
+msgid "BLT Toolkit: the database tables could not be created. Check that the database user may create tables; the PHP error log may say why."
+msgstr ""
+
+#: includes/class-blt-toolkit-snapshots.php:464
 msgid "Baseline, before BLT Toolkit changed anything"
 msgstr ""
 
-#: includes/class-blt-toolkit-snapshots.php:406
+#: includes/class-blt-toolkit-snapshots.php:466
 msgid "Before a roles change"
 msgstr ""
 
-#: includes/class-blt-toolkit-snapshots.php:408
+#: includes/class-blt-toolkit-snapshots.php:468
 msgid "Before a reset"
 msgstr ""
 
-#: includes/class-blt-toolkit-snapshots.php:410
+#: includes/class-blt-toolkit-snapshots.php:470
 msgid "Before a restore"
 msgstr ""
 
-#: includes/class-blt-toolkit-snapshots.php:412
+#: includes/class-blt-toolkit-snapshots.php:472
 msgid "Before an import"
 msgstr ""
 
-#: includes/class-blt-toolkit-snapshots.php:414
+#: includes/class-blt-toolkit-snapshots.php:474
 msgid "Before separate permissions were changed"
 msgstr ""
 
-#: includes/class-blt-toolkit-snapshots.php:416
+#: includes/class-blt-toolkit-snapshots.php:476
 msgid "Before recovery mode"
 msgstr ""
 
-#: includes/class-blt-toolkit-snapshots.php:418
+#: includes/class-blt-toolkit-snapshots.php:478
 msgid "User Role Editor backup"
 msgstr ""
 
-#: includes/class-blt-toolkit-snapshots.php:604
+#: includes/class-blt-toolkit-snapshots.php:664
 msgid "This site defines its roles in code ($wp_user_roles), so they cannot be restored from here."
 msgstr ""
 
-#: includes/class-blt-toolkit-snapshots.php:662
+#: includes/class-blt-toolkit-snapshots.php:722
 msgid "Your roles already match this snapshot, so nothing was changed."
 msgstr ""
 
-#: includes/class-blt-toolkit-snapshots.php:1324
+#: includes/class-blt-toolkit-snapshots.php:1384
 msgid "The roles changed since you opened the preview. Look at the new preview and confirm again."
 msgstr ""
 
-#: includes/class-blt-toolkit-snapshots.php:1376
+#: includes/class-blt-toolkit-snapshots.php:1436
 msgid "That snapshot does not exist. It may have been removed to keep only the newest ones."
 msgstr ""
 
-#: includes/class-blt-toolkit-snapshots.php:1384
+#: includes/class-blt-toolkit-snapshots.php:1444
 msgid "That snapshot is damaged: its contents no longer match the checksum stored with it, so it cannot be restored."
 msgstr ""
 
 #. translators: 1: snapshot number, 2: date and time it was taken.
-#: includes/class-blt-toolkit-snapshots.php:1425
+#: includes/class-blt-toolkit-snapshots.php:1485
 msgid "Restored the roles saved in snapshot %1$d (%2$s)."
+msgstr ""
+
+#. translators: %s: display name of the user whose switched session ended.
+#: includes/class-blt-toolkit-switch-cookies.php:707
+msgid "The switched session as %s ended because someone signed in on the same browser."
+msgstr ""
+
+#. translators: %s: display name of the user whose switched session ended.
+#: includes/class-blt-toolkit-switch-cookies.php:709
+msgid "The switched session as %s ended because the session it was switched from had ended."
 msgstr ""
 
 #. translators: %s: the user's display name.
@@ -8201,62 +8573,63 @@ msgid "Switch to customer<span class=\"screen-reader-text\">: %s</span>"
 msgstr ""
 
 #. translators: %s: display name of the user switched to.
-#: includes/class-blt-toolkit-switch.php:830
-#: includes/class-blt-toolkit-switch.php:1101
+#: includes/class-blt-toolkit-switch.php:962
+#: includes/class-blt-toolkit-switch.php:1250
 msgid "Switched to %s."
 msgstr ""
 
 #. translators: %s: display name of the user to switch back to.
-#: includes/class-blt-toolkit-switch.php:849
+#: includes/class-blt-toolkit-switch.php:981
 msgid "Switch back to %s"
 msgstr ""
 
 #. translators: %s: display name of the user switched back to.
-#: includes/class-blt-toolkit-switch.php:872
-#: includes/class-blt-toolkit-switch.php:1223
+#: includes/class-blt-toolkit-switch.php:1004
+#: includes/class-blt-toolkit-switch.php:1372
 msgid "Switched back to %s."
 msgstr ""
 
-#: includes/class-blt-toolkit-switch.php:960
-#: includes/class-blt-toolkit-switch.php:968
-#: includes/class-blt-toolkit-switch.php:1001
-#: includes/class-blt-toolkit-switch.php:1008
+#: includes/class-blt-toolkit-switch.php:1103
+#: includes/class-blt-toolkit-switch.php:1117
+#: includes/class-blt-toolkit-switch.php:1150
+#: includes/class-blt-toolkit-switch.php:1157
 msgid "Could not switch users."
 msgstr ""
 
+#: includes/class-blt-toolkit-switch.php:1112
+#: includes/class-blt-toolkit-username-bulk.php:789
+msgid "That user no longer exists."
+msgstr ""
+
 #. translators: "switch off" means signing out for a moment, with a way back.
-#: includes/class-blt-toolkit-switch.php:1041
+#: includes/class-blt-toolkit-switch.php:1190
 msgid "Could not switch off."
 msgstr ""
 
-#: includes/class-blt-toolkit-switch.php:1068
+#: includes/class-blt-toolkit-switch.php:1217
 msgid "You have switched too many times in a row. Switch back first."
 msgstr ""
 
-#: includes/class-blt-toolkit-switch.php:1292
+#: includes/class-blt-toolkit-switch.php:1441
 msgid "Switched off."
 msgstr ""
 
 #. translators: 1: name of the user who is switched in, 2: name of the user to switch to, 3: how long ago, such as "5 mins".
-#: includes/class-blt-toolkit-switch.php:1396
+#: includes/class-blt-toolkit-switch.php:1558
 msgid "%1$s is currently switched to %2$s. They switched %3$s ago. Continue?"
 msgstr ""
 
 #. translators: %s: name of the user to switch to.
-#: includes/class-blt-toolkit-switch.php:1403
+#: includes/class-blt-toolkit-switch.php:1565
 msgid "Yes, switch to %s"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch.php:1417
+#: includes/class-blt-toolkit-switch.php:1579
 msgid "No, go back"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch.php:1419
+#: includes/class-blt-toolkit-switch.php:1581
 msgid "Someone is already switched in"
-msgstr ""
-
-#: includes/class-blt-toolkit-switch.php:1585
-msgid "When a user with permission switches to another user's account, BLT Toolkit sets cookies that let them switch back. Like the cookies WordPress sets when you log in, they contain the username of the user who switched, an expiration time and a secure hash. They expire after two days at most, when the browser is closed unless that user chose \"Remember Me\" when logging in, and as soon as anyone logs in or out in that browser."
 msgstr ""
 
 #: includes/class-blt-toolkit-sync.php:217
@@ -8438,6 +8811,12 @@ msgstr ""
 msgid "Users without a role could not be counted. Try again; if this keeps happening, the PHP error log may say why."
 msgstr ""
 
+#: includes/class-blt-toolkit-user-roles.php:1548
+msgid "user without a role"
+msgid_plural "users without a role"
+msgstr[0] ""
+msgstr[1] ""
+
 #. translators: %s: how long ago, such as "5 mins".
 #: includes/class-blt-toolkit-user-roles.php:1560
 msgid "counted %s ago; roles changed while counting, so count again for an exact number"
@@ -8575,10 +8954,6 @@ msgstr ""
 msgid "No row in the dry run is ready to rename."
 msgstr ""
 
-#: includes/class-blt-toolkit-username-bulk.php:789
-msgid "That user no longer exists."
-msgstr ""
-
 #. translators: 1: the username now, 2: the username in the dry run.
 #: includes/class-blt-toolkit-username-bulk.php:807
 msgid "The username is now %1$s, not %2$s as in the dry run, so it was not changed."
@@ -8605,52 +8980,64 @@ msgstr[1] ""
 msgid "Could not change the username %1$s to %2$s: %3$s"
 msgstr ""
 
-#: includes/class-blt-toolkit-username-changer.php:210
+#: includes/class-blt-toolkit-username-changer.php:226
 msgid "The username was changed by another request at the same moment, so this change was not saved. Reload the page to see the username now."
 msgstr ""
 
-#: includes/class-blt-toolkit-username-changer.php:213
+#: includes/class-blt-toolkit-username-changer.php:229
 msgid "The username could not be saved. Nothing was changed; try again."
 msgstr ""
 
 #. translators: %s: date and time.
-#: includes/class-blt-toolkit-username-changer.php:368
+#: includes/class-blt-toolkit-username-changer.php:384
 msgid "You changed your username recently. You can change it again after %s."
 msgstr ""
 
-#: includes/class-blt-toolkit-username-changer.php:378
-#: includes/class-blt-toolkit-username-shortcode.php:359
+#: includes/class-blt-toolkit-username-changer.php:394
+#: includes/class-blt-toolkit-username-shortcode.php:362
 msgid "You are not allowed to change your own username."
 msgstr ""
 
-#: includes/class-blt-toolkit-username-changer.php:381
+#: includes/class-blt-toolkit-username-changer.php:397
 msgid "You are not allowed to change this user's username."
 msgstr ""
 
-#: includes/class-blt-toolkit-username-changer.php:454
+#: includes/class-blt-toolkit-username-changer.php:505
 #: includes/class-blt-toolkit-username-shortcode.php:351
 msgid "Your current password is not correct, so your username was not changed."
 msgstr ""
 
-#: includes/class-blt-toolkit-username-changer.php:679
+#. translators: %s: date and time.
+#: includes/class-blt-toolkit-username-changer.php:615
+msgid "Your current password was entered wrongly too many times, so your username was not changed. You can try again after %s."
+msgstr ""
+
+#. translators: 1: number of wrong passwords, 2: number of minutes.
+#: includes/class-blt-toolkit-username-changer.php:643
+msgid "Username changes paused after %1$s wrong current password within %2$s minutes."
+msgid_plural "Username changes paused after %1$s wrong current passwords within %2$s minutes."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-blt-toolkit-username-changer.php:875
 msgid "Someone is switched into this account, and this person is switched into another account, right now. Changing the username ends both switched sessions. Confirm to go ahead."
 msgstr ""
 
-#: includes/class-blt-toolkit-username-changer.php:683
+#: includes/class-blt-toolkit-username-changer.php:879
 msgid "Someone is switched into this account right now. Changing the username ends that switched session. Confirm to go ahead."
 msgstr ""
 
-#: includes/class-blt-toolkit-username-changer.php:686
+#: includes/class-blt-toolkit-username-changer.php:882
 msgid "This person is switched into another account right now. Changing the username ends that switched session, and they cannot switch back. Confirm to go ahead."
 msgstr ""
 
 #. translators: Email subject. Keep the tag in braces as it is.
-#: includes/class-blt-toolkit-username-changer.php:1001
+#: includes/class-blt-toolkit-username-changer.php:1197
 msgid "[{sitename}] Your username has changed"
 msgstr ""
 
 #. translators: Plain-text email. Keep the tags in braces as they are.
-#: includes/class-blt-toolkit-username-changer.php:1011
+#: includes/class-blt-toolkit-username-changer.php:1207
 msgid ""
 "Hi {display_name},\n"
 "\n"
@@ -8666,7 +9053,7 @@ msgid ""
 msgstr ""
 
 #. translators: 1: current username, 2: the username it could not be changed to.
-#: includes/class-blt-toolkit-username-changer.php:1150
+#: includes/class-blt-toolkit-username-changer.php:1346
 msgid "Could not change the username %1$s to %2$s."
 msgstr ""
 
@@ -8795,15 +9182,19 @@ msgstr ""
 msgid "That username cannot be used. Choose another."
 msgstr ""
 
-#: includes/class-blt-toolkit-username-shortcode.php:356
+#: includes/class-blt-toolkit-username-shortcode.php:354
+msgid "Your current password was entered wrongly too many times, so your username was not changed. Try again later."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-shortcode.php:359
 msgid "You changed your username recently, so it was not changed again."
 msgstr ""
 
-#: includes/class-blt-toolkit-username-shortcode.php:362
+#: includes/class-blt-toolkit-username-shortcode.php:365
 msgid "Your account is in a switched session right now. Confirm below to change your username and end it."
 msgstr ""
 
-#: includes/class-blt-toolkit-username-shortcode.php:365
+#: includes/class-blt-toolkit-username-shortcode.php:368
 msgid "Your username could not be changed. Nothing was changed; try again."
 msgstr ""
 

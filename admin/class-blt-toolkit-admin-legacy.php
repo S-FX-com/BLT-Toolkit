@@ -157,9 +157,12 @@ class BLT_Toolkit_Admin_Legacy {
 					'available' => null !== $plan['settings'],
 					'checked'   => null !== $plan['settings'] && $settings_changes && ! isset( $ledger['uc_settings'] ),
 				),
+				// Opt-in (Phase 7 backlog): Username Changer 3.3.1 never
+				// enforced Allowed Roles, so importing them turns self-service
+				// on for those roles for the first time; the preview says so.
 				'uc_roles'    => array(
 					'available' => $roles_ready,
-					'checked'   => $roles_ready,
+					'checked'   => false,
 				),
 				'uc_audit'    => array(
 					'available' => $audit['exists'] && $audit['remaining'] > 0 && '' === $audit['job'],

@@ -145,6 +145,14 @@
 	opacity: 0.85;
 }
 
+/* On the highlighted option the login and role line is full white: at 0.85
+   it is 4.2:1 on the primary blue, under WCAG 1.4.3's 4.5:1 for 12px text
+   (white on #2271b1 is 5.2:1). */
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-option:hover .blt-tk-switch-search-meta,
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-option.is-active .blt-tk-switch-search-meta {
+	opacity: 1;
+}
+
 #wpadminbar .blt-tk-switch-search .blt-tk-switch-search-status {
 	display: block;
 	margin-top: 4px;

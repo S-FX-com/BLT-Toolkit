@@ -159,6 +159,12 @@ class BLT_Toolkit_Admin_Settings {
 		$disabled     = 'advanced' === $tab ? BLT_Toolkit_Plugin::disabled_by_constant() : array();
 		$recovery     = defined( 'BLT_TOOLKIT_RECOVERY' ) && constant( 'BLT_TOOLKIT_RECOVERY' );
 
+		// CONVENTIONS 10, Bedrock: under DISALLOW_FILE_MODS updates arrive by
+		// deploy. The same context core's map_meta_cap() uses to take
+		// update_plugins away, so the Updates card agrees with the missing
+		// Check for Updates button.
+		$file_mods = wp_is_file_mod_allowed( 'capability_update_core' );
+
 		$support_agent = 'switching' === $tab ? self::support_agent_state() : array();
 		$self_service  = 'usernames' === $tab ? self::self_service_state( wp_get_current_user() ) : array();
 
@@ -959,40 +965,32 @@ class BLT_Toolkit_Admin_Settings {
 	}
 
 	/**
-	 * A "coming in a later release" line for a control that is not built yet.
-	 *
-	 * @param string $text What is coming.
-	 * @return void
-	 */
-	public static function later( $text ) {
-		?>
-		<div class="blt-card-body blt-toolkit-later">
-			<?php echo BLT_Toolkit_Admin::badge( 'pending', __( 'Coming soon', 'blt-toolkit' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in badge(). ?>
-			<span class="blt-text-muted"><?php echo esc_html( $text ); ?></span>
-		</div>
-		<?php
-	}
-
-	/**
 	 * A whole-number input bounded by the settings class's range for that
 	 * key, so the browser and the server agree.
 	 *
-	 * @param string $group Settings group.
-	 * @param string $key   Key within the group.
-	 * @param int    $value Current value.
-	 * @param string $id    Input id.
+	 * The field's instructions (its range, what the number means) are tied
+	 * to it by passing their element id as `$describedby`, so a screen reader
+	 * reads them with the field (WCAG 1.3.1). The family convention is the
+	 * input id plus `-desc`.
+	 *
+	 * @param string $group       Settings group.
+	 * @param string $key         Key within the group.
+	 * @param int    $value       Current value.
+	 * @param string $id          Input id.
+	 * @param string $describedby Optional id(s) of the field's description, space-separated.
 	 * @return void
 	 */
-	public static function number( $group, $key, $value, $id ) {
+	public static function number( $group, $key, $value, $id, $describedby = '' ) {
 		$range = isset( BLT_Toolkit_Settings::INT_RANGES[ $group . '.' . $key ] ) ? BLT_Toolkit_Settings::INT_RANGES[ $group . '.' . $key ] : array( 0, PHP_INT_MAX );
 
 		printf(
-			'<input type="number" class="small-text" id="%1$s" name="blt_toolkit[%2$s]" value="%3$s" min="%4$s" max="%5$s" step="1" />',
+			'<input type="number" class="small-text" id="%1$s" name="blt_toolkit[%2$s]" value="%3$s" min="%4$s" max="%5$s" step="1"%6$s />',
 			esc_attr( $id ),
 			esc_attr( $key ),
 			esc_attr( (string) (int) $value ),
 			esc_attr( (string) $range[0] ),
-			esc_attr( (string) $range[1] )
+			esc_attr( (string) $range[1] ),
+			'' !== $describedby ? ' aria-describedby="' . esc_attr( $describedby ) . '"' : ''
 		);
 	}
 }

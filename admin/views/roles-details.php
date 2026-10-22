@@ -46,8 +46,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<div class="blt-field">
 				<div class="blt-field-label"><label for="blt-tk-role-description"><?php esc_html_e( 'Description', 'blt-toolkit' ); ?></label></div>
 				<div>
-					<input type="text" class="large-text" id="blt-tk-role-description" name="description" value="<?php echo esc_attr( $details['description'] ); ?>" maxlength="500" <?php disabled( ! $details['editable'] ); ?> />
-					<p class="blt-field-desc"><?php esc_html_e( 'Optional. Shown under the role\'s name in the role list.', 'blt-toolkit' ); ?></p>
+					<input type="text" class="large-text" id="blt-tk-role-description" aria-describedby="blt-tk-role-description-desc" name="description" value="<?php echo esc_attr( $details['description'] ); ?>" maxlength="500" <?php disabled( ! $details['editable'] ); ?> />
+					<p class="blt-field-desc" id="blt-tk-role-description-desc"><?php esc_html_e( 'Optional. Shown under the role\'s name in the role list.', 'blt-toolkit' ); ?></p>
 				</div>
 			</div>
 			<?php if ( ! isset( $details['toolbar'] ) || $details['toolbar'] ) : ?>

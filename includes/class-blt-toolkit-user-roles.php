@@ -1545,7 +1545,7 @@ class BLT_Toolkit_User_Roles {
 			<span class="blt-stat-label"><?php esc_html_e( 'Users without a role', 'blt-toolkit' ); ?></span>
 			<span class="blt-stat-value">
 				<?php if ( 'counted' === $state['status'] && $state['count'] > 0 ) : ?>
-					<a href="<?php echo esc_url( add_query_arg( self::VIEW_ARG, '1', admin_url( 'users.php' ) ) ); ?>"><?php echo esc_html( number_format_i18n( $state['count'] ) ); ?></a>
+					<a href="<?php echo esc_url( add_query_arg( self::VIEW_ARG, '1', admin_url( 'users.php' ) ) ); ?>"><?php echo esc_html( number_format_i18n( $state['count'] ) ); ?><span class="screen-reader-text"> <?php echo esc_html( _n( 'user without a role', 'users without a role', (int) $state['count'], 'blt-toolkit' ) ); ?></span></a>
 				<?php elseif ( 'counted' === $state['status'] ) : ?>
 					<?php echo esc_html( number_format_i18n( 0 ) ); ?>
 				<?php else : ?>

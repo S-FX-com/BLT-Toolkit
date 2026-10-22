@@ -92,7 +92,7 @@ class BLT_Toolkit_Username_Shortcode {
 	/**
 	 * Every result code the redirect may carry. Anything else is ignored.
 	 */
-	const RESULTS = array( 'changed', 'expired', 'empty', 'invalid', 'password', 'cooldown', 'forbidden', 'switched', 'failed' );
+	const RESULTS = array( 'changed', 'expired', 'empty', 'invalid', 'password', 'locked', 'cooldown', 'forbidden', 'switched', 'failed' );
 
 	/**
 	 * Transient prefix for a result's details; the user ID follows.
@@ -349,6 +349,9 @@ class BLT_Toolkit_Username_Shortcode {
 
 			case 'password':
 				return self::make_notice( 'error', '' !== $message ? $message : __( 'Your current password is not correct, so your username was not changed.', 'blt-toolkit' ), 'password' );
+
+			case 'locked':
+				return self::make_notice( 'error', '' !== $message ? $message : __( 'Your current password was entered wrongly too many times, so your username was not changed. Try again later.', 'blt-toolkit' ), 'password' );
 
 			case 'cooldown':
 				$refusal = BLT_Toolkit_Username_Changer::refusal( (int) $user->ID );
@@ -804,6 +807,8 @@ class BLT_Toolkit_Username_Shortcode {
 				return 'forbidden';
 			case 'blt_toolkit_username_password':
 				return 'password';
+			case 'blt_toolkit_username_password_locked':
+				return 'locked';
 			case 'blt_toolkit_username_switched':
 				return 'switched';
 			case 'blt_toolkit_username_no_user':

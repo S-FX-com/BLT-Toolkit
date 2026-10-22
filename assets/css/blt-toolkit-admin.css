@@ -50,19 +50,6 @@
 	line-height: 1.5;
 }
 
-/* --- Settings: "Coming soon" line at the foot of a card -------------------- */
-
-.blt-toolkit .blt-toolkit-later {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 6px 10px;
-	padding-top: 14px;
-	padding-bottom: 14px;
-	font-size: 13px;
-	background: var(--blt-surface-muted);
-}
-
 /* --- Settings: controls the catalog does not size -------------------------- */
 
 .blt-toolkit .blt-field textarea.regular-text {
@@ -540,6 +527,12 @@
 .blt-toolkit-roles .blt-toolkit-role-link.is-current {
 	background: var(--blt-primary-tint);
 	box-shadow: inset 3px 0 0 var(--blt-primary);
+}
+
+/* A11Y-1 (WCAG 2.4.7): keep the current-role bar and add the focus ring. */
+.blt-toolkit-roles .blt-toolkit-role-link.is-current:focus {
+	box-shadow: inset 3px 0 0 var(--blt-primary), inset 0 0 0 2px var(--blt-primary);
+	outline: none;
 }
 
 .blt-toolkit-roles .blt-toolkit-role-line {

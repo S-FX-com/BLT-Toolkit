@@ -573,6 +573,11 @@ class Test_Capability_Catalog extends TestCase {
 
 		$this->assertSame( array( 'all', 'core', 'content', 'taxonomies', 'plugins', 'blt', 'orphaned' ), array_column( $tree, 'id' ) );
 
+		// RO-13 names the top-level node "Plugins (detected)", so it never
+		// reads the same as Core > Plugins.
+		$this->assertSame( 'Plugins (detected)', $this->node( $tree, 'plugins' )['label'] );
+		$this->assertSame( 'Plugins', $this->node( $tree, 'core-plugins' )['label'] );
+
 		$core = $this->node( $tree, 'core' );
 
 		// Single site, no role holds a network capability: no Network node.

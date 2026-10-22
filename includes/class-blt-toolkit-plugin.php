@@ -111,6 +111,17 @@ class BLT_Toolkit_Plugin {
 		BLT_Toolkit_Isolation_Core::register();
 		BLT_Toolkit_Readonly::register();
 
+		// - Privacy (SPEC 14.5: the log's exporter and eraser, the policy
+		//   text with SW-24's cookies) and the Site Health tests (GEN-1,
+		//   RS-33, SEC-14, LOG-3, the tables). Hooks only, and only where
+		//   they are used: wp-admin (the privacy tools run through
+		//   admin-ajax.php), WP-Cron (Site Health's weekly check) and WP-CLI.
+		//   A visitor's page view does not even load the classes.
+		if ( is_admin() || wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+			BLT_Toolkit_Privacy::register();
+			BLT_Toolkit_Site_Health::register();
+		}
+
 		// SPEC 4.2, step 3, on `init` in this order: the idempotent schema
 		// upgrade (priority 0; also covers a plugin update by file copy,
 		// which never fires the activation hook), the switch request handling

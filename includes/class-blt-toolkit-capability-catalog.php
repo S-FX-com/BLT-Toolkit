@@ -1803,7 +1803,8 @@ class BLT_Toolkit_Capability_Catalog {
 			self::node_of( 'core', __( 'Core', 'blt-toolkit' ), array(), $core_children ),
 			self::node_of( 'content', __( 'Content types', 'blt-toolkit' ), array(), $content_children ),
 			self::node_of( 'taxonomies', __( 'Taxonomies', 'blt-toolkit' ), array(), $taxonomy_children ),
-			self::node_of( 'plugins', __( 'Plugins', 'blt-toolkit' ), array(), $plugin_children ),
+			// RO-13's name for the top-level node, so it never reads like Core > Plugins.
+			self::node_of( 'plugins', __( 'Plugins (detected)', 'blt-toolkit' ), array(), $plugin_children ),
 			self::node_of( 'blt', __( 'BLT Toolkit', 'blt-toolkit' ), $blt ),
 			self::node_of( 'orphaned', __( 'Orphaned', 'blt-toolkit' ), $orphaned ),
 		);

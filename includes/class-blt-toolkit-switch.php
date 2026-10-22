@@ -44,11 +44,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  *   `blt_switched_from_session` link (followed back to the person who
  *   signed in) is gone is destroyed and the request is signed out. It also
  *   expires with the switch cookies (48 hours), whatever "Remember Me"
- *   gave the actor.
+ *   gave the actor. A sign-in over a switched browser ends the switched
+ *   session it was in, and a switch request ends the target's switched
+ *   sessions whose origin ended. Each such end is logged as
+ *   `switch_ended` (on `init` for the first kind, which is found while the
+ *   current user is still being decided).
  * - SW-11: messages addressed to the originating user use their locale.
  * - SW-19: User Switching's action names and current_user_switched(),
  *   behind the setting `switch.compat_hooks`.
- * - SW-24: privacy policy text about the cookies.
+ * - SW-24: the privacy policy text about the cookies is part of
+ *   BLT_Toolkit_Privacy's section, included while this module runs.
  * - LOG-2: chain() is the log's switch chain provider; every switch, switch
  *   back and switch off is logged under module `switch`.
  *
@@ -183,6 +188,14 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 	 */
 	private static $login_url = null;
 
+	/**
+	 * Switched sessions end_orphaned_session() ended this request, waiting to
+	 * be logged (log_ended()): each array( user ID, who switched in, chain ).
+	 *
+	 * @var array<int,array{0:int,1:int,2:int[]}>
+	 */
+	private static $ended = array();
+
 	// ---------- Module ----------
 
 	/**
@@ -246,8 +259,8 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 		// Who switched depends on who is signed in (old_user()).
 		add_action( 'set_current_user', array( __CLASS__, 'forget_user_state' ), 10, 0 );
 
-		// SW-24.
-		add_action( 'admin_init', array( __CLASS__, 'privacy_policy' ) );
+		// SW-24: the cookie text is part of the plugin's one privacy policy
+		// section, registered by BLT_Toolkit_Privacy while this module runs.
 
 		// LOG-2.
 		BLT_Toolkit_Log::set_switch_chain_provider( array( __CLASS__, 'chain' ) );
@@ -480,7 +493,7 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 
 			if ( is_array( $session ) && ! empty( $session[ self::FROM_ID ] ) && ! self::follow_links( $session, array( __CLASS__, 'session_by_verifier' ) )['intact'] ) {
 				if ( BLT_Toolkit_Switch_Cookies::from_browser( BLT_Toolkit_Switch_Cookies::OLDUSER ) ) {
-					BLT_Toolkit_Switch_Cookies::end_sessions();
+					BLT_Toolkit_Switch_Cookies::end_sessions( 'origin_ended' );
 				}
 
 				return false;
@@ -607,6 +620,74 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 	}
 
 	/**
+	 * follow_links(), plus every user the links name, the one whose session
+	 * is gone included (`named`, oldest first). Pure: sessions are found
+	 * through `$lookup`.
+	 *
+	 * For an intact chain `named` equals `ids`. For a broken one it also
+	 * holds the user at the broken link, so the log can say who the switch
+	 * started from after that person's session ended (LOG-2).
+	 *
+	 * @param mixed    $session The session to start from.
+	 * @param callable $lookup  As for follow_links().
+	 * @return array{ids:int[],intact:bool,named:int[]}
+	 */
+	public static function named_links( $session, callable $lookup ) {
+		$named  = array();
+		$record = static function ( $user_id, $verifier ) use ( $lookup, &$named ) {
+			$named[] = (int) $user_id;
+
+			return call_user_func( $lookup, $user_id, $verifier );
+		};
+
+		$links          = self::follow_links( $session, $record );
+		$links['named'] = array_reverse( $named );
+
+		return $links;
+	}
+
+	/**
+	 * Sort a user's sessions for the duplicate-switch check (SW-8): those a
+	 * switch made whose links still lead back to the person who signed in
+	 * (`live`: who switched in, leaving out `$actor_id`'s own), and those
+	 * whose links are broken (`dead`: nobody can use them again; their next
+	 * request would end them, end_orphaned_session()). Sessions no switch
+	 * made are in neither. Pure: sessions are found through `$lookup`.
+	 *
+	 * @param array    $sessions Verifier => session, as the session manager stores them.
+	 * @param int      $actor_id The user switching.
+	 * @param callable $lookup   As for follow_links().
+	 * @return array{live:array<string,int>,dead:array<string,array{from:int,named:int[]}>}
+	 */
+	public static function classify_switches( array $sessions, $actor_id, callable $lookup ) {
+		$out = array(
+			'live' => array(),
+			'dead' => array(),
+		);
+
+		foreach ( $sessions as $verifier => $session ) {
+			$from_id = is_array( $session ) && isset( $session[ self::FROM_ID ] ) && is_numeric( $session[ self::FROM_ID ] ) ? (int) $session[ self::FROM_ID ] : 0;
+
+			if ( $from_id <= 0 ) {
+				continue;
+			}
+
+			$links = self::named_links( $session, $lookup );
+
+			if ( ! $links['intact'] ) {
+				$out['dead'][ (string) $verifier ] = array(
+					'from'  => $from_id,
+					'named' => $links['named'],
+				);
+			} elseif ( (int) $actor_id !== $from_id ) {
+				$out['live'][ (string) $verifier ] = $from_id;
+			}
+		}
+
+		return $out;
+	}
+
+	/**
 	 * One of a user's live sessions by its verifier (the key core stores it
 	 * under), or null. Goes through the session manager's own
 	 * get_session(), so a custom `session_token_manager` is respected and an
@@ -635,6 +716,57 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 		$session = $read instanceof Closure ? $read( (string) $verifier ) : null;
 
 		return is_array( $session ) ? $session : null;
+	}
+
+	/**
+	 * A user's live sessions keyed by verifier, through the session
+	 * manager's own get_sessions() (protected, so read in its scope, as
+	 * session_by_verifier() does): get_all() drops the keys.
+	 *
+	 * @param int $user_id User ID.
+	 * @return array<string,array>
+	 */
+	private static function sessions_by_verifier( $user_id ) {
+		$manager = WP_Session_Tokens::get_instance( (int) $user_id );
+		$read    = Closure::bind(
+			function () {
+				return $this->get_sessions();
+			},
+			$manager,
+			get_class( $manager )
+		);
+
+		$sessions = $read instanceof Closure ? $read() : array();
+
+		return is_array( $sessions ) ? $sessions : array();
+	}
+
+	/**
+	 * End one of a user's sessions by its verifier, through the session
+	 * manager's own update_session() with no session (what destroy() does
+	 * once it has hashed a token).
+	 *
+	 * @param int    $user_id  User ID.
+	 * @param string $verifier Session verifier.
+	 * @return void
+	 */
+	private static function destroy_by_verifier( $user_id, $verifier ) {
+		if ( (int) $user_id <= 0 || '' === (string) $verifier ) {
+			return;
+		}
+
+		$manager = WP_Session_Tokens::get_instance( (int) $user_id );
+		$end     = Closure::bind(
+			function ( $key ) {
+				$this->update_session( $key, null );
+			},
+			$manager,
+			get_class( $manager )
+		);
+
+		if ( $end instanceof Closure ) {
+			$end( (string) $verifier );
+		}
 	}
 
 	/**
@@ -949,14 +1081,25 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 	/**
 	 * SW-4: switch to a user.
 	 *
+	 * Step 1 runs in the SPEC's order: SW-1 and the nonce, then the target,
+	 * 404 when it is missing. The Guard maps `blt_switch_to_user` on a
+	 * missing user to `do_not_allow` (SPEC 5.1), so SW-1 is checked in two
+	 * halves: `blt_switch_users` before the nonce, the target-specific
+	 * meta capability after the lookup. Checked first, the meta capability
+	 * would answer 403 and the 404 could never be reached. Only someone who
+	 * holds `blt_switch_users` and a nonce made for this exact ID (a link
+	 * printed while the user existed, such as a Users screen opened before
+	 * the user was deleted) reaches the 404, so it tells nobody which user
+	 * IDs exist.
+	 *
 	 * @return void
 	 */
 	private static function request_switch_to() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The nonce for this exact user ID is checked right after the capability.
 		$user_id = isset( $_REQUEST['user_id'] ) && is_scalar( $_REQUEST['user_id'] ) ? absint( wp_unslash( $_REQUEST['user_id'] ) ) : 0;
 
-		// SW-1: the Guard refuses oneself, a missing target, SEC-1 and SEC-2.
-		if ( $user_id <= 0 || ! current_user_can( 'blt_switch_to_user', $user_id ) ) { // phpcs:ignore WordPress.WP.Capabilities.Unknown -- Meta capability the Guard maps (SPEC 5.1).
+		// SW-1, first half: whether this person may switch at all.
+		if ( $user_id <= 0 || ! current_user_can( 'blt_switch_users' ) ) { // phpcs:ignore WordPress.WP.Capabilities.Unknown -- BLT Toolkit's own capability (SPEC 5.1), granted on activation.
 			self::refuse( __( 'Could not switch users.', 'blt-toolkit' ), 403 );
 		}
 
@@ -964,8 +1107,14 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 
 		$target = get_userdata( $user_id );
 
+		// SW-4 step 1.
 		if ( ! $target instanceof WP_User ) {
-			self::refuse( __( 'Could not switch users.', 'blt-toolkit' ), 404 );
+			self::refuse( __( 'That user no longer exists.', 'blt-toolkit' ), 404 );
+		}
+
+		// SW-1, second half: the Guard refuses oneself, SEC-1 and SEC-2.
+		if ( ! current_user_can( 'blt_switch_to_user', $user_id ) ) { // phpcs:ignore WordPress.WP.Capabilities.Unknown -- Meta capability the Guard maps (SPEC 5.1).
+			self::refuse( __( 'Could not switch users.', 'blt-toolkit' ), 403 );
 		}
 
 		$actor = wp_get_current_user();
@@ -1324,23 +1473,36 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 	 * Someone other than the actor who is switched into the target right
 	 * now (SW-8): the first of the target's live sessions that carries
 	 * `blt_switched_from_id` for another existing user and still leads back
-	 * to the person who signed in (live_switch_from()).
+	 * to the person who signed in (classify_switches(), the rule of
+	 * live_switch_from()).
+	 *
+	 * The target's switched sessions whose links are broken are ended here
+	 * and logged (BLT_Toolkit_Switch_Cookies::record_end()): nobody can use
+	 * them again, and they would otherwise stay in the target's session list
+	 * until their next request or their 48 hours ran out. This runs only on
+	 * a switch request, after its capability and nonce checks.
 	 *
 	 * @param WP_User $target The user to switch to.
 	 * @param WP_User $actor  The user switching.
 	 * @return array{user:WP_User,login:int}|null
 	 */
 	public static function duplicate_switch( WP_User $target, WP_User $actor ) {
-		$sessions = WP_Session_Tokens::get_instance( (int) $target->ID )->get_all();
+		$target_id = (int) $target->ID;
+		$sessions  = self::sessions_by_verifier( $target_id );
+		$sorted    = self::classify_switches( $sessions, (int) $actor->ID, array( __CLASS__, 'session_by_verifier' ) );
 
-		foreach ( $sessions as $session ) {
-			$from_id = self::live_switch_from( $session, (int) $actor->ID, array( __CLASS__, 'session_by_verifier' ) );
+		foreach ( $sorted['dead'] as $verifier => $dead ) {
+			self::destroy_by_verifier( $target_id, $verifier );
 
-			if ( $from_id <= 0 ) {
-				continue;
-			}
+			$chain   = $dead['named'];
+			$chain[] = $target_id;
 
-			$from = get_userdata( $from_id );
+			BLT_Toolkit_Switch_Cookies::record_end( $target_id, $dead['from'], $chain, 'origin_ended' );
+		}
+
+		foreach ( $sorted['live'] as $verifier => $from_id ) {
+			$from    = get_userdata( $from_id );
+			$session = $sessions[ $verifier ];
 
 			if ( $from instanceof WP_User ) {
 				return array(
@@ -1544,7 +1706,7 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 			return $user_id;
 		}
 
-		$links = self::follow_links( $session, array( __CLASS__, 'session_by_verifier' ) );
+		$links = self::named_links( $session, array( __CLASS__, 'session_by_verifier' ) );
 
 		if ( $links['intact'] ) {
 			return $user_id;
@@ -1552,7 +1714,54 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 
 		$manager->destroy( $token );
 
+		// Logged later: a log write now would ask for the current user while
+		// WordPress is still deciding who that is.
+		$chain   = $links['named'];
+		$chain[] = $id;
+
+		self::queue_end( $id, (int) $session[ self::FROM_ID ], $chain );
+
 		return false;
+	}
+
+	/**
+	 * Remember a switched session end_orphaned_session() ended, and log it on
+	 * `init` (or at `shutdown` when `init` has already started), once the
+	 * current user is settled. Adds the hook once per request.
+	 *
+	 * @param int   $user_id Whose switched session ended.
+	 * @param int   $from_id Who switched into it.
+	 * @param int[] $chain   The switch chain, oldest first, ending with `$user_id`.
+	 * @return void
+	 */
+	private static function queue_end( $user_id, $from_id, array $chain ) {
+		foreach ( self::$ended as $queued ) {
+			if ( $queued[0] === (int) $user_id && $queued[2] === $chain ) {
+				return;
+			}
+		}
+
+		self::$ended[] = array( (int) $user_id, (int) $from_id, $chain );
+
+		if ( 1 === count( self::$ended ) ) {
+			add_action( did_action( 'init' ) ? 'shutdown' : 'init', array( __CLASS__, 'log_ended' ), 1, 0 );
+		}
+	}
+
+	/**
+	 * Log the switched sessions end_orphaned_session() ended this request
+	 * (BLT_Toolkit_Switch_Cookies::record_end(), reason `origin_ended`).
+	 * Hooked by queue_end().
+	 *
+	 * @return void
+	 */
+	public static function log_ended() {
+		$ended       = self::$ended;
+		self::$ended = array();
+
+		foreach ( $ended as $end ) {
+			BLT_Toolkit_Switch_Cookies::record_end( $end[0], $end[1], $end[2], 'origin_ended' );
+		}
 	}
 
 	/**
@@ -1567,24 +1776,6 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 		if ( defined( 'LOGGED_IN_COOKIE' ) ) {
 			unset( $_COOKIE[ LOGGED_IN_COOKIE ] );
 		}
-	}
-
-	// ---------- SW-24 ----------
-
-	/**
-	 * Suggested privacy policy text about the switch cookies (SW-24).
-	 * Hooked on `admin_init`, where core expects it.
-	 *
-	 * @return void
-	 */
-	public static function privacy_policy() {
-		if ( ! function_exists( 'wp_add_privacy_policy_content' ) ) {
-			return;
-		}
-
-		$text = '<p>' . esc_html__( 'When a user with permission switches to another user\'s account, BLT Toolkit sets cookies that let them switch back. Like the cookies WordPress sets when you log in, they contain the username of the user who switched, an expiration time and a secure hash. They expire after two days at most, when the browser is closed unless that user chose "Remember Me" when logging in, and as soon as anyone logs in or out in that browser.', 'blt-toolkit' ) . '</p>';
-
-		wp_add_privacy_policy_content( 'BLT Toolkit', wp_kses_post( $text ) );
 	}
 
 	// ---------- Logging (LOG-2) ----------

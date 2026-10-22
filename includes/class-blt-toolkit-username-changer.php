@@ -80,6 +80,22 @@ class BLT_Toolkit_Username_Changer {
 	const MAX_LINKS = 10;
 
 	/**
+	 * User meta holding the times (Unix) of the person's recent wrong
+	 * current-password attempts (UN-22 throttle), newest last, at most the
+	 * limit's worth. Deleted after a correct password and by uninstall.
+	 */
+	const PASSWORD_FAILURES_META = 'blt_toolkit_password_failures';
+
+	/**
+	 * Default UN-22 throttle: this many wrong current passwords within the
+	 * window pause the person's self-service username changes until the
+	 * oldest of them is a window old (filter
+	 * `blt_toolkit_username_password_throttle`).
+	 */
+	const PASSWORD_LIMIT  = 5;
+	const PASSWORD_WINDOW = 900;
+
+	/**
 	 * Change a user's username (UN-10).
 	 *
 	 * @param int    $user_id  Whose username changes.
@@ -443,18 +459,198 @@ class BLT_Toolkit_Username_Changer {
 	}
 
 	/**
-	 * Check a user's current password (UN-22).
+	 * Check a user's current password (UN-22), throttled.
+	 *
+	 * Every path that asks for the password calls this: the profile screen
+	 * (BLT_Toolkit_Username_Profile), and change() for the shortcode and any
+	 * other self-service caller. Without a throttle a hijacked session could
+	 * use the rename form to guess the account's password, so wrong
+	 * passwords are counted per user: after the limit within the window
+	 * (default 5 within 15 minutes, filter
+	 * `blt_toolkit_username_password_throttle`) the password is not checked
+	 * at all, right or wrong, until the oldest of those attempts is a window
+	 * old (`blt_toolkit_username_password_locked`, 429, with `until`). The
+	 * attempt that reaches the limit is logged once (`usernames` /
+	 * `password_locked`, status `warning`). A correct password clears the
+	 * count. Signing in is not affected: this counts only the rename form's
+	 * password field.
 	 *
 	 * @param WP_User $user     The user, as stored before any change.
 	 * @param string  $password What was typed.
-	 * @return true|WP_Error `blt_toolkit_username_password` (403).
+	 * @return true|WP_Error `blt_toolkit_username_password` (403) or
+	 *                       `blt_toolkit_username_password_locked` (429).
 	 */
 	public static function check_password( WP_User $user, $password ) {
-		if ( ! is_string( $password ) || '' === $password || ! wp_check_password( $password, (string) $user->user_pass, (int) $user->ID ) ) {
+		$user_id  = (int) $user->ID;
+		$throttle = self::password_throttle( $user );
+		$now      = time();
+		$stored   = $throttle['limit'] > 0 ? get_user_meta( $user_id, self::PASSWORD_FAILURES_META, true ) : array();
+		$state    = self::throttle_state( $stored, $now, $throttle['limit'], $throttle['window'] );
+
+		if ( $state['locked_until'] > 0 ) {
+			return self::locked_error( $state['locked_until'] );
+		}
+
+		if ( ! is_string( $password ) || '' === $password || ! wp_check_password( $password, (string) $user->user_pass, $user_id ) ) {
+			if ( $throttle['limit'] > 0 ) {
+				$after = self::throttle_state( array_merge( $state['failures'], array( $now ) ), $now, $throttle['limit'], $throttle['window'] );
+
+				update_user_meta( $user_id, self::PASSWORD_FAILURES_META, $after['failures'] );
+
+				if ( $after['locked_until'] > 0 ) {
+					self::log_lock( $user, count( $after['failures'] ), $after['locked_until'], $throttle['window'] );
+				}
+			}
+
 			return new WP_Error( 'blt_toolkit_username_password', __( 'Your current password is not correct, so your username was not changed.', 'blt-toolkit' ), array( 'status' => 403 ) );
 		}
 
+		if ( ! empty( $stored ) ) {
+			delete_user_meta( $user_id, self::PASSWORD_FAILURES_META );
+		}
+
 		return true;
+	}
+
+	/**
+	 * The UN-22 throttle for a user: how many wrong passwords within how
+	 * many seconds pause their self-service renames. Filter
+	 * `blt_toolkit_username_password_throttle`; a limit of 0 turns the
+	 * throttle off.
+	 *
+	 * @param WP_User $user The user renaming themselves.
+	 * @return array{limit:int,window:int}
+	 */
+	public static function password_throttle( WP_User $user ) {
+		/**
+		 * Filter the throttle on wrong current passwords in the username
+		 * forms (UN-22): after `limit` wrong passwords within `window`
+		 * seconds, the person's self-service renames pause until the oldest
+		 * of them is `window` seconds old. Return a `limit` of 0 to turn it
+		 * off.
+		 *
+		 * @param array   $throttle `limit` (default 5) and `window` (seconds, default 900).
+		 * @param WP_User $user     The user renaming themselves.
+		 */
+		$throttle = apply_filters(
+			'blt_toolkit_username_password_throttle',
+			array(
+				'limit'  => self::PASSWORD_LIMIT,
+				'window' => self::PASSWORD_WINDOW,
+			),
+			$user
+		);
+
+		return self::clean_throttle( $throttle );
+	}
+
+	/**
+	 * A filtered throttle as two integers: `limit` 0 (off) to 100,
+	 * `window` 1 second to 1 day; anything missing or not numeric takes the
+	 * default. Pure.
+	 *
+	 * @param mixed $throttle Filtered value.
+	 * @return array{limit:int,window:int}
+	 */
+	public static function clean_throttle( $throttle ) {
+		$throttle = is_array( $throttle ) ? $throttle : array();
+		$limit    = isset( $throttle['limit'] ) && is_numeric( $throttle['limit'] ) ? (int) $throttle['limit'] : self::PASSWORD_LIMIT;
+		$window   = isset( $throttle['window'] ) && is_numeric( $throttle['window'] ) ? (int) $throttle['window'] : self::PASSWORD_WINDOW;
+
+		return array(
+			'limit'  => min( 100, max( 0, $limit ) ),
+			'window' => min( DAY_IN_SECONDS, max( 1, $window ) ),
+		);
+	}
+
+	/**
+	 * Where a user stands with the UN-22 throttle at `$now`. Pure.
+	 *
+	 * `failures` keeps the stored attempts that are numbers, not in the
+	 * future and less than a window old, oldest first, at most `$limit` of
+	 * them (the newest). The person is paused while they number `$limit`:
+	 * until the oldest of them is a window old (`locked_until`, else 0).
+	 * A limit of 0 never pauses and keeps nothing.
+	 *
+	 * @param mixed $stored The stored meta value.
+	 * @param int   $now    Current time.
+	 * @param int   $limit  Wrong passwords allowed within the window.
+	 * @param int   $window Seconds.
+	 * @return array{failures:int[],locked_until:int}
+	 */
+	public static function throttle_state( $stored, $now, $limit, $window ) {
+		$now      = (int) $now;
+		$limit    = max( 0, (int) $limit );
+		$window   = max( 1, (int) $window );
+		$failures = array();
+
+		if ( $limit > 0 && is_array( $stored ) ) {
+			foreach ( $stored as $time ) {
+				if ( is_numeric( $time ) && (int) $time <= $now && (int) $time > $now - $window ) {
+					$failures[] = (int) $time;
+				}
+			}
+
+			sort( $failures );
+			$failures = array_slice( $failures, -$limit );
+		}
+
+		return array(
+			'failures'     => $failures,
+			'locked_until' => $limit > 0 && count( $failures ) >= $limit ? $failures[0] + $window : 0,
+		);
+	}
+
+	/**
+	 * The error for a paused rename (UN-22 throttle).
+	 *
+	 * @param int $until When renaming with the password works again.
+	 * @return WP_Error `blt_toolkit_username_password_locked` (429).
+	 */
+	private static function locked_error( $until ) {
+		return new WP_Error(
+			'blt_toolkit_username_password_locked',
+			sprintf(
+				/* translators: %s: date and time. */
+				__( 'Your current password was entered wrongly too many times, so your username was not changed. You can try again after %s.', 'blt-toolkit' ),
+				wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), (int) $until )
+			),
+			array(
+				'status' => 429,
+				'until'  => (int) $until,
+			)
+		);
+	}
+
+	/**
+	 * Log the attempt that paused someone's renames (UN-22 throttle).
+	 *
+	 * @param WP_User $user   Whose renames are paused.
+	 * @param int     $count  Wrong passwords within the window.
+	 * @param int     $until  When renaming works again.
+	 * @param int     $window The window, in seconds.
+	 * @return void
+	 */
+	private static function log_lock( WP_User $user, $count, $until, $window ) {
+		BLT_Toolkit_Log::record(
+			array(
+				'module'      => 'usernames',
+				'action'      => 'password_locked',
+				'object_type' => 'user',
+				'object_id'   => (string) (int) $user->ID,
+				'summary'     => sprintf(
+					/* translators: 1: number of wrong passwords, 2: number of minutes. */
+					_n( 'Username changes paused after %1$s wrong current password within %2$s minutes.', 'Username changes paused after %1$s wrong current passwords within %2$s minutes.', (int) $count, 'blt-toolkit' ),
+					number_format_i18n( (int) $count ),
+					number_format_i18n( (int) ceil( (int) $window / MINUTE_IN_SECONDS ) )
+				),
+				'details'     => array(
+					'attempts' => (int) $count,
+					'until'    => gmdate( 'Y-m-d H:i:s', (int) $until ),
+				),
+				'status'      => 'warning',
+			)
+		);
 	}
 
 	// ---------- UN-12 ----------

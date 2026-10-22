@@ -27,6 +27,22 @@ $blt_tk_tiles = array(
 		'sub'   => __( 'last 30 days', 'blt-toolkit' ),
 	),
 );
+
+/**
+ * A11Y-2: what a tile's link counts, read by screen readers after the
+ * number, in the plural form that number needs.
+ *
+ * @param string $key   Tile key.
+ * @param int    $count The number shown.
+ * @return string
+ */
+$blt_tk_tile_sr = static function ( $key, $count ) {
+	if ( 'switches' === $key ) {
+		return _n( 'switch into another account in the last 30 days', 'switches into another account in the last 30 days', $count, 'blt-toolkit' );
+	}
+
+	return _n( 'username change in the last 30 days', 'username changes in the last 30 days', $count, 'blt-toolkit' );
+};
 ?>
 <div class="wrap blt-ui blt-toolkit blt-toolkit-overview">
 	<?php
@@ -155,7 +171,7 @@ $blt_tk_tiles = array(
 							<?php if ( null === $activity[ $blt_tk_key ] ) : ?>
 								<span aria-hidden="true">&mdash;</span><span class="screen-reader-text"><?php esc_html_e( 'Not available', 'blt-toolkit' ); ?></span>
 							<?php elseif ( '' !== $links[ $blt_tk_key ] && $activity[ $blt_tk_key ] > 0 ) : ?>
-								<a href="<?php echo esc_url( $links[ $blt_tk_key ] ); ?>"><?php echo esc_html( number_format_i18n( $activity[ $blt_tk_key ] ) ); ?></a>
+								<a href="<?php echo esc_url( $links[ $blt_tk_key ] ); ?>"><?php echo esc_html( number_format_i18n( $activity[ $blt_tk_key ] ) ); ?><span class="screen-reader-text"> <?php echo esc_html( $blt_tk_tile_sr( $blt_tk_key, (int) $activity[ $blt_tk_key ] ) ); ?></span></a>
 							<?php else : ?>
 								<?php echo esc_html( number_format_i18n( $activity[ $blt_tk_key ] ) ); ?>
 							<?php endif; ?>

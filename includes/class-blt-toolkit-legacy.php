@@ -2166,7 +2166,8 @@ class BLT_Toolkit_Legacy {
 		}
 
 		// Not the current roles, so not take(): store() keeps them as they
-		// are, with the same canonical JSON and hash, and prunes (SNAP-3).
+		// are, with the same canonical JSON and hash, and prunes (SNAP-3),
+		// which never removes this reason (Snapshots::KEPT_REASONS).
 		$id = BLT_Toolkit_Snapshots::store( self::BACKUP_REASON, $roles );
 
 		if ( $id <= 0 ) {
