@@ -1,0 +1,350 @@
+/**
+ * BLT Toolkit — admin styles.
+ *
+ * Layered on top of assets/css/blt-design-system.css (enqueued as a
+ * dependency, on BLT Toolkit screens only), which supplies the page shell,
+ * cards, field rows, toggles, badges, tabs, stat tiles, callouts, code blocks
+ * and empty states. Only layout the catalog does not cover lives here, and
+ * every color comes from the design system's tokens.
+ *
+ * Page-specific classes carry the `blt-toolkit-` prefix so they never
+ * collide with a shared component name (DESIGN 2, naming gotcha).
+ */
+
+/* --- Notices from the last redirect sit between the header and the content --- */
+
+.blt-toolkit .blt-toolkit-notice {
+	margin: 12px 0 16px;
+}
+
+/* --- Overview: module cards ------------------------------------------------
+   Selectable-card styling, but each card holds a toggle switch: the toggle is
+   the control and the highlight shows whether the module runs right now, so
+   the card itself is not a click target. */
+
+.blt-toolkit .blt-toolkit-module-card {
+	gap: 8px;
+	cursor: default;
+}
+
+.blt-toolkit .blt-toolkit-module-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px 8px;
+}
+
+/* The catalog leaves room for a radio mark these cards do not have. */
+.blt-toolkit .blt-toolkit-module-head .blt-select-card-name {
+	padding-right: 0;
+}
+
+.blt-toolkit .blt-toolkit-module-toggle {
+	margin-top: auto;
+	padding-top: 8px;
+}
+
+.blt-toolkit .blt-toolkit-module-note {
+	display: block;
+	line-height: 1.5;
+}
+
+/* --- Settings: "Coming soon" line at the foot of a card -------------------- */
+
+.blt-toolkit .blt-toolkit-later {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 10px;
+	padding-top: 14px;
+	padding-bottom: 14px;
+	font-size: 13px;
+	background: var(--blt-surface-muted);
+}
+
+/* --- Settings: controls the catalog does not size -------------------------- */
+
+.blt-toolkit .blt-field textarea.regular-text {
+	width: 25em;
+	max-width: 100%;
+}
+
+.blt-toolkit .blt-field textarea.large-text {
+	max-width: 40em;
+}
+
+.blt-toolkit .blt-field select {
+	max-width: 100%;
+}
+
+/* Field labels that carry a badge under the text (Settings > Advanced). */
+.blt-toolkit .blt-field-label .blt-badge {
+	margin-top: 6px;
+}
+
+/* Several buttons on one line wrap cleanly on narrow screens. */
+.blt-toolkit .blt-stack-top .button {
+	margin: 0 6px 6px 0;
+}
+
+/* --- Activity: filter toolbar, table, row disclosure (SPEC 13.2) ----------
+   The toolbar is the catalog's .blt-toolbar; each control carries a small
+   visible label above it, and the controls wrap on narrow screens. */
+
+.blt-toolkit .blt-toolkit-muted {
+	color: var(--blt-muted-fg);
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-export {
+	margin: 0;
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-filters {
+	align-items: flex-end;
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-filter {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-filter > span {
+	font-size: 12px;
+	color: var(--blt-muted-fg);
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-filter select,
+.blt-toolkit-activity .blt-toolkit-activity-filter input {
+	max-width: 100%;
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-filter-actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-height: 30px;
+}
+
+/* The list table: the card body supplies the padding around it. */
+.blt-toolkit-activity .blt-toolkit-activity-table .tablenav {
+	height: auto;
+	margin: 0 0 8px;
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-table .tablenav.bottom {
+	margin: 8px 0 0;
+}
+
+.blt-toolkit-activity .wp-list-table .column-when {
+	width: 11em;
+}
+
+.blt-toolkit-activity .wp-list-table .column-actor {
+	width: 13em;
+}
+
+.blt-toolkit-activity .wp-list-table .column-activity {
+	width: 12em;
+}
+
+.blt-toolkit-activity .wp-list-table .column-status {
+	width: 7em;
+}
+
+/* Medium widths (above WordPress's 782px stacking, up to a wide screen):
+   the fixed em columns above would leave What happened, the primary column,
+   only a sliver of a table-layout: fixed table, so the other four take
+   shares of the table instead and the primary keeps about half. */
+@media screen and (min-width: 783px) and (max-width: 1279px) {
+	.blt-toolkit-activity .wp-list-table .column-when {
+		width: 13%;
+	}
+
+	.blt-toolkit-activity .wp-list-table .column-actor {
+		width: 15%;
+	}
+
+	.blt-toolkit-activity .wp-list-table .column-activity {
+		width: 14%;
+	}
+
+	.blt-toolkit-activity .wp-list-table .column-status {
+		width: 11%;
+	}
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-summary,
+.blt-toolkit-activity .blt-toolkit-activity-object,
+.blt-toolkit-activity .blt-toolkit-activity-sub {
+	display: block;
+	overflow-wrap: anywhere;
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-summary {
+	font-weight: 600;
+	color: var(--blt-fg);
+}
+
+.blt-toolkit-activity .column-activity .blt-badge {
+	margin-bottom: 4px;
+}
+
+/* Row disclosure: a native <details>, so it opens without JavaScript and
+   from the keyboard. */
+.blt-toolkit-activity .blt-toolkit-activity-details {
+	margin-top: 6px;
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-details > summary {
+	display: inline-block;
+	cursor: pointer;
+	color: var(--blt-primary);
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-details > summary:hover {
+	color: var(--blt-primary-hover);
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-details > summary:focus-visible {
+	outline: 2px solid var(--blt-primary);
+	outline-offset: 2px;
+	border-radius: var(--blt-radius-sm);
+}
+
+/* The body and every value cell are size containers, so each list of
+   fields lays itself out by the room it actually has (see the @container
+   rule below), however deep it is nested. */
+.blt-toolkit-activity .blt-toolkit-activity-details-body {
+	container-type: inline-size;
+	margin-top: 8px;
+	padding: 12px 14px;
+	background: var(--blt-surface-muted);
+	border: 1px solid var(--blt-border);
+	border-radius: var(--blt-radius-sm);
+	overflow-wrap: break-word;
+}
+
+/* Labels take what they need up to 40 percent; values always keep the
+   rest, and both may shrink, so nothing spills out of the cell. */
+.blt-toolkit-activity .blt-toolkit-activity-fields {
+	display: grid;
+	grid-template-columns: fit-content(40%) minmax(0, 1fr);
+	gap: 4px 16px;
+	margin: 0;
+	min-width: 0;
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-fields dt {
+	font-weight: 600;
+	color: var(--blt-fg);
+	min-width: 0;
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-fields dd {
+	container-type: inline-size;
+	margin: 0;
+	min-width: 0;
+	overflow-wrap: break-word;
+}
+
+/* Nested details sit under their label, indented; from the third level on
+   only the rule marks the nesting, so deep details keep their width. */
+.blt-toolkit-activity .blt-toolkit-activity-fields dd > .blt-toolkit-activity-fields {
+	padding-left: 10px;
+	border-left: 2px solid var(--blt-border);
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-fields dd .blt-toolkit-activity-fields dd .blt-toolkit-activity-fields dd > .blt-toolkit-activity-fields {
+	padding-left: 6px;
+}
+
+/* Too narrow for two columns: each label above its value. */
+@container (max-width: 26em) {
+	.blt-toolkit-activity .blt-toolkit-activity-fields {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0;
+	}
+
+	.blt-toolkit-activity .blt-toolkit-activity-fields dd {
+		margin-bottom: 6px;
+	}
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-chain {
+	margin: 0 0 0 1.4em;
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-recorded,
+.blt-toolkit-activity .blt-toolkit-activity-block {
+	margin-top: 12px;
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-block-title {
+	margin: 0 0 6px;
+	font-weight: 600;
+	color: var(--blt-fg);
+}
+
+.blt-toolkit-activity .blt-toolkit-diff-role {
+	padding: 8px 0;
+	border-top: 1px solid var(--blt-border);
+}
+
+.blt-toolkit-activity .blt-toolkit-diff-role:first-child {
+	border-top: 0;
+	padding-top: 0;
+}
+
+.blt-toolkit-activity .blt-toolkit-diff-role p {
+	margin: 4px 0;
+}
+
+.blt-toolkit-activity .blt-toolkit-diff-label {
+	color: var(--blt-muted-fg);
+}
+
+.blt-toolkit-activity .blt-toolkit-diff-flips {
+	margin: 0 0 0 1.4em;
+	list-style: disc;
+}
+
+.blt-toolkit-activity .blt-toolkit-activity-details .blt-code {
+	max-height: 20em;
+	overflow: auto;
+}
+
+/* Narrow screens: WordPress folds every column after the primary one away
+   until a JavaScript toggle opens the row. Show them stacked under their
+   labels instead, so the whole row reads without JavaScript. The row toggle
+   is not printed (see BLT_Toolkit_Admin_Activity_Table). */
+@media screen and (max-width: 782px) {
+	/* The primary cell is a <td> in older WordPress releases and a
+	   <th scope="row"> in current ones (7.1 checked), so the selector does
+	   not name the element. */
+	.blt-ui.blt-toolkit-activity .wp-list-table tr:not(.inline-edit-row):not(.no-items) .column-primary ~ td:not(.check-column) {
+		display: block;
+		flex: 0 1 100%;
+	}
+
+	.blt-ui.blt-toolkit-activity .wp-list-table tbody .column-primary {
+		padding-right: 10px;
+	}
+
+	.blt-toolkit-activity .blt-toolkit-activity-fields {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0;
+	}
+
+	.blt-toolkit-activity .blt-toolkit-activity-fields dd {
+		margin-bottom: 6px;
+	}
+
+	.blt-toolkit-activity .blt-toolkit-activity-filter,
+	.blt-toolkit-activity .blt-toolkit-activity-filter select,
+	.blt-toolkit-activity .blt-toolkit-activity-filter input {
+		width: 100%;
+	}
+}

@@ -1,0 +1,167 @@
+# Release automation: every push to main (i.e. every merge) runs the CI
+# baseline (lint, phpcs, unit tests, POT drift) on that commit, then bumps the
+# plugin version, tags it, builds the distribution zip, and publishes a GitHub
+# release whose asset the plugin-update-checker on client sites installs.
+# Ported from BLT Secure (CONVENTIONS 9.2, SPEC 17 Phase 0), with BLT
+# Activity Log's shared build and verify scripts.
+#
+# Bump level: patch by default; put #minor or #major anywhere in a commit
+# message in the push (squash-merge titles count), or run the workflow
+# manually with the bump input.
+#
+# Loop prevention (three layers): pushes made with GITHUB_TOKEN never
+# trigger workflows (GitHub built-in), the bump commit carries [skip ci],
+# and the actor guard below skips bot-initiated runs.
+#
+# NOTE: if branch protection is ever enabled on main, the bot's direct push
+# will be rejected — grant the Actions app a ruleset bypass, or switch the
+# checkout/push to a PAT secret.
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump level'
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Gate: the CI baseline (CONVENTIONS 14.3) runs on the exact commit being
+      # released, so a red tree never gets a version commit, a tag or a
+      # release, even after a direct push to main or a merge whose pull
+      # request checks failed. ci.yml's PHP 7.4 to 8.3 syntax matrix is not
+      # repeated: PHPCompatibilityWP in phpcs enforces the 7.4 floor here.
+      - name: Install dev dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Lint
+        run: composer lint
+
+      - name: Coding standards
+        run: composer phpcs
+
+      - name: Unit tests
+        run: composer test
+
+      # The creation date, the copyright year and the version in the header
+      # change without any string changing, so they are not drift. The
+      # committed POT is put back afterwards, so the bump commit below does
+      # not pick up a regenerated creation date.
+      - name: Translation template is current
+        run: |
+          POT=languages/blt-toolkit.pot
+          if ! git ls-files --error-unmatch "$POT" > /dev/null 2>&1; then
+            echo "$POT is not committed. Run: node bin/make-pot.js" >&2
+            exit 1
+          fi
+          node bin/make-pot.js
+          if ! git diff --quiet \
+            --ignore-matching-lines='^"POT-Creation-Date' \
+            --ignore-matching-lines='^"Project-Id-Version' \
+            --ignore-matching-lines='^# Copyright' \
+            -- "$POT"; then
+            echo "$POT is out of date. Run: node bin/make-pot.js" >&2
+            git --no-pager diff -- "$POT" | head -n 80
+            exit 1
+          fi
+          git checkout -- "$POT"
+
+      - name: Determine bump level
+        id: level
+        run: |
+          LEVEL="${{ github.event.inputs.bump }}"
+          if [ -z "$LEVEL" ]; then
+            LEVEL=patch
+            RANGE="${{ github.event.before }}..${{ github.sha }}"
+            # On force-push or first push the 'before' sha may be unknown; fall back to the head commit.
+            if ! MESSAGES=$(git log --format=%B "$RANGE" 2>/dev/null); then
+              MESSAGES=$(git log -1 --format=%B "${{ github.sha }}")
+            fi
+            case "$MESSAGES" in
+              *'#major'*) LEVEL=major ;;
+              *'#minor'*) LEVEL=minor ;;
+            esac
+          fi
+          echo "level=$LEVEL" >> "$GITHUB_OUTPUT"
+          echo "Bump level: $LEVEL"
+
+      - name: Bump version
+        id: bump
+        run: |
+          VERSION=$(php .github/scripts/bump-version.php "${{ steps.level.outputs.level }}")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "New version: $VERSION"
+
+      - name: Sanity-check version consistency
+        run: |
+          V="${{ steps.bump.outputs.version }}"
+          php -l blt-toolkit.php
+          .github/scripts/check-version-sync.sh
+          grep -q "^ \* Version:[[:space:]]*${V}\$" blt-toolkit.php
+          grep -q "define( 'BLT_TOOLKIT_VERSION', '${V}' );" blt-toolkit.php
+          grep -q "^Stable tag: ${V}\$" readme.txt
+
+      # Gate: a tree that cannot be packaged never gets a version commit or a tag.
+      - name: Pre-push package check
+        run: |
+          .github/scripts/build-zip.sh "${{ steps.bump.outputs.version }}"
+          .github/scripts/verify-zip.sh "${{ steps.bump.outputs.version }}"
+
+      # The tag is annotated and created after the rebase, then pushed by name:
+      # --follow-tags skips lightweight tags, and a tag made before the rebase
+      # would point at a commit that never reaches main.
+      - name: Commit, tag, push
+        run: |
+          V="${{ steps.bump.outputs.version }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(release): v${V} [skip ci]"
+          git pull --rebase origin main
+          git tag -a "v${V}" -m "v${V}"
+          git push origin main "refs/tags/v${V}"
+
+      # Rebuilt from the pushed commit, so the asset matches the tag even when
+      # the rebase brought in a commit that landed during this run.
+      - name: Build distribution zip
+        run: .github/scripts/build-zip.sh "${{ steps.bump.outputs.version }}"
+
+      - name: Verify zip contents
+        run: .github/scripts/verify-zip.sh "${{ steps.bump.outputs.version }}"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.bump.outputs.version }}
+          name: v${{ steps.bump.outputs.version }}
+          generate_release_notes: true
+          files: build/blt-toolkit-${{ steps.bump.outputs.version }}.zip
