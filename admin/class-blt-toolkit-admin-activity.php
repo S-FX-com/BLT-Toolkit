@@ -607,6 +607,7 @@ class BLT_Toolkit_Admin_Activity {
 			'role_merged'           => __( 'Roles merged', 'blt-toolkit' ),
 			'roles_reset'           => __( 'Roles reset', 'blt-toolkit' ),
 			'roles_imported'        => __( 'Roles imported', 'blt-toolkit' ),
+			'roles_exported'        => __( 'Roles exported', 'blt-toolkit' ),
 			'snapshot_restored'     => __( 'Snapshot restored', 'blt-toolkit' ),
 			'capability_added'      => __( 'Capability added', 'blt-toolkit' ),
 			'capability_deleted'    => __( 'Capability deleted', 'blt-toolkit' ),

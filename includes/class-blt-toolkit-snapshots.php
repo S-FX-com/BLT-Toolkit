@@ -18,8 +18,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Each row holds `$wp_roles->roles` as canonical JSON with its SHA-256, so two
  * snapshots of the same roles are recognizably identical whatever order the
  * roles were built in, and a row whose JSON no longer matches its hash is
- * recognizably damaged. The Tools screen that shows all of this arrives in
- * Phase 6; nothing here renders anything.
+ * recognizably damaged. Tools > Snapshots (BLT_Toolkit_Admin_Tools) shows
+ * all of this; nothing here renders anything. A restore writes through
+ * BLT_Toolkit_Role_Store::transaction(), like every BLT roles write, and
+ * review() is the dry run the Tools previews share (restore, reset, sync).
  *
  * Decided policy for every BLT write to the roles option: when the snapshot
  * that must come first cannot be stored (take() returns 0), the write is
@@ -75,6 +77,28 @@ class BLT_Toolkit_Snapshots {
 		}
 
 		$id = self::insert( $reason, $roles, $hash, false );
+
+		if ( $id > 0 ) {
+			self::prune();
+		}
+
+		return $id;
+	}
+
+	/**
+	 * Store a snapshot of roles other than the current ones, such as User
+	 * Role Editor's first-activation backup (reason `legacy_ure_backup`,
+	 * SPEC 15), then prune (SNAP-3). Writes no role.
+	 *
+	 * Unlike take(), it does not compare with the newest snapshot: the
+	 * caller decides whether this content is stored already.
+	 *
+	 * @param string $reason Why it was stored (SPEC 14.3 lists the values).
+	 * @param array  $roles  A roles array in the shape of `$wp_roles->roles`.
+	 * @return int Snapshot ID, or 0 when it could not be stored.
+	 */
+	public static function store( $reason, array $roles ) {
+		$id = self::insert( $reason, $roles, BLT_Toolkit_Role_Diff::hash( $roles ), false );
 
 		if ( $id > 0 ) {
 			self::prune();
@@ -422,46 +446,159 @@ class BLT_Toolkit_Snapshots {
 	}
 
 	/**
-	 * Restore a snapshot (SNAP-4).
+	 * Everything the Tools screen shows before a restore (SNAP-4), worked out
+	 * by a dry run through the role store, so the diff, the Guard's verdict
+	 * and the SEC-10 list are exactly those of the write. Nothing is written
+	 * (RO-5).
 	 *
-	 * 1. The snapshot must exist and be undamaged, the roles must live in the
-	 *    database, and something must differ.
-	 * 2. The Guard checks the change for every role it touches, as the
-	 *    current user (SEC-2, SEC-3, SEC-5, SEC-12, SEC-13), so a restore can
-	 *    never grant what its user could not grant by hand.
-	 * 3. A `before_restore` snapshot of the roles today (SNAP-1). If it cannot
-	 *    be stored, nothing is written.
-	 * 4. One write of the roles option, in which `administrator` keeps the
-	 *    lockout-critical set and, when the snapshot predates BLT Toolkit's
-	 *    grants, gets BLT Toolkit's capabilities back (restorable_roles()).
-	 * 5. A `roles` / `snapshot_restored` row in the activity log, with the
-	 *    diff and the `before_restore` snapshot's ID.
-	 *
-	 * The caller checks that the user may restore at all (`blt_reset_roles`
-	 * on the Tools screen) and shows restore_preview() first.
-	 *
-	 * @param int  $id        Snapshot ID.
-	 * @param bool $confirmed Whether the user confirmed a SEC-13 warning (the
-	 *                        restore takes away their own `blt_edit_roles`
-	 *                        while another administrator could give it back).
-	 * @return int|WP_Error The `before_restore` snapshot's ID, or a WP_Error:
-	 *                      `blt_toolkit_snapshot_not_found`,
-	 *                      `blt_toolkit_snapshot_damaged`,
-	 *                      `blt_toolkit_roles_not_in_db`,
-	 *                      `blt_toolkit_snapshot_unchanged`, one of the
-	 *                      Guard's codes, `blt_toolkit_snapshot_failed` or
-	 *                      `blt_toolkit_roles_write_failed`.
+	 * @param int   $id   Snapshot ID.
+	 * @param array $args Optional: `actor` (WP_User; default the current user),
+	 *                    `count` (false skips counting the people who hold
+	 *                    the roles the restore deletes, as the confirm does).
+	 * @return array|WP_Error array(
+	 *     'snapshot'  => the snapshot's metadata (no roles),
+	 *     'diff'      => what the restore changes (today against the roles written),
+	 *     'counts'    => Role_Diff::counts() of that diff,
+	 *     'additions' => restore_additions(): what Administrator gets beyond the snapshot,
+	 *     'expected'  => hash of the roles the plan was made from (the confirm form carries it),
+	 *     'unchanged' => nothing would change,
+	 *     'in_code'   => the roles live in code and cannot be restored,
+	 *     'critical'  => role => Critical capabilities granted (SEC-10),
+	 *     'names'     => role => array( 'label', 'accept' ) for the typed confirmation,
+	 *     'lockout'   => the SEC-13 confirmation is needed,
+	 *     'guard'     => true or the Guard's refusal,
+	 *     'isolated'  => isolation_notes(): content types seeded, and those nobody could edit after,
+	 *     'removed', 'no_role', 'default_role', 'extra_default' => removal_impact() (RO-43, SNAP-4),
+	 * ), or `blt_toolkit_snapshot_not_found` / `blt_toolkit_snapshot_damaged`.
 	 */
-	public static function restore( $id, $confirmed = false ) {
+	public static function restore_plan( $id, array $args = array() ) {
 		$snapshot = self::restorable( $id );
 
 		if ( is_wp_error( $snapshot ) ) {
 			return $snapshot;
 		}
 
-		$wp_roles = wp_roles();
+		$current = self::current_roles();
+		$maps    = self::isolation_maps();
+		$target  = self::target_roles( $snapshot['roles'], $maps );
+		$plan    = array(
+			'snapshot'      => self::meta_only( $snapshot ),
+			'diff'          => BLT_Toolkit_Role_Diff::diff( $current, $target ),
+			'counts'        => array(
+				'roles'        => 0,
+				'capabilities' => 0,
+			),
+			'additions'     => self::restore_additions( $snapshot['roles'], $current, $target, BLT_Toolkit_Caps::lockout_critical(), array_keys( BLT_Toolkit_Caps::own() ), $maps ),
+			'isolated'      => self::isolation_notes( self::seed_isolated( $snapshot['roles'], $maps )['seeded'], $target, $maps ),
+			'removed'       => array(),
+			'no_role'       => null,
+			'default_role'  => '',
+			'extra_default' => array(),
+			'expected'      => BLT_Toolkit_Role_Diff::hash( $current ),
+			'unchanged'     => false,
+			'in_code'       => ! wp_roles()->use_db,
+			'critical'      => array(),
+			'names'         => array(),
+			'lockout'       => false,
+			'guard'         => true,
+		);
 
-		if ( ! $wp_roles->use_db ) {
+		if ( $plan['in_code'] ) {
+			$plan['counts']    = BLT_Toolkit_Role_Diff::counts( $plan['diff'] );
+			$plan['unchanged'] = BLT_Toolkit_Role_Diff::is_empty( $plan['diff'] );
+
+			return $plan;
+		}
+
+		$seen      = '';
+		$additions = $plan['additions'];
+		$review    = self::review(
+			self::restore_mutator( $snapshot, '', $seen, $additions, $maps ),
+			array(
+				'reason'  => 'before_restore',
+				'context' => 'restore',
+				'actor'   => isset( $args['actor'] ) && $args['actor'] instanceof WP_User ? $args['actor'] : wp_get_current_user(),
+			)
+		);
+
+		if ( is_wp_error( $review ) ) {
+			return $review;
+		}
+
+		$plan['diff']      = $review['diff'];
+		$plan['counts']    = BLT_Toolkit_Role_Diff::counts( $review['diff'] );
+		$plan['unchanged'] = array() === $review['changes'];
+		$plan['additions'] = $additions;
+		$plan['expected']  = '' !== $seen ? $seen : $plan['expected'];
+		$plan['critical']  = $review['critical'];
+		$plan['names']     = $review['names'];
+		$plan['lockout']   = $review['lockout'];
+		$plan['guard']     = $review['guard'];
+
+		// RO-43's user impact, shared with the reset (SNAP-4): who holds the
+		// roles the restore deletes, and who is left with none. Counted for
+		// the preview only (`count` false on the confirm).
+		$impact = self::removal_impact( $plan['diff'], array_keys( $target ), ! isset( $args['count'] ) || ! empty( $args['count'] ) );
+
+		$plan['removed']       = $impact['removed'];
+		$plan['no_role']       = $impact['no_role'];
+		$plan['default_role']  = $impact['default_role'];
+		$plan['extra_default'] = $impact['extra_default'];
+
+		return $plan;
+	}
+
+	/**
+	 * Restore a snapshot (SNAP-4), through the role store
+	 * (BLT_Toolkit_Role_Store::transaction(), context `restore`).
+	 *
+	 * 1. The snapshot must exist and be undamaged, and the roles must live in
+	 *    the database.
+	 * 2. The store reads the roles again; when the caller passes `expected`
+	 *    (the hash restore_plan() showed), roles that changed since the
+	 *    preview refuse the restore (`blt_toolkit_roles_changed`), so what
+	 *    is written is what was previewed.
+	 * 3. The roles to write are the snapshot's, in today's role order, with
+	 *    `administrator` made safe (restorable_roles(): the SEC-12 lockout
+	 *    set, and BLT Toolkit's capabilities when the snapshot predates
+	 *    them).
+	 * 4. The Guard checks every role the restore touches as the person
+	 *    acting (SEC-1, SEC-2, SEC-3, SEC-5, SEC-12, SEC-13), and SEC-10's
+	 *    Critical grants need `confirmed_critical`, so a restore never grants
+	 *    what its user could not grant by hand.
+	 * 5. A `before_restore` snapshot of the roles today (SNAP-1; none, no
+	 *    write), `blt_toolkit_before_roles_save`, one write of the roles
+	 *    option, a `roles` / `snapshot_restored` log row with the diff and the
+	 *    `before_restore` snapshot's ID, `blt_toolkit_after_roles_save`.
+	 *
+	 * The caller checks that the user may restore at all (`blt_reset_roles`
+	 * on the Tools screen) and shows restore_plan() first.
+	 *
+	 * @param int   $id        Snapshot ID.
+	 * @param bool  $confirmed Whether the user confirmed a SEC-13 warning (the
+	 *                         restore takes away their own `blt_edit_roles`
+	 *                         while another administrator could give it back).
+	 * @param array $args      Optional: `confirmed_critical` (SEC-10 typed
+	 *                         confirmation given), `expected` (roles hash from
+	 *                         the preview), `actor` (WP_User).
+	 * @return int|WP_Error The `before_restore` snapshot's ID, or a WP_Error:
+	 *                      `blt_toolkit_snapshot_not_found`,
+	 *                      `blt_toolkit_snapshot_damaged`,
+	 *                      `blt_toolkit_roles_not_in_db`,
+	 *                      `blt_toolkit_roles_changed`,
+	 *                      `blt_toolkit_snapshot_unchanged`, one of the
+	 *                      Guard's codes, `blt_toolkit_critical_review`,
+	 *                      `blt_toolkit_snapshot_failed` or
+	 *                      `blt_toolkit_roles_write_failed`.
+	 */
+	public static function restore( $id, $confirmed = false, array $args = array() ) {
+		$snapshot = self::restorable( $id );
+
+		if ( is_wp_error( $snapshot ) ) {
+			return $snapshot;
+		}
+
+		if ( ! wp_roles()->use_db ) {
 			return new WP_Error(
 				'blt_toolkit_roles_not_in_db',
 				__( 'This site defines its roles in code ($wp_user_roles), so they cannot be restored from here.', 'blt-toolkit' ),
@@ -469,11 +606,57 @@ class BLT_Toolkit_Snapshots {
 			);
 		}
 
-		$current = self::current_roles();
-		$target  = self::target_roles( $snapshot['roles'] );
-		$diff    = BLT_Toolkit_Role_Diff::diff( $current, $target );
+		$expected  = isset( $args['expected'] ) && is_string( $args['expected'] ) ? strtolower( trim( $args['expected'] ) ) : '';
+		$seen      = '';
+		$additions = array();
+		$meta      = self::meta_only( $snapshot );
+		$result    = BLT_Toolkit_Role_Store::transaction(
+			self::restore_mutator( $snapshot, $expected, $seen, $additions, self::isolation_maps() ),
+			array(
+				'reason'             => 'before_restore',
+				'context'            => 'restore',
+				'module'             => 'roles',
+				'action'             => 'snapshot_restored',
+				'object_type'        => 'snapshot',
+				'object_id'          => (string) $snapshot['id'],
+				'summary'            => self::restored_summary( $meta ),
+				'describe'           => static function ( array $diff ) use ( $meta, &$additions ) {
+					$details = array(
+						'restored_snapshot' => array(
+							'id'         => $meta['id'],
+							'created_at' => $meta['created_at'],
+							'reason'     => $meta['reason'],
+						),
+						'counts'            => BLT_Toolkit_Role_Diff::counts( $diff ),
+					);
 
-		if ( BLT_Toolkit_Role_Diff::is_empty( $diff ) ) {
+					// What Administrator got beyond the snapshot (SEC-12), when anything.
+					$extra = array_filter(
+						array(
+							'lockout_set'          => isset( $additions['lockout'] ) ? $additions['lockout'] : array(),
+							'toolkit_capabilities' => isset( $additions['blt'] ) ? $additions['blt'] : array(),
+							'separate_permissions' => isset( $additions['isolated'] ) ? $additions['isolated'] : array(),
+							'other'                => isset( $additions['other'] ) ? $additions['other'] : array(),
+						)
+					);
+
+					if ( array() !== $extra ) {
+						$details['administrator_additions'] = $extra;
+					}
+
+					return array( 'details' => $details );
+				},
+				'confirmed_lockout'  => (bool) $confirmed,
+				'confirmed_critical' => ! empty( $args['confirmed_critical'] ),
+				'actor'              => isset( $args['actor'] ) && $args['actor'] instanceof WP_User ? $args['actor'] : wp_get_current_user(),
+			)
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		if ( array() === $result['changes'] ) {
 			return new WP_Error(
 				'blt_toolkit_snapshot_unchanged',
 				__( 'Your roles already match this snapshot, so nothing was changed.', 'blt-toolkit' ),
@@ -481,52 +664,530 @@ class BLT_Toolkit_Snapshots {
 			);
 		}
 
-		$allowed = self::guard_restore( wp_get_current_user(), $diff, $confirmed );
+		return (int) $result['snapshot_id'];
+	}
 
-		if ( is_wp_error( $allowed ) ) {
-			return $allowed;
+	/**
+	 * A dry run of a roles write through the role store, split the way a
+	 * review page needs it. Shared by restore, reset (BLT_Toolkit_Reset) and
+	 * Sync administrator (BLT_Toolkit_Sync). Nothing is written.
+	 *
+	 * The store's dry run returns one verdict, and a SEC-13 refusal hides
+	 * whatever the Guard would say after it. So the first pass takes SEC-10
+	 * as confirmed and SEC-13 as not; when SEC-13 asks for a confirmation,
+	 * a second pass takes it as given and reports what remains. SEC-10's
+	 * list comes from the store either way.
+	 *
+	 * @param callable $mutate Role-store mutator.
+	 * @param array    $args   BLT_Toolkit_Role_Store::transaction() arguments.
+	 * @return array|WP_Error array( 'changes', 'diff', 'critical' (role => caps),
+	 *                        'names' (role => array( 'label', 'accept' )),
+	 *                        'lockout' (bool), 'guard' (true or WP_Error) ),
+	 *                        or the mutator's or the store's WP_Error.
+	 */
+	public static function review( callable $mutate, array $args = array() ) {
+		$args = array_merge(
+			$args,
+			array(
+				'dry_run'            => true,
+				'confirmed_critical' => true,
+				'confirmed_lockout'  => false,
+			)
+		);
+		$dry  = BLT_Toolkit_Role_Store::transaction( $mutate, $args );
+
+		if ( is_wp_error( $dry ) ) {
+			return $dry;
 		}
 
-		// SNAP-1, and the decided policy: no snapshot, no write.
-		$before = self::take( 'before_restore' );
+		$out = array(
+			'changes'  => $dry['changes'],
+			'diff'     => $dry['diff'],
+			'critical' => isset( $dry['critical'] ) ? (array) $dry['critical'] : array(),
+			'names'    => array(),
+			'lockout'  => false,
+			'guard'    => isset( $dry['guard'] ) ? $dry['guard'] : true,
+		);
 
-		if ( $before <= 0 ) {
-			return new WP_Error(
-				'blt_toolkit_snapshot_failed',
-				__( 'A copy of your roles could not be saved first, so nothing was restored. Try again; if this keeps happening, the PHP error log says why.', 'blt-toolkit' ),
-				array( 'status' => 500 )
+		if ( is_wp_error( $out['guard'] ) && 'blt_toolkit_self_lockout' === $out['guard']->get_error_code() ) {
+			$data = $out['guard']->get_error_data();
+
+			if ( is_array( $data ) && ! empty( $data['confirmable'] ) ) {
+				$again = BLT_Toolkit_Role_Store::transaction( $mutate, array_merge( $args, array( 'confirmed_lockout' => true ) ) );
+
+				if ( is_wp_error( $again ) ) {
+					return $again;
+				}
+
+				$out['lockout']  = true;
+				$out['guard']    = isset( $again['guard'] ) ? $again['guard'] : true;
+				$out['critical'] = isset( $again['critical'] ) ? (array) $again['critical'] : $out['critical'];
+			}
+		}
+
+		foreach ( array_keys( $out['critical'] ) as $role ) {
+			$stored = self::after_name( (string) $role, $out['diff'], self::current_roles() );
+			$label  = function_exists( 'translate_user_role' ) ? translate_user_role( $stored ) : $stored;
+
+			$out['names'][ (string) $role ] = array(
+				'label'  => $label,
+				'accept' => array_values( array_unique( array( $label, $stored ) ) ),
 			);
 		}
 
-		// One write for the whole restore (the RO-3 technique), then reload
-		// the role objects from it. The diff is not empty, so update_option()
-		// returning false means the database refused the write.
-		if ( ! update_option( $wp_roles->role_key, $target ) ) {
-			self::log_restore( $snapshot, $diff, $before, false );
+		return $out;
+	}
 
-			return new WP_Error(
-				'blt_toolkit_roles_write_failed',
-				__( 'The roles could not be saved, so nothing was restored. Your roles are as they were.', 'blt-toolkit' ),
-				array( 'status' => 500 )
+	/**
+	 * Whether every role in a SEC-10 review got its display name typed. Pure.
+	 *
+	 * The comparison ignores case and surrounding spaces, as the Roles
+	 * screen's does; either the translated or the stored name is accepted.
+	 *
+	 * @param array $names review()'s `names`: role => array( 'label', 'accept' ).
+	 * @param mixed $typed Posted values: role => typed text.
+	 * @return bool True when there is nothing to confirm, or all of it matches.
+	 */
+	public static function names_confirmed( array $names, $typed ) {
+		$typed = is_array( $typed ) ? $typed : array();
+
+		foreach ( $names as $role => $name ) {
+			$value = isset( $typed[ $role ] ) && is_scalar( $typed[ $role ] ) ? self::fold( (string) $typed[ $role ] ) : '';
+			$match = false;
+
+			if ( '' !== $value ) {
+				foreach ( isset( $name['accept'] ) ? (array) $name['accept'] : array() as $accept ) {
+					if ( self::fold( (string) $accept ) === $value ) {
+						$match = true;
+						break;
+					}
+				}
+			}
+
+			if ( ! $match ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * The roles restore() writes for a snapshot's roles: restorable_roles(),
+	 * in the order of today's roles (roles that are new come last). Pure.
+	 *
+	 * Role order is what core's role menus follow; the snapshot stores roles
+	 * sorted by ID, so writing them as stored would reorder every menu.
+	 *
+	 * @param array $target  restorable_roles() result.
+	 * @param array $current Roles array today.
+	 * @return array
+	 */
+	public static function in_order( array $target, array $current ) {
+		$out = array();
+
+		foreach ( array_keys( $current ) as $id ) {
+			if ( array_key_exists( $id, $target ) ) {
+				$out[ $id ] = $target[ $id ];
+			}
+		}
+
+		foreach ( $target as $id => $role ) {
+			if ( ! array_key_exists( $id, $out ) ) {
+				$out[ $id ] = $role;
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * The new capability strings of a seed map, as a set. Pure.
+	 *
+	 * @param array $map BLT_Toolkit_Isolation::seed_map().
+	 * @return array<string,true>
+	 */
+	public static function map_strings( array $map ) {
+		$out = array();
+
+		foreach ( $map as $news ) {
+			foreach ( (array) $news as $new ) {
+				$out[ (string) $new ] = true;
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Give roles the strings of content types with separate permissions as
+	 * RS-30 does: every Posts (or Pages) capability a role holds gives the
+	 * type's matching string with the same value, and `edit_posts` gives
+	 * `create_{plural}` too (BLT_Toolkit_Isolation::seed_changes(), adds
+	 * only; a string the role mentions already is left as it is). Pure.
+	 *
+	 * - `$only` null (a restore): a type is seeded only when no role
+	 *   mentions any of its strings, which means the roles predate its
+	 *   separate permissions; every role then gets them.
+	 * - `$only` a list of role IDs (a reset): those roles are seeded,
+	 *   whatever the others hold, because they are WordPress's defaults,
+	 *   which know nothing of the type.
+	 *
+	 * @param array      $roles Roles array.
+	 * @param array      $maps  isolation_maps(): type => array( 'label', 'map', 'edit' ).
+	 * @param array|null $only  Role IDs to seed, or null.
+	 * @return array{roles:array,seeded:string[]} `seeded`: the types seeded, sorted.
+	 */
+	public static function seed_isolated( array $roles, array $maps, $only = null ) {
+		$seeded = array();
+
+		foreach ( $maps as $type => $info ) {
+			$map     = isset( $info['map'] ) && is_array( $info['map'] ) ? $info['map'] : array();
+			$strings = self::map_strings( $map );
+
+			if ( array() === $strings ) {
+				continue;
+			}
+
+			if ( null === $only ) {
+				foreach ( $roles as $role ) {
+					$caps = is_array( $role ) && isset( $role['capabilities'] ) && is_array( $role['capabilities'] ) ? $role['capabilities'] : array();
+
+					if ( array() !== array_intersect_key( $caps, $strings ) ) {
+						continue 2;
+					}
+				}
+			}
+
+			$changed = false;
+
+			foreach ( $roles as $id => $role ) {
+				if ( ! is_array( $role ) || ( null !== $only && ! in_array( (string) $id, array_map( 'strval', (array) $only ), true ) ) ) {
+					continue;
+				}
+
+				$caps = isset( $role['capabilities'] ) && is_array( $role['capabilities'] ) ? $role['capabilities'] : array();
+
+				foreach ( BLT_Toolkit_Isolation::seed_changes( $caps, $map )['add'] as $cap => $value ) {
+					if ( ! array_key_exists( $cap, $caps ) ) {
+						$caps[ $cap ] = (bool) $value;
+						$changed      = true;
+					}
+				}
+
+				$roles[ $id ]['capabilities'] = $caps;
+			}
+
+			if ( $changed ) {
+				$seeded[] = (string) $type;
+			}
+		}
+
+		sort( $seeded, SORT_STRING );
+
+		return array(
+			'roles'  => $roles,
+			'seeded' => $seeded,
+		);
+	}
+
+	/**
+	 * Content types with separate permissions that no role would let anyone
+	 * edit: no role in `$roles` grants the type's `edit_{plural}`. Pure.
+	 *
+	 * @param array $roles Roles array.
+	 * @param array $maps  isolation_maps().
+	 * @return string[] Types, sorted.
+	 */
+	public static function orphaned_types( array $roles, array $maps ) {
+		$out = array();
+
+		foreach ( $maps as $type => $info ) {
+			$edit = isset( $info['edit'] ) ? (string) $info['edit'] : '';
+
+			if ( '' === $edit ) {
+				continue;
+			}
+
+			foreach ( $roles as $role ) {
+				if ( is_array( $role ) && ! empty( $role['capabilities'][ $edit ] ) ) {
+					continue 2;
+				}
+			}
+
+			$out[] = (string) $type;
+		}
+
+		sort( $out, SORT_STRING );
+
+		return $out;
+	}
+
+	/**
+	 * Each content type that has separate permissions (RS-30) with what
+	 * maps to its strings: the strings of Posts (or Pages, the type it
+	 * shared before) => the type's own (BLT_Toolkit_Isolation::seed_map()),
+	 * its label, and its `edit_posts` string. Reads only; empty when no
+	 * type is isolated, without loading the separate-permissions flows.
+	 *
+	 * @return array<string,array{label:string,map:array,edit:string}>
+	 */
+	public static function isolation_maps() {
+		$isolated = BLT_Toolkit_Isolation_Core::isolated();
+		$out      = array();
+
+		if ( array() === $isolated ) {
+			return $out;
+		}
+
+		foreach ( $isolated as $type => $info ) {
+			$type = (string) $type;
+			$base = get_post_type_object( BLT_Toolkit_Isolation::shares( $type ) );
+
+			if ( ! $base instanceof WP_Post_Type ) {
+				continue;
+			}
+
+			$old = array();
+
+			foreach ( (array) $base->cap as $key => $value ) {
+				if ( is_scalar( $value ) ) {
+					$old[ (string) $key ] = (string) $value;
+				}
+			}
+
+			$new = BLT_Toolkit_Isolation_Core::new_caps( $type, $info['singular'], $info['plural'] );
+			$map = BLT_Toolkit_Isolation::seed_map( $old, $new );
+
+			if ( array() === $map ) {
+				continue;
+			}
+
+			$object = get_post_type_object( $type );
+
+			$out[ $type ] = array(
+				'label' => $object instanceof WP_Post_Type && isset( $object->labels->name ) ? (string) $object->labels->name : $type,
+				'map'   => $map,
+				'edit'  => isset( $new['edit_posts'] ) ? (string) $new['edit_posts'] : '',
 			);
 		}
 
-		$wp_roles->for_site();
+		return $out;
+	}
 
-		if ( is_callable( array( 'BLT_Toolkit_Guard', 'flush' ) ) ) {
-			BLT_Toolkit_Guard::flush();
+	/**
+	 * What a restore or reset preview says about content types with
+	 * separate permissions: the types whose strings the roles get because
+	 * the written roles predate them (`seeded`), and the types no role
+	 * would let anyone edit afterwards (`orphaned`, with RS-32's revert as
+	 * the way out). Type => label.
+	 *
+	 * @param string[] $seeded Types seed_isolated() seeded.
+	 * @param array    $target The roles to be written.
+	 * @param array    $maps   isolation_maps().
+	 * @return array{seeded:array<string,string>,orphaned:array<string,string>}
+	 */
+	public static function isolation_notes( array $seeded, array $target, array $maps ) {
+		$out = array(
+			'seeded'   => array(),
+			'orphaned' => array(),
+		);
+
+		foreach ( $seeded as $type ) {
+			if ( isset( $maps[ $type ] ) ) {
+				$out['seeded'][ $type ] = $maps[ $type ]['label'];
+			}
 		}
 
-		// Capabilities of the current user were worked out before the write.
-		$user = wp_get_current_user();
-
-		if ( $user->exists() ) {
-			$user->get_role_caps();
+		foreach ( self::orphaned_types( $target, $maps ) as $type ) {
+			$out['orphaned'][ $type ] = $maps[ $type ]['label'];
 		}
 
-		self::log_restore( $snapshot, $diff, $before, true );
+		return $out;
+	}
 
-		return $before;
+	/**
+	 * How a role is written in a user's serialized capabilities meta: the
+	 * key `s:LENGTH:"id";`. A key of that array is a role membership
+	 * whatever its value (WP_User::get_role_caps()), and its values are
+	 * booleans, so this text marks the role. Pure.
+	 *
+	 * @param string $role Role ID.
+	 * @return string
+	 */
+	public static function role_key( $role ) {
+		$role = (string) $role;
+
+		return 's:' . strlen( $role ) . ':"' . $role . '";';
+	}
+
+	/**
+	 * Who a write that deletes roles leaves behind (RO-43, SNAP-4): for each
+	 * role the diff removes, its name and how many people hold it, and how
+	 * many of those hold none of the roles that remain (they are left with
+	 * no role). One grouped query on the capabilities meta, only when
+	 * `$count` is true (a preview); the confirm skips it (SEC-9). Also the
+	 * default role for new users and the additional default roles (US-2)
+	 * that disappear.
+	 *
+	 * @param array    $diff      Role_Diff::diff() of the write.
+	 * @param string[] $remaining Role IDs after the write.
+	 * @param bool     $count     Whether to count people.
+	 * @return array{removed:array<string,array{name:string,users:int|null}>,no_role:int|null,default_role:string,extra_default:string[]}
+	 */
+	public static function removal_impact( array $diff, array $remaining, $count = true ) {
+		global $wpdb;
+
+		$out = array(
+			'removed'       => array(),
+			'no_role'       => null,
+			'default_role'  => '',
+			'extra_default' => array(),
+		);
+
+		foreach ( isset( $diff['removed'] ) ? (array) $diff['removed'] : array() as $role => $data ) {
+			$name = is_array( $data ) && isset( $data['name'] ) && is_scalar( $data['name'] ) && '' !== (string) $data['name'] ? (string) $data['name'] : (string) $role;
+
+			$out['removed'][ (string) $role ] = array(
+				'name'  => function_exists( 'translate_user_role' ) ? translate_user_role( $name ) : $name,
+				'users' => null,
+			);
+		}
+
+		if ( array() === $out['removed'] ) {
+			return $out;
+		}
+
+		$default = (string) get_option( 'default_role' );
+
+		if ( '' !== $default && isset( $out['removed'][ $default ] ) ) {
+			$out['default_role'] = $default;
+		}
+
+		$extra = BLT_Toolkit_Settings::get( 'roles', 'extra_default_roles' );
+
+		foreach ( is_array( $extra ) ? $extra : array() as $role ) {
+			if ( is_string( $role ) && isset( $out['removed'][ $role ] ) ) {
+				$out['extra_default'][] = $role;
+			}
+		}
+
+		if ( ! $count ) {
+			return $out;
+		}
+
+		$like    = static function ( $role ) use ( $wpdb ) {
+			return $wpdb->prepare( 'meta_value LIKE %s', '%' . $wpdb->esc_like( self::role_key( $role ) ) . '%' );
+		};
+		$columns = array();
+		$any     = array();
+		$keep    = array();
+		$index   = 0;
+
+		foreach ( array_keys( $out['removed'] ) as $role ) {
+			$match     = $like( $role );
+			$any[]     = $match;
+			$columns[] = 'SUM( CASE WHEN ' . $match . ' THEN 1 ELSE 0 END ) AS r' . $index;
+			++$index;
+		}
+
+		foreach ( $remaining as $role ) {
+			$keep[] = $like( (string) $role );
+		}
+
+		$columns[] = 'SUM( CASE WHEN ' . ( array() === $keep ? '1 = 1' : 'NOT ( ' . implode( ' OR ', $keep ) . ' )' ) . ' THEN 1 ELSE 0 END ) AS left_with_none';
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- One count for a preview that deletes roles; every LIKE is prepared above.
+		$row = $wpdb->get_row(
+			$wpdb->prepare( 'SELECT ' . implode( ', ', $columns ) . " FROM {$wpdb->usermeta} WHERE meta_key = %s AND ( " . implode( ' OR ', $any ) . ' )', $wpdb->get_blog_prefix() . 'capabilities' ),
+			ARRAY_A
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
+
+		if ( ! is_array( $row ) ) {
+			return $out;
+		}
+
+		$index = 0;
+
+		foreach ( array_keys( $out['removed'] ) as $role ) {
+			$out['removed'][ $role ]['users'] = isset( $row[ 'r' . $index ] ) ? (int) $row[ 'r' . $index ] : 0;
+			++$index;
+		}
+
+		$out['no_role'] = isset( $row['left_with_none'] ) ? (int) $row['left_with_none'] : 0;
+
+		return $out;
+	}
+
+	/**
+	 * What a restore gives `administrator` beyond the snapshot (SNAP-4,
+	 * SEC-12), so the preview can say so in words and not only in the diff.
+	 * Pure.
+	 *
+	 * Compared with the snapshot's own copy of the role, or with the role
+	 * today when the snapshot has none (restorable_roles() then keeps
+	 * today's). A capability counts when the role written grants it and that
+	 * copy does not (absent, or denied).
+	 *
+	 * @param array    $snapshot Roles array from the snapshot.
+	 * @param array    $current  Roles array today.
+	 * @param array    $target   The roles the restore writes.
+	 * @param string[] $lockout  The lockout-critical set (SEC-12).
+	 * @param string[] $own      BLT Toolkit's capabilities (SPEC 5.1).
+	 * @param array    $maps     Optional: isolation_maps().
+	 * @return array{lockout:string[],blt:string[],isolated:string[],other:string[],kept_role:bool} Sorted names: the
+	 *         lockout-critical ones, BLT Toolkit's own (because the snapshot
+	 *         predates them), the strings of content types with separate
+	 *         permissions (because the snapshot predates those, RS-30),
+	 *         anything else; `kept_role` when the snapshot had no
+	 *         Administrator role and today's is kept.
+	 */
+	public static function restore_additions( array $snapshot, array $current, array $target, array $lockout, array $own, array $maps = array() ) {
+		$admin     = self::ADMIN_ROLE;
+		$kept_role = ! isset( $snapshot[ $admin ] ) || ! is_array( $snapshot[ $admin ] );
+		$base_role = $kept_role ? ( isset( $current[ $admin ] ) && is_array( $current[ $admin ] ) ? $current[ $admin ] : array() ) : $snapshot[ $admin ];
+		$base      = isset( $base_role['capabilities'] ) && is_array( $base_role['capabilities'] ) ? $base_role['capabilities'] : array();
+		$after     = isset( $target[ $admin ]['capabilities'] ) && is_array( $target[ $admin ]['capabilities'] ) ? $target[ $admin ]['capabilities'] : array();
+		$lockout   = array_map( 'strval', $lockout );
+		$own       = array_map( 'strval', $own );
+		$typed     = array();
+		$out       = array(
+			'lockout'   => array(),
+			'blt'       => array(),
+			'isolated'  => array(),
+			'other'     => array(),
+			'kept_role' => $kept_role,
+		);
+
+		foreach ( $maps as $info ) {
+			$typed += self::map_strings( isset( $info['map'] ) ? (array) $info['map'] : array() );
+		}
+
+		foreach ( $after as $cap => $grant ) {
+			$cap = (string) $cap;
+
+			if ( ! $grant || ( array_key_exists( $cap, $base ) && $base[ $cap ] ) ) {
+				continue;
+			}
+
+			if ( in_array( $cap, $lockout, true ) ) {
+				$out['lockout'][] = $cap;
+			} elseif ( in_array( $cap, $own, true ) ) {
+				$out['blt'][] = $cap;
+			} elseif ( isset( $typed[ $cap ] ) ) {
+				$out['isolated'][] = $cap;
+			} else {
+				$out['other'][] = $cap;
+			}
+		}
+
+		sort( $out['lockout'], SORT_STRING );
+		sort( $out['blt'], SORT_STRING );
+		sort( $out['isolated'], SORT_STRING );
+		sort( $out['other'], SORT_STRING );
+
+		return $out;
 	}
 
 	/**
@@ -545,15 +1206,26 @@ class BLT_Toolkit_Snapshots {
 	 *   while BLT Toolkit was in use, so it is restored as it is (SNAP-4): a
 	 *   capability the owner had removed or denied stays that way, unless it
 	 *   is lockout-critical.
+	 * - RS-30: for each content type that has separate permissions now but
+	 *   whose strings no role in the snapshot mentions (the snapshot was
+	 *   taken before the type got them: the baseline, a `before_isolation`
+	 *   snapshot), every role gets the type's strings that match the Posts
+	 *   (or Pages) capabilities it holds, as giving the type separate
+	 *   permissions did (seed_isolated()). Without that, restoring such a
+	 *   snapshot would take the type's strings from every role, Administrator
+	 *   included, while the type keeps its separate permissions, and nobody
+	 *   could edit it.
 	 *
 	 * @param array    $snapshot Roles array from a snapshot.
 	 * @param array    $current  Roles array today.
 	 * @param string[] $lockout  The lockout-critical set (SEC-12).
 	 * @param string[] $own      BLT Toolkit's capabilities (SPEC 5.1).
+	 * @param array    $maps     Optional: isolation_maps().
 	 * @return array
 	 */
-	public static function restorable_roles( array $snapshot, array $current, array $lockout, array $own ) {
-		$admin = self::ADMIN_ROLE;
+	public static function restorable_roles( array $snapshot, array $current, array $lockout, array $own, array $maps = array() ) {
+		$admin    = self::ADMIN_ROLE;
+		$snapshot = self::seed_isolated( $snapshot, $maps )['roles'];
 
 		if ( ! isset( $snapshot[ $admin ] ) || ! is_array( $snapshot[ $admin ] ) ) {
 			$snapshot[ $admin ] = isset( $current[ $admin ] ) && is_array( $current[ $admin ] )
@@ -597,7 +1269,9 @@ class BLT_Toolkit_Snapshots {
 	 *
 	 * A role the restore creates grants its capabilities; a role it deletes
 	 * removes all of them; a changed role adds, flips (an add with the new
-	 * value) and removes.
+	 * value) and removes. The role store builds the same change set
+	 * (BLT_Toolkit_Role_Store::changes_from_diff()) for its own Guard pass;
+	 * this stays for callers that want the plain adds and removes.
 	 *
 	 * @param array $diff Result of BLT_Toolkit_Role_Diff::diff().
 	 * @return array<string,array{adds:array<string,bool>,removes:string[]}>
@@ -638,23 +1312,53 @@ class BLT_Toolkit_Snapshots {
 	}
 
 	/**
-	 * Run the Guard on every role a restore touches.
+	 * The refusal when the roles changed between the preview and the
+	 * confirm (the RO-2 rule for whole-site writes: what is written is what
+	 * was shown).
 	 *
-	 * @param WP_User $actor     Current user.
-	 * @param array   $diff      Diff of today against the roles to write.
-	 * @param bool    $confirmed SEC-13 confirmation.
-	 * @return true|WP_Error The first refusal.
+	 * @return WP_Error `blt_toolkit_roles_changed`, status 409.
 	 */
-	private static function guard_restore( WP_User $actor, array $diff, $confirmed ) {
-		foreach ( self::guard_changes( $diff ) as $role => $change ) {
-			$check = BLT_Toolkit_Guard::check_role_change( $actor, $role, $change['adds'], $change['removes'], (bool) $confirmed );
+	public static function changed_error() {
+		return new WP_Error(
+			'blt_toolkit_roles_changed',
+			__( 'The roles changed since you opened the preview. Look at the new preview and confirm again.', 'blt-toolkit' ),
+			array( 'status' => 409 )
+		);
+	}
 
-			if ( is_wp_error( $check ) ) {
-				return $check;
+	/**
+	 * The role-store mutator of a restore.
+	 *
+	 * It receives the roles as re-read by the store, refuses when they no
+	 * longer hash to `$expected` (when one is given), and returns the
+	 * snapshot's roles made safe, in today's order. `$seen` receives the hash
+	 * of the roles it was given and `$additions` restore_additions(), for
+	 * the preview and the log.
+	 *
+	 * @param array  $snapshot  The snapshot, with its roles.
+	 * @param string $expected  Roles hash from the preview, or '' to skip the check.
+	 * @param string $seen      Receives the hash of the roles the store read.
+	 * @param array  $additions Receives restore_additions().
+	 * @param array  $maps      isolation_maps().
+	 * @return callable
+	 */
+	private static function restore_mutator( array $snapshot, $expected, &$seen, &$additions, array $maps ) {
+		$lockout = BLT_Toolkit_Caps::lockout_critical();
+		$own     = array_keys( BLT_Toolkit_Caps::own() );
+		$roles   = $snapshot['roles'];
+
+		return static function ( array $current ) use ( $roles, $expected, $lockout, $own, $maps, &$seen, &$additions ) {
+			$seen = BLT_Toolkit_Role_Diff::hash( $current );
+
+			if ( '' !== $expected && ! hash_equals( $seen, $expected ) ) {
+				return BLT_Toolkit_Snapshots::changed_error();
 			}
-		}
 
-		return true;
+			$target    = BLT_Toolkit_Snapshots::restorable_roles( $roles, $current, $lockout, $own, $maps );
+			$additions = BLT_Toolkit_Snapshots::restore_additions( $roles, $current, $target, $lockout, $own, $maps );
+
+			return BLT_Toolkit_Snapshots::in_order( $target, $current );
+		};
 	}
 
 	/**
@@ -688,69 +1392,89 @@ class BLT_Toolkit_Snapshots {
 	/**
 	 * The roles restore() writes for a snapshot's roles.
 	 *
-	 * @param array $roles Snapshot roles.
+	 * @param array      $roles Snapshot roles.
+	 * @param array|null $maps  isolation_maps(), or null to work them out.
 	 * @return array
 	 */
-	private static function target_roles( array $roles ) {
-		return self::restorable_roles(
-			$roles,
-			self::current_roles(),
-			BLT_Toolkit_Caps::lockout_critical(),
-			array_keys( BLT_Toolkit_Caps::own() )
+	private static function target_roles( array $roles, $maps = null ) {
+		$current = self::current_roles();
+
+		return self::in_order(
+			self::restorable_roles(
+				$roles,
+				$current,
+				BLT_Toolkit_Caps::lockout_critical(),
+				array_keys( BLT_Toolkit_Caps::own() ),
+				is_array( $maps ) ? $maps : self::isolation_maps()
+			),
+			$current
 		);
 	}
 
 	/**
-	 * Record a restore, or a failed one, in the activity log (LOG-1).
+	 * The log summary of a restore.
 	 *
-	 * @param array $snapshot The restored snapshot.
-	 * @param array $diff     What changed (or would have).
-	 * @param int   $before   The `before_restore` snapshot's ID.
-	 * @param bool  $ok       Whether the write succeeded.
-	 * @return void
+	 * @param array $meta The restored snapshot's metadata.
+	 * @return string
 	 */
-	private static function log_restore( array $snapshot, array $diff, $before, $ok ) {
-		if ( ! is_callable( array( 'BLT_Toolkit_Log', 'record' ) ) ) {
-			return;
+	private static function restored_summary( array $meta ) {
+		$when = function_exists( 'get_date_from_gmt' ) ? get_date_from_gmt( $meta['created_at'], 'Y-m-d H:i' ) : $meta['created_at'];
+
+		return sprintf(
+			/* translators: 1: snapshot number, 2: date and time it was taken. */
+			__( 'Restored the roles saved in snapshot %1$d (%2$s).', 'blt-toolkit' ),
+			$meta['id'],
+			$when
+		);
+	}
+
+	/**
+	 * A role's display name as it will be after a change: the name a created
+	 * or renamed role gets, otherwise its name today, otherwise its ID.
+	 *
+	 * @param string $role    Role ID.
+	 * @param array  $diff    Role_Diff::diff() of the change.
+	 * @param array  $current Roles array today.
+	 * @return string The stored (untranslated) name.
+	 */
+	private static function after_name( $role, array $diff, array $current ) {
+		if ( isset( $diff['added'][ $role ]['name'] ) && is_scalar( $diff['added'][ $role ]['name'] ) && '' !== (string) $diff['added'][ $role ]['name'] ) {
+			return (string) $diff['added'][ $role ]['name'];
 		}
 
-		$when = function_exists( 'get_date_from_gmt' ) ? get_date_from_gmt( $snapshot['created_at'], 'Y-m-d H:i' ) : $snapshot['created_at'];
+		if ( isset( $diff['changed'][ $role ]['name']['to'] ) && is_scalar( $diff['changed'][ $role ]['name']['to'] ) && '' !== (string) $diff['changed'][ $role ]['name']['to'] ) {
+			return (string) $diff['changed'][ $role ]['name']['to'];
+		}
 
-		$summary = $ok
-			? sprintf(
-				/* translators: 1: snapshot number, 2: date and time it was taken. */
-				__( 'Restored the roles saved in snapshot %1$d (%2$s).', 'blt-toolkit' ),
-				$snapshot['id'],
-				$when
-			)
-			: sprintf(
-				/* translators: 1: snapshot number, 2: date and time it was taken. */
-				__( 'Could not restore the roles saved in snapshot %1$d (%2$s); the roles were not changed.', 'blt-toolkit' ),
-				$snapshot['id'],
-				$when
-			);
+		if ( isset( $current[ $role ]['name'] ) && is_scalar( $current[ $role ]['name'] ) && '' !== (string) $current[ $role ]['name'] ) {
+			return (string) $current[ $role ]['name'];
+		}
 
-		BLT_Toolkit_Log::record(
-			array(
-				'module'      => 'roles',
-				'action'      => 'snapshot_restored',
-				'object_type' => 'snapshot',
-				'object_id'   => (string) $snapshot['id'],
-				'summary'     => $summary,
-				'details'     => array(
-					'restored_snapshot' => array(
-						'id'         => $snapshot['id'],
-						'created_at' => $snapshot['created_at'],
-						'reason'     => $snapshot['reason'],
-					),
-					'counts'            => BLT_Toolkit_Role_Diff::counts( $diff ),
-					'diff'              => $diff,
-				),
-				'snapshot_id' => (int) $before,
-				'status'      => $ok ? 'success' : 'failure',
-				'source'      => '',
-			)
-		);
+		return $role;
+	}
+
+	/**
+	 * Text folded for a typed confirmation: trimmed, lowercase. Pure.
+	 *
+	 * @param string $text Text.
+	 * @return string
+	 */
+	private static function fold( $text ) {
+		$text = trim( $text );
+
+		return function_exists( 'mb_strtolower' ) ? mb_strtolower( $text, 'UTF-8' ) : strtolower( $text );
+	}
+
+	/**
+	 * A snapshot's metadata without its roles.
+	 *
+	 * @param array $snapshot get() result.
+	 * @return array
+	 */
+	private static function meta_only( array $snapshot ) {
+		unset( $snapshot['roles'] );
+
+		return $snapshot;
 	}
 
 	// ---------- Helpers ----------

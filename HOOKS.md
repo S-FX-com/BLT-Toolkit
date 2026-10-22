@@ -42,6 +42,7 @@ Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) se
 | [`blt_toolkit_lockout_critical_caps`](#blt_toolkit_lockout_critical_caps) | filter | SEC-12 | Available | Capabilities administrator always keeps |
 | [`blt_toolkit_capability_labels`](#blt_toolkit_capability_labels) | filter | RO-12 | Available | Plain-English capability labels |
 | [`blt_toolkit_capability_groups`](#blt_toolkit_capability_groups) | filter | RO-11, RO-13 | Available | Named capability groups |
+| [`blt_toolkit_orphan_family_labels`](#blt_toolkit_orphan_family_labels) | filter | RO-11, RO-13, SPEC 15 | Available | Labels of orphaned capability families whose plugin is known |
 | [`blt_toolkit_simple_controls`](#blt_toolkit_simple_controls) | filter | RS-3 | Available | Simple view controls |
 | [`blt_toolkit_isolation_excluded_types`](#blt_toolkit_isolation_excluded_types) | filter | RS-30, RS-35 | Available | Post types that cannot get separate permissions |
 | [`blt_toolkit_isolation_caps`](#blt_toolkit_isolation_caps) | filter | RS-31 | Available | Arguments applied to an isolated post type |
@@ -121,12 +122,12 @@ Requirement UN-10. Status: Available.
 
 ### `blt_toolkit_before_roles_save`
 
-Fires after the Guard has approved a computed change set (and the SEC-10 review was confirmed) and the SNAP-1 snapshot was stored, just before the roles option is written once (RO-3, RO-4). Every BLT Toolkit write to the roles option fires it: `BLT_Toolkit_Role_Store::save_caps()` and `transaction()`, and SEC-14 recovery, which keeps its own path because it must go ahead when the snapshot fails. Snapshot restore (Tools, Phase 6) will go through the store too; uninstall's removal of BLT Toolkit's own capabilities does not fire it. A save that changes nothing, a dry run and a refused save fire nothing.
+Fires after the Guard has approved a computed change set (and the SEC-10 review was confirmed) and the SNAP-1 snapshot was stored, just before the roles option is written once (RO-3, RO-4). Every BLT Toolkit write to the roles option fires it: `BLT_Toolkit_Role_Store::save_caps()` and `transaction()` (which every Tools write uses: snapshot restore, both resets, Sync administrator, role import and the legacy importers), and SEC-14 recovery, which keeps its own path because it must go ahead when the snapshot fails. Uninstall's removal of BLT Toolkit's own capabilities does not fire it. A save that changes nothing, a dry run and a refused save fire nothing.
 
 | Argument | Type | Description |
 | --- | --- | --- |
 | `$changes` | array | Role ID => `array( 'add' => array<string,bool>, 'remove' => string[], 'created' => bool, 'deleted' => bool, 'name' => null or array( 'from' => string, 'to' => string ) )`. `add` holds the new value of each capability added or flipped (`true` grants, `false` denies); `remove` the capabilities taken out of the role. A created role lists all its capabilities in `add`, a deleted one all of them in `remove`. |
-| `$context` | string | Where the save came from: `advanced` (the Advanced matrix, and adding or deleting a capability there; the default for a one-role save), `simple` (Simple view; needs `blt_edit_roles`, while `advanced` needs `blt_edit_capabilities` too), `self_service` (Settings > Usernames, UN-20), `support_agent` (SW-21), `lifecycle` (add, rename, move to a new role, delete and merge, RO-30 to RO-42), `activation` and `sync` (the administrator grant), `recovery` (SEC-14), `isolation` (separate permissions for a post type and their cleanup, RS-30, RS-32), and later phases' own (`import`, `restore`, `reset`). A `transaction()` without one passes `roles`. |
+| `$context` | string | Where the save came from: `advanced` (the Advanced matrix, and adding or deleting a capability there; the default for a one-role save), `simple` (Simple view; needs `blt_edit_roles`, while `advanced` needs `blt_edit_capabilities` too), `self_service` (Settings > Usernames, UN-20), `support_agent` (SW-21), `lifecycle` (add, rename, move to a new role, delete and merge, RO-30 to RO-42), `activation` and `sync` (the administrator grant), `recovery` (SEC-14), `isolation` (separate permissions for a post type and their cleanup, RS-30, RS-32), `import` (Tools > Export and import, RO-45: the roles of an imported file, in one write with a `before_import` snapshot), `restore` (Tools > Snapshots, SNAP-4: the whole roles array put back as the snapshot held it, with a `before_restore` snapshot), `reset` (Tools > Reset, RO-43, either mode, with a `before_reset` snapshot), `sync` (also Tools > Sync administrator, RO-5: exactly the capabilities its preview listed), `legacy_import` (Tools > Import from legacy plugins, SPEC 15: Username Changer's Allowed Roles as `blt_change_own_username`, with a `before_import` snapshot) and `legacy_cleanup` (the same tab's removal of User Role Editor's `ure_*` capabilities, with a `before_save` snapshot). A `transaction()` without one passes `roles`. A restore or reset that adds or removes whole roles reports them here (`created`, `deleted`) and does not fire `blt_toolkit_role_created` or `blt_toolkit_role_deleted`. |
 
 Requirement RO-4. Status: Available.
 
@@ -144,19 +145,19 @@ Requirement RO-4. Status: Available.
 
 ### `blt_toolkit_role_created`
 
-Fires after BLT Toolkit added a role and the roles option was written (RO-30), including the copy made by "Move users to a new role" (RO-32) and the Support Agent role (SW-21). A dry run, a refused add and an add awaiting the SEC-10 typed confirmation fire nothing. Import (RO-45) will fire it too.
+Fires after BLT Toolkit added a role and the roles option was written (RO-30), including the copy made by "Move users to a new role" (RO-32) and the Support Agent role (SW-21). A dry run, a refused add and an add awaiting the SEC-10 typed confirmation fire nothing. Import (RO-45) fires it for each role it creates, after the import's one roles write, with `$from` `import`.
 
 | Argument | Type | Description |
 | --- | --- | --- |
 | `$role_id` | string | The new role's ID. |
 | `$display_name` | string | Its display name, as stored. |
-| `$from` | string | What it started from: `blank` (`read` only), `subscriber`, `contributor`, `author` or `editor` (WordPress's default capabilities for that role), `copy:` followed by the copied role's ID (a copy, and every RO-32 move), or `support_agent` (SW-21). |
+| `$from` | string | What it started from: `blank` (`read` only), `subscriber`, `contributor`, `author` or `editor` (WordPress's default capabilities for that role), `copy:` followed by the copied role's ID (a copy, and every RO-32 move), `support_agent` (SW-21), or `import` (a role created by Tools > Export and import, RO-45). |
 
 Requirement RO-30. Status: Available.
 
 ### `blt_toolkit_role_deleted`
 
-Fires after a role is deleted (RO-40), including at the end of a merge (RO-42).
+Fires after a role is deleted (RO-40), including at the end of a merge (RO-42). A snapshot restore or a full reset (Tools) that removes roles does not fire it; those writes list the removed roles in `blt_toolkit_after_roles_save` (`deleted`).
 
 | Argument | Type | Description |
 | --- | --- | --- |
@@ -209,7 +210,7 @@ Fires once when a background job starts, after its settings are pinned (JOB-3) a
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `$job` | array | The job state as stored in `blt_toolkit_job_{id}` (`id`, `type`, `mode`, `status`, `owner`, `pinned`, `cursor` and the counters). Its type is one of `username_bulk`, `role_reassign`, `log_prune` or `count_no_role` (JOB-5); `log_prune` and, while the Usernames module runs, `username_bulk` are registered; the others arrive with their modules. `chain` holds the switch chain of the request that started the job (user IDs, oldest first; empty when not switched), which every log row its ticks write is attributed to (LOG-2). |
+| `$job` | array | The job state as stored in `blt_toolkit_job_{id}` (`id`, `type`, `mode`, `status`, `owner`, `pinned`, `cursor` and the counters). Its type is one of `username_bulk`, `role_reassign`, `log_prune` or `count_no_role` (JOB-5), or `legacy_uc_log` (copying Username Changer's audit log, SPEC 15); `log_prune` and `legacy_uc_log` are always registered, `username_bulk` while the Usernames module runs, `role_reassign` and `count_no_role` while the Roles module runs. `chain` holds the switch chain of the request that started the job (user IDs, oldest first; empty when not switched), which every log row its ticks write is attributed to (LOG-2). |
 
 Requirement JOB-1 to JOB-5. Status: Available. The job runner landed in Phase 1 for the daily log prune (LOG-4).
 
@@ -225,7 +226,7 @@ Requirement JOB-1 to JOB-5. Status: Available.
 
 ### `blt_toolkit_logged`
 
-Fires after each row is written to the activity log, so other logging plugins can listen (LOG-6). A failed insert does not fire it (LOG-3).
+Fires after each row is written to the activity log, so other logging plugins can listen (LOG-6). A failed insert does not fire it (LOG-3). One exception: the entries copied from Username Changer's audit log by **Tools > Import from legacy plugins** (`source` `username-changer`) are history, written 250 at a time in one insert, and do not fire it; the `toolkit` / `legacy_imported` summary row each import run writes does (SPEC 15).
 
 | Argument | Type | Description |
 | --- | --- | --- |
@@ -459,6 +460,18 @@ add_filter(
 ```
 
 Requirement RO-11, RO-13. Status: Available.
+
+### `blt_toolkit_orphan_family_labels`
+
+Labels for families of orphaned capabilities whose plugin is known (RO-11, RO-13). A family is the first word of a capability's name that is not a common verb (`ure` for `ure_edit_roles`, as `BLT_Toolkit_Capability_Catalog::prefix_family()` reads it). Its orphans are grouped under Plugins with this label and that label as their source, however few they are, and they stay orphaned: nothing registers them, so RO-24 may still delete them, and Sync administrator never grants them.
+
+| Argument | Type | Default | Description |
+| --- | --- | --- | --- |
+| `$labels` | array | `array( 'ure' => 'From User Role Editor' )` (SPEC 15, `BLT_Toolkit_Legacy::orphan_families()`) | Family => label. Families are matched in lowercase and must be two or more letters or digits; empty labels are dropped. |
+
+Applied once per request, when `BLT_Toolkit_Capability_Catalog` is built (only on BLT roles screens, Tools and their write paths).
+
+Requirement RO-11, RO-13, SPEC 15. Status: Available.
 
 ### `blt_toolkit_simple_controls`
 

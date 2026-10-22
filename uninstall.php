@@ -56,8 +56,10 @@ foreach ( array( 'blt_toolkit_log', 'blt_toolkit_snapshots' ) as $blt_toolkit_ta
 }
 
 // Options, including every job's state. `blt_toolkit_isolation_state` holds
-// the RS-33 flag and the reverted types awaiting the RS-32 cleanup.
-$blt_toolkit_options = array( 'blt_toolkit_settings', 'blt_toolkit_db_version', 'blt_toolkit_secrets', 'blt_toolkit_legacy_imports', 'blt_toolkit_log_failure', 'blt_toolkit_isolation_state' );
+// the RS-33 flag and the reverted types awaiting the RS-32 cleanup;
+// `blt_toolkit_legacy_lock` exists only while a batch of Username Changer's
+// audit log is copied (SPEC 15), unless a fatal error cut that batch short.
+$blt_toolkit_options = array( 'blt_toolkit_settings', 'blt_toolkit_db_version', 'blt_toolkit_secrets', 'blt_toolkit_legacy_imports', 'blt_toolkit_legacy_lock', 'blt_toolkit_log_failure', 'blt_toolkit_isolation_state' );
 
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-off lookup during uninstall.
 $blt_toolkit_jobs = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( 'blt_toolkit_job_' ) . '%' ) );
@@ -74,10 +76,11 @@ foreach ( array( 'blt_toolkit_no_role_count', 'blt_toolkit_recovery_in_code', 'b
 // (UN-30, an hour), the profile's rename notice (UN-18) and the username
 // form's result (UN-23), five minutes each; the Roles screen's pending review
 // or refused save (an hour), its one-time result notice and the role
-// lifecycle's (ten minutes), and the Users list's bulk role result (US-3,
-// five minutes). Found by prefix in the options table, with their timeouts;
-// on a site with a persistent object cache they live there instead and
-// expire on their own.
+// lifecycle's (ten minutes), the Users list's bulk role result (US-3,
+// five minutes), the Tools screen's one-time result notice (ten minutes) and
+// a role import's stored upload (RO-45, an hour, compressed). Found by
+// prefix in the options table, with their timeouts; on a site with a
+// persistent object cache they live there instead and expire on their own.
 $blt_toolkit_prefixes = array(
 	'blt_toolkit_bulk_plan_',
 	'blt_toolkit_username_notice_',
@@ -85,6 +88,8 @@ $blt_toolkit_prefixes = array(
 	'blt_toolkit_roles_pending_',
 	'blt_toolkit_lifecycle_notice_',
 	'blt_toolkit_bulk_roles_notice_',
+	'blt_toolkit_tools_notice_',
+	'blt_toolkit_import_',
 );
 
 foreach ( $blt_toolkit_prefixes as $blt_toolkit_prefix ) {

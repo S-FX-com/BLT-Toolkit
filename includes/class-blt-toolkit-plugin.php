@@ -94,6 +94,10 @@ class BLT_Toolkit_Plugin {
 		BLT_Toolkit_Jobs::register();
 		BLT_Toolkit_Rest::register();
 
+		// - The legacy importers' `legacy_uc_log` job type (SPEC 15),
+		//   registered on `init` 5: Tools imports work with every module off.
+		BLT_Toolkit_Legacy::register();
+
 		// - Separate permissions (RS-30 to RS-34): isolated types are
 		//   re-registered by the filter the main file adds, whatever the
 		//   Roles module's state, so their verification at `init`

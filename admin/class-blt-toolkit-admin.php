@@ -188,62 +188,134 @@ class BLT_Toolkit_Admin {
 	 * Each handler runs only after route_post() has checked the method, the
 	 * capability and the nonce, and it ends with a redirect.
 	 *
-	 * @return array<string,array{screen:string,method:string,cap:string}>
+	 * Optional keys: `class`, a class whose static `method` handles the
+	 * action instead of the screen object (a tab owned by its own class);
+	 * `dropped`, a static method of that class called before the nonce check
+	 * that redirects with a reason when PHP threw an upload's body away.
+	 *
+	 * @return array<string,array{screen:string,method:string,cap:string,class?:string,dropped?:string}>
 	 */
 	public static function post_actions() {
 		return array(
-			'blt_toolkit_save_modules'         => array(
+			'blt_toolkit_save_modules'           => array(
 				'screen' => 'overview',
 				'method' => 'handle_save_modules',
 				'cap'    => 'manage_options',
 			),
-			'blt_toolkit_save_settings'        => array(
+			'blt_toolkit_save_settings'          => array(
 				'screen' => 'settings',
 				'method' => 'handle_save',
 				'cap'    => 'manage_options',
 			),
-			'blt_toolkit_remove_token'         => array(
+			'blt_toolkit_remove_token'           => array(
 				'screen' => 'settings',
 				'method' => 'handle_remove_token',
 				'cap'    => 'manage_options',
 			),
-			'blt_toolkit_test_connection'      => array(
+			'blt_toolkit_test_connection'        => array(
 				'screen' => 'settings',
 				'method' => 'handle_test_connection',
 				'cap'    => 'manage_options',
 			),
 			// SW-21. The handler also requires blt_create_roles.
-			'blt_toolkit_create_support_agent' => array(
+			'blt_toolkit_create_support_agent'   => array(
 				'screen' => 'settings',
 				'method' => 'handle_create_support_agent',
 				'cap'    => 'manage_options',
 			),
 			// Streams the CSV and exits instead of redirecting (SPEC 13.2).
-			'blt_toolkit_export_log'           => array(
+			'blt_toolkit_export_log'             => array(
 				'screen' => 'activity',
 				'method' => 'handle_export',
 				'cap'    => 'blt_view_toolkit_log',
 			),
 			// UN-30. The template streams a CSV and exits instead of redirecting.
-			'blt_toolkit_bulk_template'        => array(
+			'blt_toolkit_bulk_template'          => array(
 				'screen' => 'usernames',
 				'method' => 'handle_template',
 				'cap'    => 'blt_change_usernames',
 			),
-			'blt_toolkit_bulk_plan'            => array(
+			'blt_toolkit_bulk_plan'              => array(
 				'screen' => 'usernames',
 				'method' => 'handle_plan',
 				'cap'    => 'blt_change_usernames',
 			),
-			'blt_toolkit_bulk_start'           => array(
+			'blt_toolkit_bulk_start'             => array(
 				'screen' => 'usernames',
 				'method' => 'handle_start',
 				'cap'    => 'blt_change_usernames',
 			),
-			'blt_toolkit_bulk_discard'         => array(
+			'blt_toolkit_bulk_discard'           => array(
 				'screen' => 'usernames',
 				'method' => 'handle_discard',
 				'cap'    => 'blt_change_usernames',
+			),
+			// Tools > Snapshots, Reset and Sync administrator (SNAP-4, RO-43,
+			// RO-5). Each previews on its tab first; these POSTs write.
+			'blt_toolkit_snapshot_restore'       => array(
+				'screen' => 'tools',
+				'method' => 'handle_restore',
+				'cap'    => 'blt_reset_roles',
+			),
+			'blt_toolkit_roles_reset'            => array(
+				'screen' => 'tools',
+				'method' => 'handle_reset',
+				'cap'    => 'blt_reset_roles',
+			),
+			'blt_toolkit_sync_admin'             => array(
+				'screen' => 'tools',
+				'method' => 'handle_sync',
+				'cap'    => 'blt_reset_roles',
+			),
+			// Tools > Export and import (RO-44, RO-45). Handled by static
+			// methods of BLT_Toolkit_Admin_Transfer (`class`); the export
+			// streams a JSON file and exits instead of redirecting. The upload
+			// names `dropped`, which says why when PHP threw the body away.
+			'blt_toolkit_roles_export'           => array(
+				'screen' => 'tools',
+				'class'  => 'BLT_Toolkit_Admin_Transfer',
+				'method' => 'handle_export',
+				'cap'    => 'blt_reset_roles',
+			),
+			'blt_toolkit_roles_import_upload'    => array(
+				'screen'  => 'tools',
+				'class'   => 'BLT_Toolkit_Admin_Transfer',
+				'method'  => 'handle_upload',
+				'cap'     => 'blt_reset_roles',
+				'dropped' => 'handle_dropped',
+			),
+			'blt_toolkit_roles_import'           => array(
+				'screen' => 'tools',
+				'class'  => 'BLT_Toolkit_Admin_Transfer',
+				'method' => 'handle_import',
+				'cap'    => 'blt_reset_roles',
+			),
+			'blt_toolkit_roles_import_discard'   => array(
+				'screen' => 'tools',
+				'class'  => 'BLT_Toolkit_Admin_Transfer',
+				'method' => 'handle_discard',
+				'cap'    => 'blt_reset_roles',
+			),
+			// Tools > Import from legacy plugins (SPEC 15). The tab needs
+			// manage_options (SPEC 13.1); each handler also checks the
+			// screen's blt_reset_roles.
+			'blt_toolkit_legacy_import_uc'       => array(
+				'screen' => 'tools',
+				'class'  => 'BLT_Toolkit_Admin_Legacy',
+				'method' => 'handle_import_uc',
+				'cap'    => 'manage_options',
+			),
+			'blt_toolkit_legacy_import_ure'      => array(
+				'screen' => 'tools',
+				'class'  => 'BLT_Toolkit_Admin_Legacy',
+				'method' => 'handle_import_ure',
+				'cap'    => 'manage_options',
+			),
+			'blt_toolkit_legacy_remove_ure_caps' => array(
+				'screen' => 'tools',
+				'class'  => 'BLT_Toolkit_Admin_Legacy',
+				'method' => 'handle_remove_ure_caps',
+				'cap'    => 'manage_options',
 			),
 		);
 	}
@@ -761,11 +833,21 @@ class BLT_Toolkit_Admin {
 			self::redirect( $route['screen'], array(), 'bulk_too_large' );
 		}
 
+		// The same for an upload handled by a class of its own: its `dropped`
+		// method redirects with the reason when the body is gone, and
+		// returns otherwise.
+		if ( isset( $route['class'], $route['dropped'] ) && is_callable( array( $route['class'], $route['dropped'] ) ) ) {
+			call_user_func( array( $route['class'], $route['dropped'] ) );
+		}
+
 		check_admin_referer( $action, self::NONCE_FIELD );
 
-		$screen = $this->screen( $route['screen'] );
+		// A route with `class` is handled by that class's static method (a
+		// tab owned by a class other than its screen's); otherwise by the
+		// screen object.
+		$target = isset( $route['class'] ) ? $route['class'] : $this->screen( $route['screen'] );
 
-		call_user_func( array( $screen, $route['method'] ) );
+		call_user_func( array( $target, $route['method'] ) );
 
 		// Handlers redirect and exit. Reaching this line is a bug; still end on
 		// a redirect rather than a blank admin-post.php page.

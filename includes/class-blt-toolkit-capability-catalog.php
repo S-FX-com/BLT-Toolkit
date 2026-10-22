@@ -606,6 +606,9 @@ class BLT_Toolkit_Capability_Catalog {
 	 *                                holders() looks users up itself.
 	 *     @type bool     $multisite  Whether the site is part of a network (default false). On a single site the
 	 *                                multisite capabilities do nothing, so only those a role or user holds are listed.
+	 *     @type array    $orphan_families Family (prefix_family()) => label for orphaned capabilities whose plugin is
+	 *                                known (SPEC 15: `ure` => "From User Role Editor"). They stay orphans; their group
+	 *                                gets this label and forms whatever its size.
 	 * }
 	 * @return array{entries:array,tree:array,content_groups:array,taxonomy_groups:array,meta_names:array,holders:array}
 	 */
@@ -620,6 +623,7 @@ class BLT_Toolkit_Capability_Catalog {
 		$roles      = isset( $input['roles'] ) ? (array) $input['roles'] : array();
 		$users      = isset( $input['users'] ) ? (array) $input['users'] : array();
 		$multisite  = ! empty( $input['multisite'] );
+		$known      = isset( $input['orphan_families'] ) ? (array) $input['orphan_families'] : array();
 		$held       = array();
 
 		// What any role or user holds, with any value (RO-13: the multisite
@@ -853,15 +857,26 @@ class BLT_Toolkit_Capability_Catalog {
 
 		// Meta capability names stored by mistake (`edit_post`) are junk, not
 		// a plugin's family.
-		$families = self::prefix_groups( array_values( array_diff_key( array_combine( $orphans, $orphans ), $meta_names ) ), self::PREFIX_MIN );
-		$family   = array();
+		$candidates = array_values( array_diff_key( array_combine( $orphans, $orphans ), $meta_names ) );
+		$families   = self::prefix_groups( $candidates, self::PREFIX_MIN );
+		$family     = array();
+
+		// A family whose plugin is known (SPEC 15: User Role Editor's `ure_*`)
+		// is grouped and labeled whatever its size, and stays orphaned.
+		foreach ( $candidates as $cap ) {
+			$prefix = self::prefix_family( $cap );
+
+			if ( '' !== $prefix && isset( $known[ $prefix ] ) && ( ! isset( $families[ $prefix ] ) || ! in_array( $cap, $families[ $prefix ], true ) ) ) {
+				$families[ $prefix ][] = $cap;
+			}
+		}
 
 		foreach ( $families as $prefix => $caps ) {
 			$id = 'plugin-' . self::id_part( $prefix );
 
 			if ( ! isset( $plugin_nodes[ $id ] ) ) {
 				$plugin_nodes[ $id ] = array(
-					'label' => self::humanize( $prefix ),
+					'label' => isset( $known[ $prefix ] ) && is_string( $known[ $prefix ] ) && '' !== $known[ $prefix ] ? $known[ $prefix ] : self::humanize( $prefix ),
 					'caps'  => array(),
 				);
 			}
@@ -1944,17 +1959,52 @@ class BLT_Toolkit_Capability_Catalog {
 		}
 
 		return array(
-			'core'       => self::core_caps(),
-			'core_meta'  => self::core_meta_names(),
-			'post_types' => $post_types,
-			'taxonomies' => $taxonomies,
-			'declared'   => self::declared(),
-			'blt'        => $blt,
-			'blt_meta'   => array_keys( BLT_Toolkit_Caps::meta() ),
-			'roles'      => $roles,
-			'users'      => array(),
-			'multisite'  => is_multisite(),
+			'core'            => self::core_caps(),
+			'core_meta'       => self::core_meta_names(),
+			'post_types'      => $post_types,
+			'taxonomies'      => $taxonomies,
+			'declared'        => self::declared(),
+			'blt'             => $blt,
+			'blt_meta'        => array_keys( BLT_Toolkit_Caps::meta() ),
+			'roles'           => $roles,
+			'users'           => array(),
+			'multisite'       => is_multisite(),
+			'orphan_families' => self::orphan_families(),
 		);
+	}
+
+	/**
+	 * Labels of orphaned capability families whose plugin is known: User Role
+	 * Editor's `ure_*` (SPEC 15, BLT_Toolkit_Legacy::orphan_families()), then
+	 * `blt_toolkit_orphan_family_labels`. The capabilities stay orphans (RO-11):
+	 * nothing registers them, so RO-24 may still delete them.
+	 *
+	 * @return array<string,string> Family => label.
+	 */
+	private static function orphan_families() {
+		$defaults = class_exists( 'BLT_Toolkit_Legacy' ) ? BLT_Toolkit_Legacy::orphan_families() : array();
+
+		/**
+		 * Filter the labels of orphaned capability families (RO-11, RO-13).
+		 * A family is the first word of a capability's name that is not a
+		 * common verb (`ure` for `ure_edit_roles`); its orphans are grouped
+		 * under Plugins with this label, however few they are, and stay
+		 * orphaned.
+		 *
+		 * @param array<string,string> $labels Family => label. Default: `ure` => "From User Role Editor".
+		 */
+		$filtered = apply_filters( 'blt_toolkit_orphan_family_labels', $defaults );
+		$out      = array();
+
+		foreach ( is_array( $filtered ) ? $filtered : array() as $family => $label ) {
+			$family = strtolower( (string) $family );
+
+			if ( 1 === preg_match( '/^[a-z0-9]{2,}$/', $family ) && is_scalar( $label ) && '' !== trim( (string) $label ) ) {
+				$out[ $family ] = trim( (string) $label );
+			}
+		}
+
+		return $out;
 	}
 
 	/**

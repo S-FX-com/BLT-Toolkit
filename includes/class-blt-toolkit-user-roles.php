@@ -45,7 +45,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *   nonce, `promote_users` and both roles in `editable_roles` (SEC-4); each
  *   user is checked on its own (`promote_user`, can_act_on_user(), not
  *   oneself). One aggregate log row; the result is shown on users.php.
- * - US-12, users without a role (capabilities meta missing or empty): never
+ * - US-12, users without a role (capabilities meta missing, empty or naming
+ *   only roles that no longer exist): never
  *   counted on a page load. The count runs when someone asks for it (the
  *   "Count" button in the Users screen's views and on the Overview), as one
  *   query on ordinary sites and as the `count_no_role` cursor job on large
@@ -240,6 +241,7 @@ class BLT_Toolkit_User_Roles {
 		add_action( 'add_user_role', array( __CLASS__, 'forget_count' ), 10, 0 );
 		add_action( 'remove_user_role', array( __CLASS__, 'forget_count' ), 10, 0 );
 		add_action( 'deleted_user', array( __CLASS__, 'forget_count' ), 10, 0 );
+		add_action( 'blt_toolkit_after_roles_save', array( __CLASS__, 'after_roles_save' ), 10, 1 );
 
 		// US-12, JOB-5: the label is translated, so on `init`; every request
 		// that runs a tick comes later.
@@ -1161,6 +1163,24 @@ class BLT_Toolkit_User_Roles {
 	}
 
 	/**
+	 * `blt_toolkit_after_roles_save` callback (US-12): a write that deletes
+	 * or creates a role (a restore, a full reset, a role deleted) changes who
+	 * has no role, so the cached count goes.
+	 *
+	 * @param mixed $changes Role ID => change (BLT_Toolkit_Role_Store).
+	 * @return void
+	 */
+	public static function after_roles_save( $changes ) {
+		foreach ( is_array( $changes ) ? $changes : array() as $change ) {
+			if ( is_array( $change ) && ( ! empty( $change['deleted'] ) || ! empty( $change['created'] ) ) ) {
+				self::forget_count();
+
+				return;
+			}
+		}
+	}
+
+	/**
 	 * Drop the cached count (US-12), once per request: someone's roles
 	 * changed, so the number may be wrong.
 	 *
@@ -1231,8 +1251,13 @@ class BLT_Toolkit_User_Roles {
 
 	/**
 	 * The SQL condition "this user has no role on this site" (US-12): no
-	 * capabilities meta row with a value other than empty (`''`, `a:0:{}`,
-	 * NULL). A user with two rows, one of them not empty, has a role.
+	 * capabilities meta row names a role that exists here. That covers a
+	 * missing or empty meta (`''`, `a:0:{}`, NULL) and a meta that names
+	 * only roles since deleted (a full reset, a restore), which give nothing
+	 * (WP_User::$roles is empty for them, and core's own "No role" view
+	 * counts them too). A role is matched by its key in the serialized
+	 * array (BLT_Toolkit_Snapshots::role_key()). A user with two rows, one
+	 * of them naming a role, has a role.
 	 *
 	 * @param string $id_column The users table's ID column as the query names it.
 	 * @return string Prepared SQL.
@@ -1240,8 +1265,18 @@ class BLT_Toolkit_User_Roles {
 	public static function no_role_sql( $id_column ) {
 		global $wpdb;
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Core table and column names; the value is bound.
-		return $wpdb->prepare( "NOT EXISTS ( SELECT 1 FROM {$wpdb->usermeta} blt_caps WHERE blt_caps.user_id = {$id_column} AND blt_caps.meta_key = %s AND blt_caps.meta_value IS NOT NULL AND blt_caps.meta_value NOT IN ( '', 'a:0:{}' ) )", $wpdb->get_blog_prefix() . 'capabilities' );
+		$match = array();
+
+		foreach ( array_keys( (array) wp_roles()->roles ) as $role ) {
+			$match[] = $wpdb->prepare( 'blt_caps.meta_value LIKE %s', '%' . $wpdb->esc_like( BLT_Toolkit_Snapshots::role_key( (string) $role ) ) . '%' );
+		}
+
+		if ( array() === $match ) {
+			$match[] = '1 = 0';
+		}
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Core table and column names; each LIKE is prepared above; the key is bound.
+		return $wpdb->prepare( "NOT EXISTS ( SELECT 1 FROM {$wpdb->usermeta} blt_caps WHERE blt_caps.user_id = {$id_column} AND blt_caps.meta_key = %s AND ( " . implode( ' OR ', $match ) . ' ) )', $wpdb->get_blog_prefix() . 'capabilities' );
 	}
 
 	/**

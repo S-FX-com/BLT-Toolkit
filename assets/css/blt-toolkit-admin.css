@@ -1322,3 +1322,225 @@ html:has(.blt-toolkit-roles .blt-toolkit-savebar) {
 		padding: 12px 16px 16px;
 	}
 }
+
+/* --- Tools: snapshots, reset, sync (SNAP-4, RO-43, RO-5) -------------------
+   Diffs are drawn by the Activity screen's renderer, so they take the same
+   layout here. Wide tables scroll inside their card on narrow screens. */
+
+.blt-toolkit-tools .blt-toolkit-table-scroll {
+	overflow-x: auto;
+}
+
+.blt-toolkit-tools .blt-toolkit-snapshots th[scope="row"] {
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.blt-toolkit-tools .blt-toolkit-snapshots .blt-badge {
+	margin-left: 4px;
+}
+
+.blt-toolkit-tools .blt-toolkit-snapshot-actions a {
+	display: inline-block;
+	margin: 0 12px 4px 0;
+}
+
+.blt-toolkit-tools .blt-toolkit-pager {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	margin-top: 16px;
+}
+
+.blt-toolkit-tools .blt-toolkit-review-list {
+	margin: 0 0 12px;
+	padding: 0;
+	list-style: none;
+}
+
+.blt-toolkit-tools .blt-toolkit-review-list li {
+	margin: 0 0 8px;
+}
+
+.blt-toolkit-tools .blt-toolkit-diff-role {
+	padding: 8px 0;
+	border-top: 1px solid var(--blt-border);
+}
+
+.blt-toolkit-tools .blt-toolkit-diff-role:first-child {
+	border-top: 0;
+	padding-top: 0;
+}
+
+.blt-toolkit-tools .blt-toolkit-diff-role p {
+	margin: 4px 0;
+}
+
+.blt-toolkit-tools .blt-toolkit-diff-label {
+	margin: 8px 0 4px;
+	color: var(--blt-muted-fg);
+}
+
+.blt-toolkit-tools .blt-toolkit-diff-flips {
+	margin: 0 0 0 1.4em;
+	list-style: disc;
+}
+
+.blt-toolkit-tools .blt-card + .blt-callout,
+.blt-toolkit-tools .blt-card-body .blt-callout {
+	margin: 12px 0;
+}
+
+.blt-toolkit-tools .blt-settings-footer {
+	flex-wrap: wrap;
+	gap: 8px 12px;
+}
+
+/* Narrow screens: each snapshot is a stacked block with its labels shown, so
+   the list never scrolls sideways. */
+@media screen and (max-width: 782px) {
+	.blt-toolkit-tools .blt-toolkit-snapshots thead {
+		display: none;
+	}
+
+	.blt-toolkit-tools .blt-toolkit-snapshots,
+	.blt-toolkit-tools .blt-toolkit-snapshots tbody,
+	.blt-toolkit-tools .blt-toolkit-snapshots tr,
+	.blt-toolkit-tools .blt-toolkit-snapshots th,
+	.blt-toolkit-tools .blt-toolkit-snapshots td {
+		display: block;
+		width: auto;
+	}
+
+	.blt-toolkit-tools .blt-toolkit-snapshots th[scope="row"] {
+		white-space: normal;
+		padding-bottom: 4px;
+	}
+
+	.blt-toolkit-tools .blt-toolkit-snapshots td {
+		padding-top: 2px;
+		padding-bottom: 2px;
+	}
+
+	.blt-toolkit-tools .blt-toolkit-snapshots td[data-label]::before {
+		content: attr(data-label) ": ";
+		font-weight: 600;
+	}
+
+	.blt-toolkit-tools .blt-toolkit-snapshots td[data-label] br {
+		display: none;
+	}
+
+	.blt-toolkit-tools .blt-toolkit-snapshots td:last-child {
+		padding-bottom: 12px;
+	}
+}
+
+/* Tools > Export and import: the import preview (RO-45). */
+.blt-toolkit-tools .blt-toolkit-transfer-preview th[scope="row"] {
+	width: 26%;
+}
+
+.blt-toolkit-tools .blt-toolkit-transfer-preview td:last-child {
+	width: 32%;
+}
+
+.blt-toolkit-tools .blt-toolkit-transfer-preview select {
+	max-width: 100%;
+}
+
+.blt-toolkit-tools .blt-toolkit-transfer-preview .blt-badge {
+	vertical-align: middle;
+}
+
+.blt-toolkit-tools .blt-toolkit-transfer-preview .blt-chip {
+	overflow-wrap: anywhere;
+}
+
+.blt-toolkit-tools .blt-toolkit-transfer-preview .blt-callout input[type="text"] {
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 25em;
+}
+
+.blt-toolkit-tools .blt-toolkit-transfer-caps > summary {
+	cursor: pointer;
+}
+
+.blt-toolkit-tools .blt-toolkit-transfer-caps ul {
+	margin-top: 4px;
+}
+
+@media screen and (max-width: 782px) {
+	.blt-toolkit-tools .blt-toolkit-transfer-preview thead {
+		display: none;
+	}
+
+	.blt-toolkit-tools .blt-toolkit-transfer-preview,
+	.blt-toolkit-tools .blt-toolkit-transfer-preview tbody,
+	.blt-toolkit-tools .blt-toolkit-transfer-preview tr,
+	.blt-toolkit-tools .blt-toolkit-transfer-preview th[scope="row"],
+	.blt-toolkit-tools .blt-toolkit-transfer-preview td,
+	.blt-toolkit-tools .blt-toolkit-transfer-preview td:last-child {
+		display: block;
+		width: auto;
+	}
+
+	.blt-toolkit-tools .blt-toolkit-transfer-preview td[data-label]::before {
+		content: attr(data-label);
+		display: block;
+		font-weight: 600;
+	}
+
+	.blt-toolkit-tools .blt-toolkit-transfer-preview td:last-child {
+		padding-bottom: 12px;
+	}
+}
+
+/* Tools > Import from legacy plugins (SPEC 15) and the Overview's setup card
+   (SPEC 13.2). An item with nothing to import is drawn as a toggle that is
+   plainly not a control; an email body keeps its line breaks. */
+.blt-toolkit-tools .blt-toggle.is-disabled {
+	cursor: not-allowed;
+}
+
+.blt-toolkit-tools .blt-toggle.is-disabled .blt-toggle-track {
+	opacity: 0.55;
+}
+
+.blt-toolkit-tools .blt-toolkit-legacy-value p {
+	margin: 0 0 4px;
+}
+
+.blt-toolkit-tools .blt-toolkit-legacy-value p.blt-toolkit-legacy-text {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	padding: 4px 8px;
+	border-left: 3px solid var(--blt-border);
+	margin-bottom: 8px;
+}
+
+.blt-toolkit-tools .blt-toolkit-legacy-card .blt-card-body > p:first-child {
+	margin-top: 0;
+}
+
+.blt-toolkit-tools .blt-toggle-stack {
+	margin-top: 12px;
+}
+
+/* One line per plugin, full width (not a .blt-field row, whose first
+   column is a 200px label). */
+.blt-toolkit-overview .blt-toolkit-setup-line + .blt-toolkit-setup-line {
+	margin-top: 16px;
+	padding-top: 16px;
+	border-top: 1px solid var(--blt-border);
+}
+
+.blt-toolkit-overview .blt-toolkit-setup-line p {
+	margin: 0 0 8px;
+}
+
+.blt-toolkit-overview .blt-toolkit-setup-line p:last-child {
+	margin-bottom: 0;
+}
