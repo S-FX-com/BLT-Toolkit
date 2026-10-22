@@ -53,7 +53,7 @@ $switch = $settings['switch'];
 				$field . '[woocommerce]',
 				$switch['woocommerce'],
 				__( 'WooCommerce', 'blt-toolkit' ),
-				__( 'Adds "Switch to customer" on orders and "Switch back" in My Account, and keeps each user's cart and WooCommerce session separate when you switch. Applies only while WooCommerce is active.', 'blt-toolkit' )
+				__( 'Adds "Switch to customer" on orders and "Switch back" in My Account, and keeps each user\'s cart and WooCommerce session separate when you switch. Applies only while WooCommerce is active.', 'blt-toolkit' )
 			);
 			?>
 		</div>

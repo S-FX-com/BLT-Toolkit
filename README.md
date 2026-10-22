@@ -83,7 +83,7 @@ No block or Bricks element is planned for v1.
 | Switching | Search for a user to switch to from the toolbar | On | Typeahead; without JavaScript it links to the Users screen (SW-20). |
 | Switching | Work with tools made for User Switching | On | The "Compatibility hooks" setting of SW-19 (`switch.compat_hooks`). Also fires User Switching's actions and defines `current_user_switched()` (SW-19, D2). See [HOOKS.md](HOOKS.md). |
 | Switching | WooCommerce | On | Only when WooCommerce is active (SW-22). |
-| Switching | Support Agent role | Not created | A button, with a preview first, that creates `blt_support_agent` with `read`, `list_users` and `blt_switch_users` (SW-21). |
+| Switching | Support Agent role | Not created | A button that opens a preview first: the role's three capabilities with their risk tier, and which of the site's roles a Support Agent could and could not switch into (administrators never, SEC-1; roles with a capability it lacks never, SEC-2). Because `blt_switch_users` is Critical, the role is created only after you type its name (SEC-10). Needs `manage_options` and **Create roles** (`blt_create_roles`). Creating it takes a role snapshot first and is logged (SW-21). The button is gone once the role exists. |
 | Usernames | Minimum length | 3 | The maximum is always 60, the database column's limit (UN-2). |
 | Usernames | Names that cannot be used | `admin`, `administrator`, `root`, `sysadmin`, `webmaster` | Compared case-insensitively and merged with WordPress's own list. Affects new names only (UN-4, D12). |
 | Usernames | Allow `@` in usernames | On | Email-style usernames are common with SSO; a name that equals another user's email is always refused (UN-6, UN-7, D13). |
@@ -126,7 +126,21 @@ Define these in `wp-config.php`.
 
 ### CSS tokens
 
-BLT Toolkit puts two things on the front end: the "Switch back" link (SW-17) and the username form (UN-23). Both are styled by `assets/css/blt-toolkit-front.css` with `.blt-tk-*` classes and `--blt-tk-*` custom properties: no global resets, no framework, safe inside a Bricks page, and nothing loaded for visitors who are not switched or not on a page with the shortcode. The tokens are listed here when those pieces are built (Phases 2 and 3b). The `tk` prefix is pending confirmation that it does not collide with BLT Tube's (D14).
+BLT Toolkit puts two things on the front end: the "Switch back" link (SW-17) and the username form (UN-23). Both are styled by `assets/css/blt-toolkit-front.css` with `.blt-tk-*` classes and `--blt-tk-*` custom properties: no global resets, no framework, safe inside a Bricks page, and nothing loaded for visitors who are not switched or not on a page with the shortcode. The `tk` prefix is pending confirmation that it does not collide with BLT Tube's (D14).
+
+The stylesheet only reads the tokens, never declares them, so a theme can set any of them on `:root`, `body` or a wrapper. Each falls back to the BLT design token where there is one, then to the literal value. The list is also in the stylesheet's header; the username form's tokens are added in Phase 3b.
+
+| Token | Used for | Fallback |
+| --- | --- | --- |
+| `--blt-tk-accent` | "Switch back" link background | `--blt-primary`, then `#2271b1` |
+| `--blt-tk-accent-hover` | Background on hover and focus | `--blt-primary-hover`, then `#135e96` |
+| `--blt-tk-on-accent` | Link text | `--blt-surface`, then `#ffffff` |
+| `--blt-tk-focus` | Focus ring | `--blt-fg`, then `#1e1e1e` |
+| `--blt-tk-radius` | Corner radius | `--blt-radius-sm`, then `4px` |
+| `--blt-tk-font-size` | Text size | `13px` |
+| `--blt-tk-offset` | Distance from the bottom-left corner | `16px` |
+| `--blt-tk-z` | Stacking order | `99999` |
+| `--blt-tk-shadow` | Shadow | `0 2px 8px rgba(0, 0, 0, 0.25)` |
 
 The toolbar's "Viewing as" node uses `var(--blt-primary, #2271b1)`. Admin screens use the family design system (`blt-design-system.css`) and its tokens.
 
@@ -186,7 +200,7 @@ Two meta capabilities are checked against a target user and never granted direct
 - Granting a Critical capability to any role other than `administrator`, or to any user, needs a review step and the role's name typed to confirm (SEC-10). Tier badges appear next to every control (SEC-11).
 - The `administrator` role is read-only in Simple view, cannot be deleted, keeps its ID, and keeps its lockout-critical capabilities (`read`, `manage_options`, `list_users`, `edit_users`, `promote_users`, `activate_plugins`, `blt_edit_roles`, `blt_edit_capabilities`) in Advanced view (SEC-12). A save that would leave you without `blt_edit_roles` is refused unless another administrator exists and you confirm (SEC-13).
 
-**Optional role.** **Support Agent** (`blt_support_agent`: `read`, `list_users`, `blt_switch_users`) is created only when the owner clicks the button under **Settings > Switching**. The protection rules keep it from switching into anyone more powerful than itself (SW-21).
+**Optional role.** **Support Agent** (`blt_support_agent`: `read`, `list_users`, `blt_switch_users`) is created only when the owner clicks the button under **Settings > Switching**, checks the preview and types the role's name to confirm. The protection rules keep it from switching into anyone more powerful than itself (SW-21): on a default site it can switch into Subscribers, never into Contributors, Authors, Editors or Administrators. The deprecated `level_0` to `level_10` capabilities are left out of that comparison (SEC-8).
 
 ## Development
 

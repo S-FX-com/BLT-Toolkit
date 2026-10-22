@@ -89,7 +89,7 @@ Nothing is deleted unless you turn on "Delete all plugin data on uninstall" unde
 
 == Credits ==
 
-BLT Toolkit reimplements, from a written specification, the features of three GPL-2.0-or-later plugins whose source was read while it was designed. The switch module reproduces User Switching's cookie and session mechanism. Any block of code ported from these plugins keeps its original copyright line in its file header.
+BLT Toolkit reimplements, from a written specification, the features of three GPL-2.0-or-later plugins whose source was read while it was designed. The switch module reproduces User Switching's cookie and session mechanism, request flow, redirects and duplicate-switch check, and its WooCommerce placements and session forgetting follow User Switching 1.12.2 by John Blackbourn; each switch file names the User Switching functions it follows in its header. Any block of code ported from these plugins keeps its original copyright line in its file header.
 
 * User Switching by John Blackbourn (https://johnblackbourn.com).
 * User Role Editor by Vladimir Garagulya (https://www.role-editor.com).
