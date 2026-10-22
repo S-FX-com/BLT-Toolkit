@@ -44,6 +44,14 @@ class BLT_Toolkit_Csv {
 	const BOM = "\xEF\xBB\xBF";
 
 	/**
+	 * Most cells one record may have. A file is read whole, so without a cap
+	 * one line of commas becomes millions of cells and runs PHP out of
+	 * memory or time before any reason can be shown; past it the file is
+	 * refused with the line.
+	 */
+	const MAX_COLUMNS = 100;
+
+	/**
 	 * Parse a bulk rename CSV.
 	 *
 	 * Rows come back in file order, blank lines (and lines whose cells are
@@ -53,11 +61,19 @@ class BLT_Toolkit_Csv {
 	 * cells sit beyond the header's columns: a username holding the
 	 * delimiter without quotes, which the planner refuses).
 	 *
-	 * A file with more than `$max_rows` data rows is refused, not truncated.
+	 * A row whose `new_username` is empty asks for nothing, so it is left out
+	 * and only counted (`blank`): the template lists every user, and a site
+	 * with more users than `$max_rows` must be able to upload it back with a
+	 * few names filled in (UN-30 steps 1 and 2). A blank row with extra cells
+	 * is kept, since its columns may be shifted.
+	 *
+	 * A file with more than `$max_rows` rows that ask for a rename is
+	 * refused, not truncated, and so is a record with more than MAX_COLUMNS
+	 * cells.
 	 *
 	 * @param string $bytes    The file's contents.
-	 * @param int    $max_rows Most data rows accepted (at least 1).
-	 * @return array|WP_Error array( 'delimiter', 'header', 'id_column', 'rows' ), or the reason the file cannot be read.
+	 * @param int    $max_rows Most rows asking for a rename (at least 1).
+	 * @return array|WP_Error array( 'delimiter', 'header', 'id_column', 'rows', 'blank' ), or the reason the file cannot be read.
 	 */
 	public static function parse( $bytes, $max_rows ) {
 		$bytes    = (string) $bytes;
@@ -92,10 +108,18 @@ class BLT_Toolkit_Csv {
 
 		if ( '' === $delimiter ) {
 			$delimiter = self::detect_delimiter( $bytes, $offset );
+			$other     = ',' === $delimiter ? ';' : ',';
+
+			// Counting is a guess; a header that only the other delimiter
+			// makes sense of settles it.
+			if ( ! self::reads_header( $bytes, $offset, $line, $delimiter ) && self::reads_header( $bytes, $offset, $line, $other ) ) {
+				$delimiter = $other;
+			}
 		}
 
 		$header = null;
 		$rows   = array();
+		$blank  = 0;
 		$length = strlen( $bytes );
 
 		while ( $offset < $length ) {
@@ -121,19 +145,26 @@ class BLT_Toolkit_Csv {
 				continue;
 			}
 
+			$row = self::row( $header, $cells, $quoted, $start );
+
+			if ( 0 === $row['extra'] && ( ! isset( $row['cells'][ self::NEW_COLUMN ] ) || '' === trim( $row['cells'][ self::NEW_COLUMN ] ) ) ) {
+				++$blank;
+				continue;
+			}
+
 			if ( count( $rows ) >= $max_rows ) {
 				return new WP_Error(
 					'blt_toolkit_csv_too_many_rows',
 					sprintf(
-						/* translators: %d: the most rows one file may have. */
-						_n( 'The file has more than %d row. Split it into smaller files.', 'The file has more than %d rows. Split it into smaller files.', $max_rows, 'blt-toolkit' ),
-						$max_rows
+						/* translators: %s: the most rows one file may have, such as 5,000. */
+						_n( 'The file has more than %s row with a new username. Split it into smaller files.', 'The file has more than %s rows with a new username. Split it into smaller files.', $max_rows, 'blt-toolkit' ),
+						number_format_i18n( $max_rows )
 					),
 					array( 'max' => $max_rows )
 				);
 			}
 
-			$rows[] = self::row( $header, $cells, $quoted, $start );
+			$rows[] = $row;
 		}
 
 		if ( null === $header ) {
@@ -145,6 +176,7 @@ class BLT_Toolkit_Csv {
 			'header'    => $header,
 			'id_column' => in_array( 'user_id', $header, true ) ? 'user_id' : 'username',
 			'rows'      => $rows,
+			'blank'     => $blank,
 		);
 	}
 
@@ -209,8 +241,8 @@ class BLT_Toolkit_Csv {
 	private static function detect_delimiter( $bytes, $offset ) {
 		$length = strlen( $bytes );
 		$counts = array(
-			','  => 0,
-			';'  => 0,
+			',' => 0,
+			';' => 0,
 		);
 		$quoted = false;
 		$seen   = false;
@@ -233,6 +265,34 @@ class BLT_Toolkit_Csv {
 		}
 
 		return $counts[';'] > $counts[','] ? ';' : ',';
+	}
+
+	/**
+	 * Whether the first non-blank record, split with this delimiter, is a
+	 * valid header. Reads from copies of the position.
+	 *
+	 * @param string $bytes     File contents.
+	 * @param int    $offset    Where the header search starts.
+	 * @param int    $line      Line number there.
+	 * @param string $delimiter Delimiter to try.
+	 * @return bool
+	 */
+	private static function reads_header( $bytes, $offset, $line, $delimiter ) {
+		$length = strlen( $bytes );
+
+		while ( $offset < $length ) {
+			$record = self::read_record( $bytes, $offset, $line, $delimiter );
+
+			if ( is_wp_error( $record ) ) {
+				return false;
+			}
+
+			if ( ! self::is_blank( $record[0] ) ) {
+				return ! is_wp_error( self::header( $record[0] ) );
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -299,6 +359,19 @@ class BLT_Toolkit_Csv {
 			$cells[]  = $cell;
 			$quoted[] = $is_quoted;
 
+			if ( count( $cells ) > self::MAX_COLUMNS ) {
+				return new WP_Error(
+					'blt_toolkit_csv_columns',
+					sprintf(
+						/* translators: 1: line number in the file, 2: the most columns a row may have. */
+						__( 'The row on line %1$s has more than %2$s columns. Keep only the user_id or username column and new_username, then upload the file again.', 'blt-toolkit' ),
+						number_format_i18n( $start ),
+						number_format_i18n( self::MAX_COLUMNS )
+					),
+					array( 'line' => $start )
+				);
+			}
+
 			if ( $offset >= $length ) {
 				break;
 			}
@@ -341,12 +414,14 @@ class BLT_Toolkit_Csv {
 	 */
 	private static function header( array $cells ) {
 		$names = array();
+		$seen  = array();
 
 		foreach ( $cells as $cell ) {
 			$name = strtolower( trim( $cell ) );
 			$name = (string) preg_replace( '/[\s\-]+/', '_', $name );
 
-			if ( '' !== $name && in_array( $name, $names, true ) ) {
+			// A map, not in_array(): the check runs for every column.
+			if ( '' !== $name && isset( $seen[ $name ] ) ) {
 				return new WP_Error(
 					'blt_toolkit_csv_header',
 					sprintf(
@@ -357,10 +432,11 @@ class BLT_Toolkit_Csv {
 				);
 			}
 
-			$names[] = $name;
+			$names[]       = $name;
+			$seen[ $name ] = true;
 		}
 
-		if ( ! in_array( self::NEW_COLUMN, $names, true ) || ! array_intersect( self::ID_COLUMNS, $names ) ) {
+		if ( ! isset( $seen[ self::NEW_COLUMN ] ) || ! array_intersect( self::ID_COLUMNS, $names ) ) {
 			return new WP_Error(
 				'blt_toolkit_csv_header',
 				__( 'The first row must name the columns: user_id and new_username, or username and new_username.', 'blt-toolkit' )

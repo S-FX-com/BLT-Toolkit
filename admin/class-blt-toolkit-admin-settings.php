@@ -20,9 +20,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  * BLT_Toolkit_Settings::set_github_token(): a blank field keeps the stored
  * token, and removing it is a separate POST (CONVENTIONS 6.2).
  *
- * Controls that belong to later phases (self-service roles UN-20, extra
- * default roles US-2, role metadata 9.5) are not rendered; each tab names
- * what is still to come in one line.
+ * Controls that belong to later phases (extra default roles US-2, role
+ * metadata 9.5) are not rendered; each tab names what is still to come in
+ * one line.
+ *
+ * Settings > Usernames also sets who may change their own username (UN-20):
+ * one toggle per role for the `blt_change_own_username` capability, the
+ * single source of truth (X-6). Saving the tab compares each toggle with
+ * the state the page was drawn from, so only roles the person changed are
+ * written (RO-1); the Guard checks every change (check_role_change(), RO-4);
+ * a snapshot is taken first and nothing is written without it (SNAP-1); the
+ * roles option is written once (RO-3) and the change logged with the diff
+ * and the snapshot's ID.
  *
  * Settings > Switching also offers the Support Agent role (SW-21): a button
  * that opens a preview of the role's capabilities and of who it can and
@@ -49,6 +58,22 @@ class BLT_Toolkit_Admin_Settings {
 	 * Name of the typed-confirmation field on the preview (SEC-10).
 	 */
 	const SUPPORT_AGENT_CONFIRM = 'blt_toolkit_confirm_role';
+
+	/**
+	 * The self-service capability Settings > Usernames sets per role (UN-20).
+	 */
+	const SELF_SERVICE_CAP = 'blt_change_own_username';
+
+	/**
+	 * Fields of the self-service toggles (UN-20), outside the `blt_toolkit[...]`
+	 * array so they never reach save_tab(): the roles switched on, the roles
+	 * shown (a toggle that was not shown is never touched) and the roles that
+	 * had the capability when the page was drawn (only a toggle the person
+	 * changed is written).
+	 */
+	const SELF_SERVICE_FIELD = 'blt_toolkit_self_service';
+	const SELF_SERVICE_SHOWN = 'blt_toolkit_self_service_shown';
+	const SELF_SERVICE_WAS   = 'blt_toolkit_self_service_was';
 
 	/**
 	 * GitHub repository the update checker reads, used when the checker is not
@@ -133,6 +158,7 @@ class BLT_Toolkit_Admin_Settings {
 		$recovery     = defined( 'BLT_TOOLKIT_RECOVERY' ) && constant( 'BLT_TOOLKIT_RECOVERY' );
 
 		$support_agent = 'switching' === $tab ? self::support_agent_state() : array();
+		$self_service  = 'usernames' === $tab ? self::self_service_state( wp_get_current_user() ) : array();
 
 		// SW-21: the preview is its own page, so its form is never nested in
 		// the settings form.
@@ -169,6 +195,31 @@ class BLT_Toolkit_Admin_Settings {
 
 		$saved  = BLT_Toolkit_Settings::save_tab( $tab, $raw );
 		$notice = $this->was_adjusted( $tab, $raw, $saved ) ? 'saved_adjusted' : 'saved';
+
+		// UN-20: who may change their own username, when the toggles were shown.
+		if ( 'usernames' === $tab ) {
+			$roles = self::posted_self_service();
+
+			if ( null !== $roles ) {
+				$result = self::save_self_service( wp_get_current_user(), $roles['on'], $roles['shown'], $roles['was'] );
+
+				if ( is_wp_error( $result ) ) {
+					switch ( $result->get_error_code() ) {
+						case 'blt_toolkit_snapshot_failed':
+							$notice = 'self_service_snapshot';
+							break;
+						case 'blt_toolkit_roles_in_code':
+							$notice = 'self_service_in_code';
+							break;
+						case 'blt_toolkit_roles_not_saved':
+							$notice = 'self_service_failed';
+							break;
+						default:
+							$notice = 'self_service_denied';
+					}
+				}
+			}
+		}
 
 		// A blank field keeps the stored token. With the constant set the
 		// field is not shown, and a stored token would be ignored anyway.
@@ -311,6 +362,320 @@ class BLT_Toolkit_Admin_Settings {
 		}
 
 		BLT_Toolkit_Admin::redirect( 'settings', $tab, 'support_agent_created' );
+	}
+
+	// ---------- Self-service roles (UN-20) ----------
+
+	/**
+	 * What the Usernames tab shows for each role (UN-20): its name, whether
+	 * it holds `blt_change_own_username`, and whether the current person may
+	 * change that (the Guard's check_role_change(), RO-4). Reads only (RO-5).
+	 *
+	 * @param WP_User $actor Who is viewing.
+	 * @return array<string,array{name:string,on:bool,editable:bool,reason:string}> Role ID => state, in the roles option's order.
+	 */
+	public static function self_service_state( WP_User $actor ) {
+		$out = array();
+
+		foreach ( (array) wp_roles()->roles as $id => $role ) {
+			$id   = (string) $id;
+			$caps = isset( $role['capabilities'] ) && is_array( $role['capabilities'] ) ? $role['capabilities'] : array();
+			$on   = ! empty( $caps[ self::SELF_SERVICE_CAP ] );
+
+			$allowed = BLT_Toolkit_Guard::check_role_change(
+				$actor,
+				$id,
+				$on ? array() : array( self::SELF_SERVICE_CAP => true ),
+				$on ? array( self::SELF_SERVICE_CAP ) : array()
+			);
+
+			$out[ $id ] = array(
+				'name'     => isset( $role['name'] ) ? translate_user_role( (string) $role['name'] ) : $id,
+				'on'       => $on,
+				'editable' => true === $allowed,
+				'reason'   => is_wp_error( $allowed ) ? $allowed->get_error_message() : '',
+			);
+		}
+
+		return $out;
+	}
+
+	/**
+	 * The posted self-service toggles, or null when the form did not show
+	 * them. Role IDs keep their case (`[A-Za-z0-9_-]`, as Settings stores
+	 * them); unknown roles are dropped.
+	 *
+	 * @return array{on:string[],shown:string[],was:string[]}|null
+	 */
+	private static function posted_self_service() {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Verified in BLT_Toolkit_Admin::route_post().
+		if ( ! isset( $_POST[ self::SELF_SERVICE_SHOWN ] ) || ! is_array( $_POST[ self::SELF_SERVICE_SHOWN ] ) ) {
+			return null;
+		}
+
+		$lists = array();
+
+		foreach ( array(
+			'on'    => self::SELF_SERVICE_FIELD,
+			'shown' => self::SELF_SERVICE_SHOWN,
+			'was'   => self::SELF_SERVICE_WAS,
+		) as $key => $name ) {
+			$raw           = isset( $_POST[ $name ] ) && is_array( $_POST[ $name ] ) ? wp_unslash( $_POST[ $name ] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each entry is cleaned by clean_role_ids().
+			$lists[ $key ] = self::clean_role_ids( $raw, array_keys( (array) wp_roles()->roles ) );
+		}
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		return $lists;
+	}
+
+	/**
+	 * Role IDs from a form, cleaned to `[A-Za-z0-9_-]` and kept only when the
+	 * role exists. Pure.
+	 *
+	 * @param array $raw   Submitted values.
+	 * @param array $known Existing role IDs.
+	 * @return string[]
+	 */
+	public static function clean_role_ids( array $raw, array $known ) {
+		$known = array_map( 'strval', $known );
+		$out   = array();
+
+		foreach ( $raw as $value ) {
+			if ( ! is_string( $value ) ) {
+				continue;
+			}
+
+			$id = (string) preg_replace( '/[^A-Za-z0-9_-]/', '', $value );
+
+			if ( '' !== $id && in_array( $id, $known, true ) ) {
+				$out[ $id ] = true;
+			}
+		}
+
+		return array_keys( $out );
+	}
+
+	/**
+	 * Which roles gain and lose the capability (UN-20, RO-1). Pure.
+	 *
+	 * Only roles that were shown and whose toggle the person changed from the
+	 * state the page was drawn from count, and only when the role is not
+	 * already in the wanted state, so a change saved by someone else in the
+	 * meantime is never undone.
+	 *
+	 * @param string[] $on      Roles switched on in the form.
+	 * @param string[] $shown   Roles the form showed (and let the person change).
+	 * @param string[] $was     Roles that had the capability when the form was drawn.
+	 * @param string[] $current Roles that have it now.
+	 * @return array{add:string[],remove:string[]}
+	 */
+	public static function self_service_changes( array $on, array $shown, array $was, array $current ) {
+		$add    = array();
+		$remove = array();
+
+		foreach ( $shown as $role ) {
+			$role = (string) $role;
+			$want = in_array( $role, $on, true );
+
+			if ( in_array( $role, $was, true ) === $want || in_array( $role, $current, true ) === $want ) {
+				continue;
+			}
+
+			if ( $want ) {
+				$add[] = $role;
+			} else {
+				$remove[] = $role;
+			}
+		}
+
+		return array(
+			'add'    => array_values( array_unique( $add ) ),
+			'remove' => array_values( array_unique( $remove ) ),
+		);
+	}
+
+	/**
+	 * Give or take `blt_change_own_username` per role (UN-20), as any role
+	 * change: the Guard on every change (RO-4: SEC-1, SEC-2, SEC-3, SEC-5 for
+	 * a non-admin), a snapshot first (SNAP-1; nothing is written without it),
+	 * one write of the roles option (RO-3), and a log row with the diff and
+	 * the snapshot's ID.
+	 *
+	 * @param WP_User  $actor Who is saving.
+	 * @param string[] $on    Roles switched on in the form.
+	 * @param string[] $shown Roles the form showed.
+	 * @param string[] $was   Roles that had it when the form was drawn.
+	 * @return int|WP_Error The snapshot ID, 0 when nothing needed changing, or
+	 *                      a Guard refusal, `blt_toolkit_roles_in_code`,
+	 *                      `blt_toolkit_snapshot_failed` or
+	 *                      `blt_toolkit_roles_not_saved`.
+	 */
+	public static function save_self_service( WP_User $actor, array $on, array $shown, array $was ) {
+		// RO-3, SPEC 19 URE-5: re-read the roles inside the save. The copy
+		// loaded when this request started can miss a change another request
+		// saved since; writing it back would undo that change, and the
+		// snapshot taken from it could not restore it either.
+		$wp_roles = self::reload_roles();
+		$current  = array();
+
+		foreach ( (array) $wp_roles->roles as $id => $role ) {
+			if ( ! empty( $role['capabilities'][ self::SELF_SERVICE_CAP ] ) ) {
+				$current[] = (string) $id;
+			}
+		}
+
+		$changes = self::self_service_changes( $on, $shown, $was, $current );
+
+		if ( array() === $changes['add'] && array() === $changes['remove'] ) {
+			return 0;
+		}
+
+		// Roles defined in code ($wp_user_roles) cannot be saved.
+		if ( ! $wp_roles->use_db ) {
+			return new WP_Error( 'blt_toolkit_roles_in_code', __( 'This site\'s roles are defined in code, so they cannot be changed here.', 'blt-toolkit' ), array( 'status' => 409 ) );
+		}
+
+		foreach ( $changes['add'] as $role ) {
+			$allowed = BLT_Toolkit_Guard::check_role_change( $actor, $role, array( self::SELF_SERVICE_CAP => true ), array() );
+
+			if ( is_wp_error( $allowed ) ) {
+				return $allowed;
+			}
+		}
+
+		foreach ( $changes['remove'] as $role ) {
+			$allowed = BLT_Toolkit_Guard::check_role_change( $actor, $role, array(), array( self::SELF_SERVICE_CAP ) );
+
+			if ( is_wp_error( $allowed ) ) {
+				return $allowed;
+			}
+		}
+
+		$snapshot_id = (int) BLT_Toolkit_Snapshots::take( 'before_save' );
+
+		if ( 0 === $snapshot_id ) {
+			return new WP_Error( 'blt_toolkit_snapshot_failed', __( 'A copy of the roles could not be saved first, so no role was changed.', 'blt-toolkit' ), array( 'status' => 500 ) );
+		}
+
+		$before = $wp_roles->roles;
+
+		// WP_Role::add_cap() and remove_cap() write the whole roles option on
+		// every call. With use_db off they change only memory, and the single
+		// update_option() below persists the batch (RO-3).
+		$use_db           = $wp_roles->use_db;
+		$wp_roles->use_db = false;
+
+		foreach ( $changes['add'] as $role ) {
+			$object = $wp_roles->get_role( $role );
+
+			if ( $object instanceof WP_Role ) {
+				$object->add_cap( self::SELF_SERVICE_CAP, true );
+			}
+		}
+
+		foreach ( $changes['remove'] as $role ) {
+			$object = $wp_roles->get_role( $role );
+
+			if ( $object instanceof WP_Role ) {
+				$object->remove_cap( self::SELF_SERVICE_CAP );
+			}
+		}
+
+		$wp_roles->use_db = $use_db;
+
+		update_option( $wp_roles->role_key, $wp_roles->roles );
+
+		$stored = get_option( $wp_roles->role_key );
+
+		if ( ! is_array( $stored ) || BLT_Toolkit_Role_Diff::hash( $stored ) !== BLT_Toolkit_Role_Diff::hash( $wp_roles->roles ) ) {
+			return new WP_Error( 'blt_toolkit_roles_not_saved', __( 'The roles could not be saved.', 'blt-toolkit' ), array( 'status' => 500 ) );
+		}
+
+		self::log_self_service( $changes, $before, $wp_roles->roles, $snapshot_id );
+
+		return $snapshot_id;
+	}
+
+	/**
+	 * The roles as stored right now (RO-3: "Re-read roles inside the save").
+	 *
+	 * The roles option is autoloaded, so get_option() answers from the copy
+	 * of every autoloaded option read when the request started (or, with a
+	 * persistent object cache, from that cache as it was then). Dropping
+	 * those cache entries makes WP_Roles::for_site() read the option from
+	 * the database again. Roles defined in code ($wp_user_roles) are left as
+	 * they are. Costs one query, on a save only.
+	 *
+	 * @return WP_Roles
+	 */
+	private static function reload_roles() {
+		$wp_roles = wp_roles();
+
+		if ( $wp_roles->use_db ) {
+			wp_cache_delete( 'alloptions', 'options' );
+			wp_cache_delete( $wp_roles->role_key, 'options' );
+
+			$wp_roles->for_site();
+		}
+
+		return $wp_roles;
+	}
+
+	/**
+	 * Log a self-service roles change (LOG-1), like any roles save: the
+	 * roles named, the diff and the snapshot taken first.
+	 *
+	 * @param array $changes     self_service_changes().
+	 * @param array $before      Roles before the write.
+	 * @param array $after       Roles after it.
+	 * @param int   $snapshot_id The `before_save` snapshot.
+	 * @return void
+	 */
+	private static function log_self_service( array $changes, array $before, array $after, $snapshot_id ) {
+		$names = static function ( array $ids ) use ( $after, $before ) {
+			$out = array();
+
+			foreach ( $ids as $id ) {
+				$role  = isset( $after[ $id ] ) ? $after[ $id ] : ( isset( $before[ $id ] ) ? $before[ $id ] : array() );
+				$out[] = isset( $role['name'] ) ? translate_user_role( (string) $role['name'] ) : (string) $id;
+			}
+
+			return $out;
+		};
+
+		$parts = array();
+
+		if ( array() !== $changes['add'] ) {
+			/* translators: %l: list of role names, such as "Author and Editor". */
+			$parts[] = wp_sprintf( __( 'now allowed for %l', 'blt-toolkit' ), $names( $changes['add'] ) );
+		}
+
+		if ( array() !== $changes['remove'] ) {
+			/* translators: %l: list of role names, such as "Author and Editor". */
+			$parts[] = wp_sprintf( __( 'no longer allowed for %l', 'blt-toolkit' ), $names( $changes['remove'] ) );
+		}
+
+		BLT_Toolkit_Log::record(
+			array(
+				'module'      => 'usernames',
+				'action'      => 'roles_saved',
+				'object_type' => 'role',
+				'object_id'   => implode( ',', array_merge( $changes['add'], $changes['remove'] ) ),
+				'summary'     => sprintf(
+					/* translators: %s: what changed, such as "now allowed for Author; no longer allowed for Subscriber". */
+					__( 'Changed who can change their own username: %s.', 'blt-toolkit' ),
+					implode( '; ', $parts )
+				),
+				'details'     => array(
+					'capability'   => self::SELF_SERVICE_CAP,
+					'added_to'     => $changes['add'],
+					'removed_from' => $changes['remove'],
+					'context'      => 'self_service',
+					'diff'         => BLT_Toolkit_Role_Diff::diff( $before, $after ),
+				),
+				'snapshot_id' => (int) $snapshot_id,
+			)
+		);
 	}
 
 	// ---------- Support Agent role (SW-21) ----------

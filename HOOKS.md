@@ -11,8 +11,8 @@ Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) se
 | [`blt_toolkit_switched_to`](#blt_toolkit_switched_to) | action | SW-4 | Available | After switching to a user |
 | [`blt_toolkit_switched_back`](#blt_toolkit_switched_back) | action | SW-5 | Available | After switching back |
 | [`blt_toolkit_switched_off`](#blt_toolkit_switched_off) | action | SW-6 | Available | After switching off |
-| [`blt_toolkit_before_username_change`](#blt_toolkit_before_username_change) | action | UN-10 | Planned (Phase 3) | Before a username is written |
-| [`blt_toolkit_after_username_change`](#blt_toolkit_after_username_change) | action | UN-10 | Planned (Phase 3) | After a username changed |
+| [`blt_toolkit_before_username_change`](#blt_toolkit_before_username_change) | action | UN-10 | Available | Before a username is written |
+| [`blt_toolkit_after_username_change`](#blt_toolkit_after_username_change) | action | UN-10 | Available | After a username changed |
 | [`blt_toolkit_before_roles_save`](#blt_toolkit_before_roles_save) | action | RO-4 | Planned (Phase 4) | Before role capabilities are written |
 | [`blt_toolkit_after_roles_save`](#blt_toolkit_after_roles_save) | action | RO-4 | Planned (Phase 4) | After role capabilities were written |
 | [`blt_toolkit_role_created`](#blt_toolkit_role_created) | action | RO-30 | Planned (Phase 4) | After a role is added |
@@ -32,11 +32,12 @@ Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) se
 | [`blt_toolkit_switch_show_footer_link`](#blt_toolkit_switch_show_footer_link) | filter | SW-17 | Available | The fixed "Switch back" link on the site |
 | [`blt_toolkit_switch_send_cookies`](#blt_toolkit_switch_send_cookies) | filter | SW-3 | Available | Whether switch cookies are sent |
 | [`blt_toolkit_switch_search_limit`](#blt_toolkit_switch_search_limit) | filter | SW-20 | Available | Toolbar search result cap |
-| [`blt_toolkit_validate_username`](#blt_toolkit_validate_username) | filter | UN-9 | Planned (Phase 3) | Add or remove username errors |
-| [`blt_toolkit_username_min_length`](#blt_toolkit_username_min_length) | filter | UN-2 | Planned (Phase 3) | Minimum username length |
-| [`blt_toolkit_disallowed_usernames`](#blt_toolkit_disallowed_usernames) | filter | UN-4 | Planned (Phase 3) | Disallowed usernames |
-| [`blt_toolkit_username_email`](#blt_toolkit_username_email) | filter | UN-15 | Planned (Phase 3) | The rename notification email |
-| [`blt_toolkit_bulk_rename_max_rows`](#blt_toolkit_bulk_rename_max_rows) | filter | UN-30 | Planned (Phase 3) | Bulk rename CSV row cap |
+| [`blt_toolkit_validate_username`](#blt_toolkit_validate_username) | filter | UN-9 | Available | Add or remove username errors |
+| [`blt_toolkit_username_min_length`](#blt_toolkit_username_min_length) | filter | UN-2 | Available | Minimum username length |
+| [`blt_toolkit_disallowed_usernames`](#blt_toolkit_disallowed_usernames) | filter | UN-4 | Available | Disallowed usernames |
+| [`blt_toolkit_username_email`](#blt_toolkit_username_email) | filter | UN-15 | Available | The rename notification email |
+| [`blt_toolkit_bulk_rename_max_rows`](#blt_toolkit_bulk_rename_max_rows) | filter | UN-30 | Available | Bulk rename CSV row cap |
+| [`shortcode_atts_blt_toolkit_username_form`](#shortcode_atts_blt_toolkit_username_form) | filter | UN-23 | Available | The username form's shortcode attributes (core's filter) |
 | [`blt_toolkit_risky_caps`](#blt_toolkit_risky_caps) | filter | SPEC 5.4, SEC-10, SEC-11 | Planned (Phase 4) | Capability risk tiers |
 | [`blt_toolkit_lockout_critical_caps`](#blt_toolkit_lockout_critical_caps) | filter | SEC-12 | Available | Capabilities administrator always keeps |
 | [`blt_toolkit_capability_labels`](#blt_toolkit_capability_labels) | filter | RO-12 | Planned (Phase 4) | Plain-English capability labels |
@@ -93,15 +94,15 @@ Requirement SW-6. Status: Available.
 
 ### `blt_toolkit_before_username_change`
 
-Fires inside the rename procedure after the change is authorized and the new name validated, and before anything is written (UN-10 step 3).
+Fires inside the rename procedure (`BLT_Toolkit_Username_Changer::change()`) after the change is authorized, the new name validated, the current password checked when UN-22 asks for it and a switched session confirmed (UN-12), and before anything is written (UN-10 step 3). Every path fires it: the profile screen, the bulk rename and the self-service form.
 
 | Argument | Type | Description |
 | --- | --- | --- |
 | `$user_id` | int | The user being renamed. |
 | `$old` | string | The current login. |
-| `$new` | string | The new login. |
+| `$new` | string | The new login (trimmed, exactly as it will be stored). |
 
-Requirement UN-10. Status: Planned (Phase 3).
+Requirement UN-10. Status: Available.
 
 ### `blt_toolkit_after_username_change`
 
@@ -112,9 +113,11 @@ Fires after a username changed: the login, author slug, display name and nicknam
 | `$user_id` | int | The renamed user. |
 | `$old` | string | The previous login. |
 | `$new` | string | The new login. |
-| `$result` | array | What the procedure returns: `old_login`, `new_login`, `nicename_changed`, `old_nicename`, `sessions_ended`. |
+| `$result` | array | What the procedure returns: `old_login`, `new_login`, `nicename_changed` (bool), `old_nicename`, `sessions_ended` (int, sessions destroyed), plus `new_nicename` and `session_kept` (bool: a self rename kept the current session, UN-14). |
 
-Requirement UN-10. Status: Planned (Phase 3).
+The log row (`usernames` / `username_changed`) is written right after this action, then the optional email is sent.
+
+Requirement UN-10. Status: Available.
 
 ### `blt_toolkit_before_roles_save`
 
@@ -200,7 +203,7 @@ Fires once when a background job starts, after its settings are pinned (JOB-3) a
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `$job` | array | The job state as stored in `blt_toolkit_job_{id}` (`id`, `type`, `mode`, `status`, `owner`, `pinned`, `cursor` and the counters). Its type is one of `username_bulk`, `role_reassign`, `log_prune` or `count_no_role` (JOB-5); in this release only `log_prune` is registered, the others arrive with their modules. |
+| `$job` | array | The job state as stored in `blt_toolkit_job_{id}` (`id`, `type`, `mode`, `status`, `owner`, `pinned`, `cursor` and the counters). Its type is one of `username_bulk`, `role_reassign`, `log_prune` or `count_no_role` (JOB-5); `log_prune` and, while the Usernames module runs, `username_bulk` are registered; the others arrive with their modules. `chain` holds the switch chain of the request that started the job (user IDs, oldest first; empty when not switched), which every log row its ticks write is attributed to (LOG-2). |
 
 Requirement JOB-1 to JOB-5. Status: Available. The job runner landed in Phase 1 for the daily log prune (LOG-4).
 
@@ -322,7 +325,7 @@ The last validation rule (UN-9), applied on every path: profile, bulk rename, th
 | `$new` | string | | The proposed username, trimmed. |
 | `$user` | WP_User | | The user being renamed. |
 
-Requirement UN-9. Status: Planned (Phase 3).
+Requirement UN-9. Status: Available.
 
 ### `blt_toolkit_username_min_length`
 
@@ -332,7 +335,7 @@ The minimum username length (UN-2), enforced on the server. The maximum is alway
 | --- | --- | --- | --- |
 | `$length` | int | The Settings > Usernames field **Minimum length** (`usernames.min_length`, default `3`) | Characters. |
 
-Requirement UN-2. Status: Planned (Phase 3).
+Requirement UN-2. Status: Available.
 
 ### `blt_toolkit_disallowed_usernames`
 
@@ -342,7 +345,7 @@ Usernames nobody may change to (UN-4). The result is merged with core's `illegal
 | --- | --- | --- | --- |
 | `$names` | string[] | The Settings > Usernames field **Names that cannot be used** (`usernames.disallowed`, default `admin`, `administrator`, `root`, `sysadmin`, `webmaster`) | Usernames. |
 
-Requirement UN-4. Status: Planned (Phase 3).
+Requirement UN-4. Status: Available.
 
 ### `blt_toolkit_username_email`
 
@@ -350,22 +353,37 @@ The plain-text email sent to a renamed user when the Settings > Usernames toggle
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$email` | array | `to`, `subject`, `message`, `headers` (*proposed keys*, as core's `wp_new_user_notification_email`), with the tags in the subject and body already replaced | Return it. |
-| `$user` | WP_User | | *Proposed.* The renamed user. |
-| `$old` | string | | *Proposed.* The previous login. |
-| `$new` | string | | *Proposed.* The new login. |
+| `$email` | array | `to` (the user's email), `subject`, `message`, `headers` (`''`), as core's `wp_new_user_notification_email`, with the tags in the subject and body already replaced and the text in the user's locale | Return it. A result that is not an array, or whose `to` is not an email address, sends nothing. |
+| `$user` | WP_User | | The renamed user, as stored after the change. |
+| `$old` | string | | The previous login. |
+| `$new` | string | | The new login. |
 
-Requirement UN-15. Status: Planned (Phase 3).
+The subject and body come from the Settings > Usernames fields **Email subject** and **Email message** (`usernames.email_subject`, `usernames.email_body`), or a translated default when empty. Tags: `{old_username}`, `{new_username}`, `{display_name}`, `{email}`, `{sitename}`, `{siteurl}`, `{loginurl}`, replaced in one pass.
+
+Requirement UN-15. Status: Available.
 
 ### `blt_toolkit_bulk_rename_max_rows`
 
-The most data rows one bulk rename CSV may contain (UN-30). A larger file is refused, not truncated.
+The most rows with a new username one bulk rename CSV may contain (UN-30). Rows whose `new_username` is empty are skipped and do not count, so the template of a site with more users than this uploads back with a few names filled in. A file with more is refused, not truncated, and an upload larger than this many rows times 1 KB (plus 64 KB), or than the server's upload limit, is refused before it is read. Read when the Usernames screen shows the upload form and when a file is checked.
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$rows` | int | `5000` | Rows. |
+| `$rows` | int | `5000` | Rows (at least 1). |
 
-Requirement UN-30. Status: Planned (Phase 3).
+Requirement UN-30. Status: Available.
+
+### `shortcode_atts_blt_toolkit_username_form`
+
+Core's `shortcode_atts_{$shortcode}` filter for `[blt_toolkit_username_form]` (UN-23), applied by `shortcode_atts()` each time the shortcode renders, and also when the page's content is checked early to decide whether the stylesheet goes in the head (`wp_enqueue_scripts`). Use it to set a site-wide default, such as `style="none"` on every form, which then also keeps the stylesheet off the page.
+
+| Argument | Type | Default | Description |
+| --- | --- | --- | --- |
+| `$out` | array | `style` (`styled`), `class` (`''`), merged with what the shortcode gave | Return it. `style` is `styled` or `none` (`no-css` also means `none`; anything else reads as `styled`); `class` is a space-separated list of extra wrapper classes, each sanitized with `sanitize_html_class()`. |
+| `$pairs` | array | | The defaults. |
+| `$atts` | array | | The attributes as written in the shortcode. |
+| `$shortcode` | string | | `blt_toolkit_username_form`. |
+
+Requirement UN-23. Status: Available.
 
 ### `blt_toolkit_risky_caps`
 

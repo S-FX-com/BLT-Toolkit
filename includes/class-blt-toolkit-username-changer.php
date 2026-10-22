@@ -26,12 +26,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  *    (UN-12) come here too, before any write.
  * 3. `blt_toolkit_before_username_change`.
  * 4. `UPDATE ... SET user_login WHERE ID`, requiring exactly one row
- *    (never `WHERE user_login`, UC-9). 5a (UN-11, multisite, written now and
- *    never reached on a single site): the old login is replaced in place in
- *    `site_admins` (UC-7).
+ *    (never found by `user_login`, UC-9). The old login is a second
+ *    condition, so a concurrent rename of the same user makes this one
+ *    change nothing (UN-21 cooldown, UN-10 log).
  * 5. The author slug per the `usernames.nicename_policy` setting (UN-13),
  *    with core's algorithm (BLT_Toolkit_Nicename), unique among the other
- *    users; the old slug is kept for the 301 (UN-13a).
+ *    users; the old slug is kept for the 301 (UN-13a). 5a (UN-11, multisite,
+ *    written now and never reached on a single site): the old login is
+ *    replaced in place in `site_admins` (UC-7).
  * 6. `display_name` and `nickname` follow only when each exactly equals the
  *    old login.
  * 7. clean_user_cache() with the old object, so the old login's
@@ -65,16 +67,24 @@ class BLT_Toolkit_Username_Changer {
 	 * than read from BLT_Toolkit_Switch, so a rename never loads the switch
 	 * module's code while that module is off.
 	 */
-	const SESSION_FROM_ID  = 'blt_switched_from_id';
-	const SESSION_INTO     = 'blt_switched_into';
-	const SESSION_REMEMBER = 'blt_switched_remember';
+	const SESSION_FROM_ID      = 'blt_switched_from_id';
+	const SESSION_FROM_SESSION = 'blt_switched_from_session';
+	const SESSION_INTO         = 'blt_switched_into';
+	const SESSION_REMEMBER     = 'blt_switched_remember';
+
+	/**
+	 * Most switch links followed back to the person who signed in: the
+	 * switch stack's depth (BLT_Toolkit_Switch_Cookies::MAX_DEPTH, not read
+	 * from there for the same reason as the keys above).
+	 */
+	const MAX_LINKS = 10;
 
 	/**
 	 * Change a user's username (UN-10).
 	 *
-	 * @param int    $user_id Whose username changes.
-	 * @param string $new     The new username (trimmed here, then validated as is).
-	 * @param array  $options {
+	 * @param int    $user_id  Whose username changes.
+	 * @param string $new_name The new username (trimmed here, then validated as is).
+	 * @param array  $options  {
 	 *     Optional.
 	 *
 	 *     @type bool   $notify             Email the user (UN-15). Default: setting `usernames.notify_user`.
@@ -84,6 +94,10 @@ class BLT_Toolkit_Username_Changer {
 	 *     @type string $current_password   The user's current password (UN-22). When passed it is
 	 *                                      checked for a self rename; it is required for the
 	 *                                      self-service sources when the setting is on.
+	 *     @type string $nicename_policy    `if_derived`, `always` or `never` (UN-13). Default: setting
+	 *                                      `usernames.nicename_policy`. A bulk rename pins it (JOB-3).
+	 *     @type string $email_subject      Email subject template (UN-15). Default: the setting.
+	 *     @type string $email_body         Email body template (UN-15). Default: the setting.
 	 * }
 	 * @return array|WP_Error {
 	 *     @type string $old_login        The previous login.
@@ -95,13 +109,13 @@ class BLT_Toolkit_Username_Changer {
 	 *     @type bool   $session_kept     A self rename kept the current session (extra key).
 	 * }
 	 */
-	public static function change( $user_id, $new, array $options = array() ) {
+	public static function change( $user_id, $new_name, array $options = array() ) {
 		global $wpdb;
 
-		$user_id = (int) $user_id;
-		$new     = is_string( $new ) ? BLT_Toolkit_Username_Validator::normalize( $new ) : ''; // UN-1: the trimmed name is what is validated and stored.
-		$options = self::options( $options );
-		$self    = $user_id > 0 && get_current_user_id() === $user_id;
+		$user_id  = (int) $user_id;
+		$new_name = is_string( $new_name ) ? BLT_Toolkit_Username_Validator::normalize( $new_name ) : ''; // UN-1: the trimmed name is what is validated and stored.
+		$options  = self::options( $options );
+		$self     = $user_id > 0 && get_current_user_id() === $user_id;
 
 		// 1. Authorize (SPEC 5.1; SEC-1, SEC-2 and the cooldown live in the Guard).
 		if ( $user_id <= 0 ) {
@@ -123,7 +137,7 @@ class BLT_Toolkit_Username_Changer {
 		$old->data = clone $fresh->data;
 		$old_login = (string) $old->user_login;
 
-		$errors = BLT_Toolkit_Username_Validator::validate( $new, $old );
+		$errors = BLT_Toolkit_Username_Validator::validate( $new_name, $old );
 
 		if ( ! BLT_Toolkit_Username_Validator::is_valid( $errors ) ) {
 			return $errors;
@@ -161,12 +175,27 @@ class BLT_Toolkit_Username_Changer {
 		 * @param string $old     The current login.
 		 * @param string $new     The new login.
 		 */
-		do_action( 'blt_toolkit_before_username_change', $user_id, $old_login, $new );
+		do_action( 'blt_toolkit_before_username_change', $user_id, $old_login, $new_name );
 
-		// 4. By ID, exactly one row (UC-9).
+		// 4. By ID, exactly one row (UC-9), and only while the login is still
+		// the one authorized and validated in steps 1 and 2. Two requests
+		// that passed those steps together (the UN-21 cooldown is read in
+		// step 1 and written after the write) cannot both rename: the
+		// second finds no row and changes nothing, so neither the cooldown
+		// nor the log's "from" can be outrun. The row is still found by its
+		// ID; the login is only the condition.
 		$suppress = $wpdb->suppress_errors( true );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- UN-10 step 4: core has no API that changes user_login; both user caches are cleared in step 7.
-		$updated = $wpdb->update( $wpdb->users, array( 'user_login' => $new ), array( 'ID' => $user_id ), array( '%s' ), array( '%d' ) );
+		$updated  = $wpdb->update(
+			$wpdb->users,
+			array( 'user_login' => $new_name ),
+			array(
+				'ID'         => $user_id,
+				'user_login' => $old_login,
+			),
+			array( '%s' ),
+			array( '%d', '%s' )
+		);
 		$db_error = (string) $wpdb->last_error;
 		$wpdb->suppress_errors( $suppress );
 
@@ -175,18 +204,18 @@ class BLT_Toolkit_Username_Changer {
 			clean_user_cache( $old );
 			clean_user_cache( $user_id );
 
-			self::log_failure( $old, $new, $options['source'], false === $updated ? wp_strip_all_tags( $db_error ) : sprintf( 'rows affected: %d', (int) $updated ) );
+			self::log_failure( $old, $new_name, $options['source'], false === $updated ? wp_strip_all_tags( $db_error ) : sprintf( 'rows affected: %d (the username changed in another request)', (int) $updated ) );
+
+			if ( 0 === $updated ) {
+				return new WP_Error( 'blt_toolkit_username_not_saved', __( 'The username was changed by another request at the same moment, so this change was not saved. Reload the page to see the username now.', 'blt-toolkit' ), array( 'status' => 409 ) );
+			}
 
 			return new WP_Error( 'blt_toolkit_username_not_saved', __( 'The username could not be saved. Nothing was changed; try again.', 'blt-toolkit' ), array( 'status' => 500 ) );
 		}
 
-		// 5a. UN-11, for the multisite path (D1 defers multisite; never reached
-		// on a single site, where the plugin runs).
-		self::replace_site_admin( $old_login, $new );
-
 		// 5 and 6. Author slug, display name; one write for both.
 		$old_nicename = (string) $old->user_nicename;
-		$new_nicename = self::new_nicename( $old, $new );
+		$new_nicename = self::new_nicename( $old, $new_name, $options['nicename_policy'] );
 		$fields       = array();
 
 		if ( '' !== $new_nicename && $new_nicename !== $old_nicename ) {
@@ -198,7 +227,7 @@ class BLT_Toolkit_Username_Changer {
 		$display_changed = (string) $old->display_name === $old_login;
 
 		if ( $display_changed ) {
-			$fields['display_name'] = $new;
+			$fields['display_name'] = $new_name;
 		}
 
 		$extra_ok = true;
@@ -215,11 +244,15 @@ class BLT_Toolkit_Username_Changer {
 			}
 		}
 
+		// 5a. UN-11, for the multisite path (D1 defers multisite; never reached
+		// on a single site, where the plugin runs).
+		self::replace_site_admin( $old_login, $new_name );
+
 		$nicename_changed = $new_nicename !== $old_nicename;
 		$nickname_changed = false;
 
 		if ( (string) get_user_meta( $user_id, 'nickname', true ) === $old_login ) {
-			$nickname_changed = (bool) update_user_meta( $user_id, 'nickname', $new );
+			$nickname_changed = (bool) update_user_meta( $user_id, 'nickname', $new_name );
 		}
 
 		// 7. The old object first: its login, slug and email keys (UC-1).
@@ -241,7 +274,7 @@ class BLT_Toolkit_Username_Changer {
 
 		$result = array(
 			'old_login'        => $old_login,
-			'new_login'        => $new,
+			'new_login'        => $new_name,
 			'nicename_changed' => $nicename_changed,
 			'old_nicename'     => $old_nicename,
 			'new_nicename'     => $new_nicename,
@@ -260,13 +293,13 @@ class BLT_Toolkit_Username_Changer {
 		 * @param string $new     The new login.
 		 * @param array  $result  What change() returns.
 		 */
-		do_action( 'blt_toolkit_after_username_change', $user_id, $old_login, $new, $result );
+		do_action( 'blt_toolkit_after_username_change', $user_id, $old_login, $new_name, $result );
 
 		$user = get_userdata( $user_id );
 
 		self::log_change(
 			$old,
-			$new,
+			$new_name,
 			$result,
 			array(
 				'source'               => $options['source'],
@@ -279,7 +312,7 @@ class BLT_Toolkit_Username_Changer {
 		);
 
 		if ( $options['notify'] && $user instanceof WP_User ) {
-			self::send_email( $user, $old_login, $new );
+			self::send_email( $user, $old_login, $new_name, $options['email_subject'], $options['email_body'] );
 		}
 
 		// 10.
@@ -298,6 +331,9 @@ class BLT_Toolkit_Username_Changer {
 			'sign_out_others'    => array_key_exists( 'sign_out_others', $options ) ? (bool) $options['sign_out_others'] : (bool) BLT_Toolkit_Settings::get( 'usernames', 'sign_out_others' ),
 			'source'             => isset( $options['source'] ) && in_array( $options['source'], self::SOURCES, true ) ? $options['source'] : 'profile',
 			'confirmed_switched' => ! empty( $options['confirmed_switched'] ),
+			'nicename_policy'    => isset( $options['nicename_policy'] ) && in_array( $options['nicename_policy'], BLT_Toolkit_Settings::NICENAME_POLICIES, true ) ? $options['nicename_policy'] : (string) BLT_Toolkit_Settings::get( 'usernames', 'nicename_policy' ),
+			'email_subject'      => isset( $options['email_subject'] ) && is_string( $options['email_subject'] ) ? $options['email_subject'] : null,
+			'email_body'         => isset( $options['email_body'] ) && is_string( $options['email_body'] ) ? $options['email_body'] : null,
 		);
 
 		if ( array_key_exists( 'current_password', $options ) ) {
@@ -349,20 +385,46 @@ class BLT_Toolkit_Username_Changer {
 	 * A validation message as shown to the person who typed the name.
 	 *
 	 * UN-6 refuses a username equal to another user's email address. Saying
-	 * so to someone who may not list users would confirm that the address
-	 * belongs to an account, so for them that rule reads as "not available",
-	 * like a taken name. The rule and the refusal are unchanged.
+	 * so to someone who may not list users would tell them the address
+	 * belongs to an account, so for them that refusal reads exactly as
+	 * UN-5's "already taken", code included (public_error_code()). The
+	 * refusal itself still says the string belongs to some account, as a
+	 * taken name does, and as core's registration and lost-password screens
+	 * do; it no longer says that it is an email address. The rule is
+	 * unchanged.
 	 *
 	 * @param string $code    Validator error code.
 	 * @param string $message Validator message.
 	 * @return string
 	 */
 	public static function public_error_message( $code, $message ) {
-		if ( 'blt_toolkit_username_email' === $code && ! current_user_can( 'list_users' ) ) {
-			return __( 'That username is not available. Choose another.', 'blt-toolkit' );
+		if ( self::masks_email_rule( $code ) ) {
+			return BLT_Toolkit_Username_Validator::taken_message();
 		}
 
 		return (string) $message;
+	}
+
+	/**
+	 * A validation error code as shown to the person who typed the name:
+	 * UN-6's reads as UN-5's for someone who may not list users (see
+	 * public_error_message()).
+	 *
+	 * @param string $code Validator error code.
+	 * @return string
+	 */
+	public static function public_error_code( $code ) {
+		return self::masks_email_rule( $code ) ? 'blt_toolkit_username_taken' : (string) $code;
+	}
+
+	/**
+	 * Whether a UN-6 refusal is shown as UN-5's to the current user.
+	 *
+	 * @param string $code Validator error code.
+	 * @return bool
+	 */
+	private static function masks_email_rule( $code ) {
+		return 'blt_toolkit_username_email' === (string) $code && ! current_user_can( 'list_users' );
 	}
 
 	// ---------- UN-22 ----------
@@ -404,8 +466,17 @@ class BLT_Toolkit_Username_Changer {
 	 * sessions). Renaming ends such a session: its cookies embed the old
 	 * login.
 	 *
-	 * Reads the user's sessions through WP_Session_Tokens, so a custom
-	 * session manager is respected and expired sessions do not count.
+	 * Only live switches count, by the rule the Switch module uses for its
+	 * duplicate-switch warning (SW-8, BLT_Toolkit_Switch::live_switch_from()):
+	 * a switched session counts while its links lead back to the live session
+	 * of the person who signed in, and a `blt_switched_into` marker counts
+	 * while the account it names has such a session switched in from this
+	 * user. A switch whose origin session ended (sign-out, "Log out
+	 * everywhere", expiry) is over, even before the Switch module cleans it
+	 * up on its next request, so it raises no warning.
+	 *
+	 * Reads the sessions through WP_Session_Tokens, so a custom session
+	 * manager is respected and expired sessions do not count.
 	 *
 	 * @param int    $user_id      User.
 	 * @param string $except_token A session to leave out: the current one, for
@@ -435,35 +506,77 @@ class BLT_Toolkit_Username_Changer {
 			}
 		}
 
-		return self::switched_flags( is_array( $sessions ) ? $sessions : array() );
+		return self::switched_flags(
+			is_array( $sessions ) ? $sessions : array(),
+			$user_id,
+			array( __CLASS__, 'session_by_verifier' ),
+			static function ( $id ) {
+				$all = WP_Session_Tokens::get_instance( (int) $id )->get_all();
+
+				return is_array( $all ) ? $all : array();
+			}
+		);
 	}
 
 	/**
-	 * The switched flags of a list of sessions (UN-12). Pure.
+	 * The switched flags of a list of sessions (UN-12). Pure: other sessions
+	 * are found through the lookups.
 	 *
-	 * @param array $sessions Session arrays, as WP_Session_Tokens::get_all() returns them.
+	 * Without lookups every marker counts. With them only live switches do
+	 * (see switched_state()): a session switched into the user counts when
+	 * leads_to_origin(), and a `blt_switched_into` marker counts when the
+	 * account it names has a session switched in from `$user_id` that leads
+	 * to its origin.
+	 *
+	 * @param array         $sessions    Session arrays, as WP_Session_Tokens::get_all() returns them.
+	 * @param int           $user_id     Whose sessions they are (for the `blt_switched_into` check).
+	 * @param callable|null $lookup      function( int $user_id, string $verifier ): array|null, one live session.
+	 * @param callable|null $sessions_of function( int $user_id ): array, a user's live sessions.
 	 * @return array{switched_into:bool,switched_from:bool,from_ids:int[],into_ids:int[]}
 	 */
-	public static function switched_flags( array $sessions ) {
-		$from = array();
-		$into = array();
+	public static function switched_flags( array $sessions, $user_id = 0, $lookup = null, $sessions_of = null ) {
+		$user_id     = (int) $user_id;
+		$lookup      = is_callable( $lookup ) ? $lookup : null;
+		$sessions_of = is_callable( $sessions_of ) && $user_id > 0 ? $sessions_of : null;
+		$from        = array();
+		$into        = array();
 
 		foreach ( $sessions as $session ) {
 			if ( ! is_array( $session ) ) {
 				continue;
 			}
 
-			if ( ! empty( $session[ self::SESSION_FROM_ID ] ) && is_numeric( $session[ self::SESSION_FROM_ID ] ) && (int) $session[ self::SESSION_FROM_ID ] > 0 ) {
-				$from[] = (int) $session[ self::SESSION_FROM_ID ];
+			$from_id = self::session_int( $session, self::SESSION_FROM_ID );
+			$into_id = self::session_int( $session, self::SESSION_INTO );
+
+			if ( $from_id > 0 && ( null === $lookup || self::leads_to_origin( $session, $lookup ) ) ) {
+				$from[] = $from_id;
 			}
 
-			if ( ! empty( $session[ self::SESSION_INTO ] ) && is_numeric( $session[ self::SESSION_INTO ] ) && (int) $session[ self::SESSION_INTO ] > 0 ) {
-				$into[] = (int) $session[ self::SESSION_INTO ];
+			if ( $into_id > 0 ) {
+				$into[] = $into_id;
 			}
 		}
 
 		$from = array_values( array_unique( $from ) );
 		$into = array_values( array_unique( $into ) );
+
+		if ( null !== $sessions_of ) {
+			$into = array_values(
+				array_filter(
+					$into,
+					static function ( $target ) use ( $user_id, $lookup, $sessions_of ) {
+						foreach ( (array) call_user_func( $sessions_of, $target ) as $session ) {
+							if ( is_array( $session ) && self::session_int( $session, self::SESSION_FROM_ID ) === $user_id && ( null === $lookup || self::leads_to_origin( $session, $lookup ) ) ) {
+								return true;
+							}
+						}
+
+						return false;
+					}
+				)
+			);
+		}
 
 		return array(
 			'switched_into' => array() !== $into,
@@ -471,6 +584,88 @@ class BLT_Toolkit_Username_Changer {
 			'from_ids'      => $from,
 			'into_ids'      => $into,
 		);
+	}
+
+	/**
+	 * Whether a switched session still leads back to the session of the
+	 * person who signed in (UN-12), by the rule of the Switch module's
+	 * BLT_Toolkit_Switch::follow_links(): each link is
+	 * `blt_switched_from_id` plus `blt_switched_from_session` (the verifier
+	 * of the session switched from), and the walk must end at a live session
+	 * that was not switched into. A link with no verifier, a session that is
+	 * gone, a repeated link or a walk deeper than MAX_LINKS breaks it. Pure.
+	 *
+	 * @param mixed    $session A session.
+	 * @param callable $lookup  function( int $user_id, string $verifier ): array|null, the live session or null.
+	 * @return bool
+	 */
+	public static function leads_to_origin( $session, callable $lookup ) {
+		$seen  = array();
+		$links = 0;
+
+		while ( is_array( $session ) ) {
+			$from_id  = self::session_int( $session, self::SESSION_FROM_ID );
+			$verifier = isset( $session[ self::SESSION_FROM_SESSION ] ) && is_string( $session[ self::SESSION_FROM_SESSION ] ) ? $session[ self::SESSION_FROM_SESSION ] : '';
+
+			if ( $from_id <= 0 ) {
+				return true;
+			}
+
+			$key = $from_id . '|' . $verifier;
+
+			if ( '' === $verifier || $links >= self::MAX_LINKS || isset( $seen[ $key ] ) ) {
+				return false;
+			}
+
+			$seen[ $key ] = true;
+			++$links;
+			$session = call_user_func( $lookup, $from_id, $verifier );
+		}
+
+		return false;
+	}
+
+	/**
+	 * One of a user's live sessions by its verifier (the key core stores it
+	 * under), or null, through the session manager's own get_session(), so
+	 * a custom manager is respected and an expired session does not count.
+	 * The same read as BLT_Toolkit_Switch::session_by_verifier(), kept here
+	 * so a rename never loads the Switch module's code.
+	 *
+	 * @param int    $user_id  User ID.
+	 * @param string $verifier Session verifier.
+	 * @return array|null
+	 */
+	public static function session_by_verifier( $user_id, $verifier ) {
+		if ( (int) $user_id <= 0 || '' === (string) $verifier || ! class_exists( 'WP_Session_Tokens' ) ) {
+			return null;
+		}
+
+		$manager = WP_Session_Tokens::get_instance( (int) $user_id );
+
+		// get_session() is protected; read it in the manager's own scope.
+		$read = Closure::bind(
+			function ( $key ) {
+				return $this->get_session( $key );
+			},
+			$manager,
+			get_class( $manager )
+		);
+
+		$session = $read instanceof Closure ? $read( (string) $verifier ) : null;
+
+		return is_array( $session ) ? $session : null;
+	}
+
+	/**
+	 * A positive integer stored under a session key, or 0. Pure.
+	 *
+	 * @param array  $session Session.
+	 * @param string $key     Key.
+	 * @return int
+	 */
+	private static function session_int( array $session, $key ) {
+		return ! empty( $session[ $key ] ) && is_numeric( $session[ $key ] ) && (int) $session[ $key ] > 0 ? (int) $session[ $key ] : 0;
 	}
 
 	/**
@@ -500,42 +695,71 @@ class BLT_Toolkit_Username_Changer {
 	 * Same algorithm as wp_insert_user(): sanitize_title() of the first 50
 	 * characters, core's `pre_user_nicename` filter, then a `-2`, `-3` ...
 	 * suffix while another user has it. A slug longer than 50 characters
-	 * after the filter is not used (core refuses it too).
+	 * after the filter is not used (core refuses it too), and neither is a
+	 * base whose suffixes are all taken: the current slug stays.
 	 *
-	 * @param WP_User $old       The user as stored before the change.
-	 * @param string  $new_login The new login.
+	 * The "generated from the username" test (BLT_Toolkit_Nicename::is_derived())
+	 * gets the same sanitizer, `pre_user_nicename` included, so it matches on
+	 * a site that filters slugs.
+	 *
+	 * Public so the bulk dry run predicts the slug exactly as the rename
+	 * will write it (UN-30 "author URL will change"). Reads the database for
+	 * the uniqueness check; call it only when a rename is being planned.
+	 *
+	 * @param WP_User     $old       The user as stored before the change.
+	 * @param string      $new_login The new login.
+	 * @param string|null $policy    `if_derived`, `always` or `never`; null reads the
+	 *                               `usernames.nicename_policy` setting. A bulk rename
+	 *                               passes the policy pinned when it started (JOB-3).
 	 * @return string
 	 */
-	private static function new_nicename( WP_User $old, $new_login ) {
+	public static function new_nicename( WP_User $old, $new_login, $policy = null ) {
 		global $wpdb;
 
-		$policy  = (string) BLT_Toolkit_Settings::get( 'usernames', 'nicename_policy' );
+		$policy  = null === $policy ? (string) BLT_Toolkit_Settings::get( 'usernames', 'nicename_policy' ) : (string) $policy;
 		$current = (string) $old->user_nicename;
 
 		if ( 'never' === $policy ) {
 			return $current;
 		}
 
-		if ( 'always' !== $policy && ! BLT_Toolkit_Nicename::is_derived( $current, (string) $old->user_login ) ) {
+		$sanitize = array( __CLASS__, 'sanitize_nicename' );
+
+		if ( 'always' !== $policy && ! BLT_Toolkit_Nicename::is_derived( $current, (string) $old->user_login, $sanitize ) ) {
 			return $current;
 		}
 
-		/** This filter is documented in wp-includes/user.php */
-		$base = apply_filters( 'pre_user_nicename', BLT_Toolkit_Nicename::base( (string) $new_login ) ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core's filter, applied as wp_insert_user() does.
+		$base = BLT_Toolkit_Nicename::base( (string) $new_login, $sanitize );
 
-		if ( ! is_string( $base ) || '' === $base || mb_strlen( $base ) > 50 ) {
+		if ( ! BLT_Toolkit_Nicename::fits( $base ) ) {
 			return $current;
 		}
 
 		$user_id = (int) $old->ID;
-
-		return BLT_Toolkit_Nicename::unique(
+		$slug    = BLT_Toolkit_Nicename::unique(
 			$base,
 			static function ( $slug ) use ( $wpdb, $user_id ) {
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The same uniqueness query wp_insert_user() runs, keyed on ID instead of login.
 				return null !== $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM {$wpdb->users} WHERE user_nicename = %s AND ID != %d LIMIT 1", $slug, $user_id ) );
 			}
 		);
+
+		// '' means every suffix was taken (BLT_Toolkit_Nicename::MAX_SUFFIX).
+		return '' === $slug ? $current : $slug;
+	}
+
+	/**
+	 * Core's slug sanitizer for logins, as wp_insert_user() applies it:
+	 * sanitize_title(), then the `pre_user_nicename` filter (UN-13).
+	 *
+	 * @param string $text Login, already cut to 50 characters.
+	 * @return string
+	 */
+	public static function sanitize_nicename( $text ) {
+		/** This filter is documented in wp-includes/user.php */
+		$slug = apply_filters( 'pre_user_nicename', sanitize_title( (string) $text ) ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core's filter, applied as wp_insert_user() does.
+
+		return is_string( $slug ) ? $slug : '';
 	}
 
 	// ---------- UN-11 ----------
@@ -585,18 +809,18 @@ class BLT_Toolkit_Username_Changer {
 	 *
 	 * @param int    $user_id         User.
 	 * @param string $old_login       Login before the change.
-	 * @param bool   $self            Whether the current user renamed themselves.
+	 * @param bool   $is_self         Whether the current user renamed themselves.
 	 * @param bool   $sign_out_others Setting `usernames.sign_out_others` (or the option).
 	 * @return array{ended:int,kept:bool}
 	 */
-	private static function handle_sessions( $user_id, $old_login, $self, $sign_out_others ) {
+	private static function handle_sessions( $user_id, $old_login, $is_self, $sign_out_others ) {
 		$manager = WP_Session_Tokens::get_instance( (int) $user_id );
 		$out     = array(
 			'ended' => 0,
 			'kept'  => false,
 		);
 
-		if ( $self ) {
+		if ( $is_self ) {
 			$token = self::session_token( $user_id, $old_login );
 
 			if ( '' !== $token ) {
@@ -700,16 +924,19 @@ class BLT_Toolkit_Username_Changer {
 	 * site's defaults: no `From:` header is built, so an SMTP plugin decides.
 	 * Written in the user's locale.
 	 *
-	 * @param WP_User $user The renamed user (as stored now).
-	 * @param string  $old  Previous login.
-	 * @param string  $new  New login.
+	 * @param WP_User     $user     The renamed user (as stored now).
+	 * @param string      $old_name Previous login.
+	 * @param string      $new_name New login.
+	 * @param string|null $subject  Subject template; null reads the setting. A bulk
+	 *                              rename passes the one pinned at its start (JOB-3).
+	 * @param string|null $body     Body template; null reads the setting.
 	 * @return bool Whether wp_mail() accepted it.
 	 */
-	public static function send_email( WP_User $user, $old, $new ) {
+	public static function send_email( WP_User $user, $old_name, $new_name, $subject = null, $body = null ) {
 		$switched = function_exists( 'switch_to_user_locale' ) ? switch_to_user_locale( (int) $user->ID ) : false;
 
-		$subject = (string) BLT_Toolkit_Settings::get( 'usernames', 'email_subject' );
-		$body    = (string) BLT_Toolkit_Settings::get( 'usernames', 'email_body' );
+		$subject = null === $subject ? (string) BLT_Toolkit_Settings::get( 'usernames', 'email_subject' ) : (string) $subject;
+		$body    = null === $body ? (string) BLT_Toolkit_Settings::get( 'usernames', 'email_body' ) : (string) $body;
 
 		if ( '' === trim( $subject ) ) {
 			$subject = self::default_subject();
@@ -721,8 +948,8 @@ class BLT_Toolkit_Username_Changer {
 
 		$tags = self::email_tags(
 			array(
-				'old_username' => (string) $old,
-				'new_username' => (string) $new,
+				'old_username' => (string) $old_name,
+				'new_username' => (string) $new_name,
 				'display_name' => (string) $user->display_name,
 				'email'        => (string) $user->user_email,
 				'sitename'     => wp_specialchars_decode( (string) get_option( 'blogname' ), ENT_QUOTES ),
@@ -750,7 +977,7 @@ class BLT_Toolkit_Username_Changer {
 		 * @param string  $old   The previous login.
 		 * @param string  $new   The new login.
 		 */
-		$email = apply_filters( 'blt_toolkit_username_email', $email, $user, (string) $old, (string) $new );
+		$email = apply_filters( 'blt_toolkit_username_email', $email, $user, (string) $old_name, (string) $new_name );
 
 		if ( ! is_array( $email ) || empty( $email['to'] ) || ! is_string( $email['to'] ) || ! is_email( $email['to'] ) ) {
 			return false;
@@ -840,13 +1067,13 @@ If you did not expect this change, contact the site\'s administrator.
 	/**
 	 * Log a rename (UN-10 step 9, action `username_changed`).
 	 *
-	 * @param WP_User $old    The user before the change.
-	 * @param string  $new    New login.
-	 * @param array   $result change()'s result.
-	 * @param array   $facts  Source and what else changed.
+	 * @param WP_User $old      The user before the change.
+	 * @param string  $new_name New login.
+	 * @param array   $result   change()'s result.
+	 * @param array   $facts    Source and what else changed.
 	 * @return void
 	 */
-	private static function log_change( WP_User $old, $new, array $result, array $facts ) {
+	private static function log_change( WP_User $old, $new_name, array $result, array $facts ) {
 		$old_login = (string) $old->user_login;
 
 		if ( ! empty( $facts['self'] ) ) {
@@ -854,20 +1081,20 @@ If you did not expect this change, contact the site\'s administrator.
 				/* translators: 1: previous username, 2: new username. */
 				__( 'Changed their own username from %1$s to %2$s.', 'blt-toolkit' ),
 				$old_login,
-				$new
+				$new_name
 			);
 		} else {
 			$summary = sprintf(
 				/* translators: 1: previous username, 2: new username. */
 				__( 'Changed the username %1$s to %2$s.', 'blt-toolkit' ),
 				$old_login,
-				$new
+				$new_name
 			);
 		}
 
 		$details = array(
 			'old_login'            => $old_login,
-			'new_login'            => (string) $new,
+			'new_login'            => (string) $new_name,
 			'author_slug_changed'  => (bool) $result['nicename_changed'],
 			'display_name_changed' => ! empty( $facts['display_name_changed'] ),
 			'nickname_changed'     => ! empty( $facts['nickname_changed'] ),
@@ -905,13 +1132,13 @@ If you did not expect this change, contact the site\'s administrator.
 	/**
 	 * Log a rename whose write failed (LOG-1).
 	 *
-	 * @param WP_User $old    The user.
-	 * @param string  $new    The new login that was not written.
-	 * @param string  $source Where the change came from.
-	 * @param string  $error  What the database said.
+	 * @param WP_User $old      The user.
+	 * @param string  $new_name The new login that was not written.
+	 * @param string  $source   Where the change came from.
+	 * @param string  $error    What the database said.
 	 * @return void
 	 */
-	private static function log_failure( WP_User $old, $new, $source, $error ) {
+	private static function log_failure( WP_User $old, $new_name, $source, $error ) {
 		BLT_Toolkit_Log::record(
 			array(
 				'module'      => 'usernames',
@@ -922,11 +1149,11 @@ If you did not expect this change, contact the site\'s administrator.
 					/* translators: 1: current username, 2: the username it could not be changed to. */
 					__( 'Could not change the username %1$s to %2$s.', 'blt-toolkit' ),
 					(string) $old->user_login,
-					(string) $new
+					(string) $new_name
 				),
 				'details'     => array(
 					'old_login' => (string) $old->user_login,
-					'new_login' => (string) $new,
+					'new_login' => (string) $new_name,
 					'source'    => (string) $source,
 					'error'     => (string) $error,
 				),

@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: BLT Toolkit 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/S-FX-com/BLT-Toolkit/issues\n"
-"POT-Creation-Date: 2026-10-22 05:08+0000\n"
+"POT-Creation-Date: 2026-10-22 07:25+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -17,16 +17,17 @@ msgstr ""
 #. Plugin Name of the plugin
 #: blt-toolkit.php
 #: admin/class-blt-toolkit-admin-activity.php:577
-#: admin/class-blt-toolkit-admin.php:262
-#: admin/class-blt-toolkit-admin.php:263
-#: admin/class-blt-toolkit-admin.php:376
-#: admin/class-blt-toolkit-admin.php:710
-#: admin/class-blt-toolkit-admin.php:721
+#: admin/class-blt-toolkit-admin.php:283
+#: admin/class-blt-toolkit-admin.php:284
+#: admin/class-blt-toolkit-admin.php:397
+#: admin/class-blt-toolkit-admin.php:731
+#: admin/class-blt-toolkit-admin.php:742
 #: admin/views/header.php:23
-#: includes/class-blt-toolkit-jobs.php:863
-#: includes/class-blt-toolkit-jobs.php:871
-#: includes/class-blt-toolkit-jobs.php:875
+#: includes/class-blt-toolkit-jobs.php:908
+#: includes/class-blt-toolkit-jobs.php:916
+#: includes/class-blt-toolkit-jobs.php:920
 #: includes/class-blt-toolkit-plugin.php:367
+#: includes/class-blt-toolkit-username-shortcode.php:621
 msgid "BLT Toolkit"
 msgstr ""
 
@@ -51,18 +52,24 @@ msgid "https://www.s-fx.com"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity-table.php:70
+#: admin/views/usernames-recent.php:51
+#: admin/views/usernames-recent.php:73
 msgid "What happened"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity-table.php:71
 #: admin/views/activity-details.php:23
+#: admin/views/usernames-recent.php:49
+#: admin/views/usernames-recent.php:59
 msgid "When"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity-table.php:72
-#: admin/class-blt-toolkit-admin-activity.php:939
+#: admin/class-blt-toolkit-admin-activity.php:941
 #: admin/views/activity-details.php:48
 #: admin/views/activity.php:107
+#: admin/views/usernames-recent.php:50
+#: admin/views/usernames-recent.php:62
 msgid "Who"
 msgstr ""
 
@@ -73,6 +80,10 @@ msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity-table.php:74
 #: admin/class-blt-toolkit-admin-activity.php:348
+#: admin/views/usernames-plan.php:101
+#: admin/views/usernames-plan.php:121
+#: admin/views/usernames-recent.php:52
+#: admin/views/usernames-recent.php:77
 msgid "Status"
 msgstr ""
 
@@ -86,7 +97,9 @@ msgid "Details<span class=\"screen-reader-text\"> of entry %d</span>"
 msgstr ""
 
 #. translators: %s: name of the user someone had switched to.
+#. translators: %s: the user someone was switched into.
 #: admin/class-blt-toolkit-admin-activity-table.php:227
+#: admin/views/usernames-recent.php:68
 msgid "acting as %s"
 msgstr ""
 
@@ -102,7 +115,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: admin/class-blt-toolkit-admin-activity.php:336
-#: admin/class-blt-toolkit-admin-activity.php:932
+#: admin/class-blt-toolkit-admin-activity.php:934
 msgid "ID"
 msgstr ""
 
@@ -115,13 +128,13 @@ msgid "Time (UTC)"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:339
-#: admin/class-blt-toolkit-admin-activity.php:937
+#: admin/class-blt-toolkit-admin-activity.php:939
 #: admin/views/activity.php:87
 msgid "Module"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:340
-#: admin/class-blt-toolkit-admin-activity.php:938
+#: admin/class-blt-toolkit-admin-activity.php:940
 #: admin/views/activity.php:97
 msgid "Action"
 msgstr ""
@@ -139,7 +152,7 @@ msgid "Acting as ID"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:344
-#: admin/class-blt-toolkit-admin-activity.php:940
+#: admin/class-blt-toolkit-admin-activity.php:942
 #: admin/views/activity-details.php:52
 #: admin/views/activity.php:122
 msgid "Acting as"
@@ -188,7 +201,9 @@ msgid "System (no signed-in user)"
 msgstr ""
 
 #. translators: 1: a user's display name, 2: their username.
+#. translators: 1: a row status such as Errors, 2: number of rows.
 #: admin/class-blt-toolkit-admin-activity.php:504
+#: admin/views/usernames-plan.php:73
 msgid "%1$s (%2$s)"
 msgstr ""
 
@@ -223,343 +238,356 @@ msgid "Bulk rename"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:599
-msgid "Role saved"
+msgid "Bulk rename cancelled"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:600
-msgid "Roles saved"
+msgid "Bulk rename retried"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:601
-msgid "Role created"
+msgid "Role saved"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:602
-msgid "Role deleted"
+msgid "Roles saved"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:603
-msgid "Role renamed"
+msgid "Role created"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:604
-msgid "Role copied"
+msgid "Role deleted"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:605
-msgid "Roles merged"
+msgid "Role renamed"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:606
-msgid "Roles reset"
+msgid "Role copied"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:607
-msgid "Roles imported"
+msgid "Roles merged"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:608
-msgid "Snapshot restored"
+msgid "Roles reset"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:609
-msgid "Capability added"
+msgid "Roles imported"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:610
-msgid "Capability deleted"
+msgid "Snapshot restored"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:611
-msgid "User roles changed"
+msgid "Capability added"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:612
-msgid "User capabilities changed"
+msgid "Capability deleted"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:613
-msgid "Separate permissions on"
+msgid "User roles changed"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:614
-msgid "Separate permissions off"
+msgid "User capabilities changed"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:615
-msgid "Administrator synced"
+msgid "Separate permissions on"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:616
-msgid "Recovery mode"
+msgid "Separate permissions off"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:617
-msgid "Activity exported"
+msgid "Administrator synced"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:618
-msgid "Old entries removed"
+msgid "Recovery mode"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:619
+msgid "Activity exported"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-activity.php:620
+msgid "Old entries removed"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-activity.php:621
 msgid "Imported from another plugin"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:634
+#: admin/class-blt-toolkit-admin-activity.php:636
 msgid "Failed"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:636
+#: admin/class-blt-toolkit-admin-activity.php:638
+#: admin/views/usernames-plan.php:129
 msgid "Warning"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:639
+#: admin/class-blt-toolkit-admin-activity.php:641
 msgid "Success"
 msgstr ""
 
 #. translators: %s: a user's name.
-#: admin/class-blt-toolkit-admin-activity.php:661
+#: admin/class-blt-toolkit-admin-activity.php:663
 msgid "User: %s"
 msgstr ""
 
 #. translators: %s: role ID, such as editor.
-#: admin/class-blt-toolkit-admin-activity.php:668
+#: admin/class-blt-toolkit-admin-activity.php:670
 msgid "Role: %s"
 msgstr ""
 
 #. translators: 1: role name, 2: role ID.
-#: admin/class-blt-toolkit-admin-activity.php:672
+#: admin/class-blt-toolkit-admin-activity.php:674
 msgid "Role: %1$s (%2$s)"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:675
-#: admin/class-blt-toolkit-admin-settings.php:84
+#: admin/class-blt-toolkit-admin-activity.php:677
+#: admin/class-blt-toolkit-admin-settings.php:109
 #: admin/views/activity.php:37
 #: admin/views/settings-log.php:21
 msgid "Activity log"
 msgstr ""
 
 #. translators: %d: snapshot number.
-#: admin/class-blt-toolkit-admin-activity.php:679
+#: admin/class-blt-toolkit-admin-activity.php:681
 msgid "Snapshot %d"
 msgstr ""
 
 #. translators: 1: kind of thing, such as Post type, 2: its ID.
 #. translators: 1: module name, 2: action name.
-#: admin/class-blt-toolkit-admin-activity.php:683
+#: admin/class-blt-toolkit-admin-activity.php:685
 #: admin/views/activity-details.php:40
 msgid "%1$s: %2$s"
 msgstr ""
 
 #. translators: %s: a span of time, such as "3 hours".
-#: admin/class-blt-toolkit-admin-activity.php:741
+#: admin/class-blt-toolkit-admin-activity.php:743
 msgid "%s ago"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:853
-#: includes/class-blt-toolkit-jobs.php:988
-#: includes/class-blt-toolkit-jobs.php:2607
+#: admin/class-blt-toolkit-admin-activity.php:855
+#: includes/class-blt-toolkit-jobs.php:1039
+#: includes/class-blt-toolkit-jobs.php:2660
 msgid "None"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:857
-#: admin/class-blt-toolkit-admin-activity.php:897
+#: admin/class-blt-toolkit-admin-activity.php:859
+#: admin/class-blt-toolkit-admin-activity.php:899
 msgid "No"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:857
-#: admin/class-blt-toolkit-admin-activity.php:897
+#: admin/class-blt-toolkit-admin-activity.php:859
+#: admin/class-blt-toolkit-admin-activity.php:899
 msgid "Yes"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:872
+#: admin/class-blt-toolkit-admin-activity.php:874
 msgid "changed to"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:911
+#: admin/class-blt-toolkit-admin-activity.php:913
 msgid "Before"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:912
+#: admin/class-blt-toolkit-admin-activity.php:914
 msgid "After"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:913
+#: admin/class-blt-toolkit-admin-activity.php:915
 msgid "Old username"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:914
+#: admin/class-blt-toolkit-admin-activity.php:916
+#: includes/class-blt-toolkit-username-profile.php:188
+#: includes/class-blt-toolkit-username-profile.php:253
+#: templates/username-form.php:91
 msgid "New username"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:915
-#: admin/class-blt-toolkit-admin-activity.php:916
+#: admin/class-blt-toolkit-admin-activity.php:917
+#: admin/class-blt-toolkit-admin-activity.php:918
 msgid "Changes"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:917
+#: admin/class-blt-toolkit-admin-activity.php:919
 msgid "Reason"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:918
+#: admin/class-blt-toolkit-admin-activity.php:920
 msgid "Entries"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:919
+#: admin/class-blt-toolkit-admin-activity.php:921
 msgid "Filters"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:920
+#: admin/class-blt-toolkit-admin-activity.php:922
 msgid "Entries removed"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:921
+#: admin/class-blt-toolkit-admin-activity.php:923
 msgid "Older than (UTC)"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:922
+#: admin/class-blt-toolkit-admin-activity.php:924
 msgid "Keep entries for (days)"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:923
+#: admin/class-blt-toolkit-admin-activity.php:925
+#: admin/class-blt-toolkit-admin-usernames.php:270
 msgid "Error"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:924
+#: admin/class-blt-toolkit-admin-activity.php:926
 msgid "Too large to keep in full"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:925
+#: admin/class-blt-toolkit-admin-activity.php:927
 msgid "Size in bytes"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:926
+#: admin/class-blt-toolkit-admin-activity.php:928
 msgid "Recorded fields"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:927
+#: admin/class-blt-toolkit-admin-activity.php:929
 msgid "Capabilities granted"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:928
+#: admin/class-blt-toolkit-admin-activity.php:930
 msgid "Role created again"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:929
+#: admin/class-blt-toolkit-admin-activity.php:931
 msgid "Snapshot could not be saved"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:930
+#: admin/class-blt-toolkit-admin-activity.php:932
 msgid "Roles defined in code"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:931
+#: admin/class-blt-toolkit-admin-activity.php:933
 msgid "Restored snapshot"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:933
+#: admin/class-blt-toolkit-admin-activity.php:935
 msgid "Taken (UTC)"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:934
+#: admin/class-blt-toolkit-admin-activity.php:936
 msgid "How much changed"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:935
-#: admin/class-blt-toolkit-admin-settings.php:83
+#: admin/class-blt-toolkit-admin-activity.php:937
+#: admin/class-blt-toolkit-admin-settings.php:108
 #: admin/class-blt-toolkit-admin.php:170
-#: admin/class-blt-toolkit-admin.php:294
-#: admin/class-blt-toolkit-admin.php:295
+#: admin/class-blt-toolkit-admin.php:315
+#: admin/class-blt-toolkit-admin.php:316
 #: admin/views/overview.php:108
 #: includes/class-blt-toolkit-plugin.php:216
 msgid "Roles"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:936
+#: admin/class-blt-toolkit-admin-activity.php:938
 msgid "Capabilities"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:941
+#: admin/class-blt-toolkit-admin-activity.php:943
 #: admin/views/activity.php:134
 msgid "From"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:942
+#: admin/class-blt-toolkit-admin-activity.php:944
 #: admin/views/activity.php:139
 msgid "To"
 msgstr ""
 
 #. translators: %d: position in a list, starting at 1.
 #. translators: %d: the item's position in the job, starting at 1.
-#: admin/class-blt-toolkit-admin-activity.php:947
-#: includes/class-blt-toolkit-jobs.php:1871
+#: admin/class-blt-toolkit-admin-activity.php:949
+#: includes/class-blt-toolkit-jobs.php:1924
 msgid "Item %d"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:1000
+#: admin/class-blt-toolkit-admin-activity.php:1002
 msgid "No role or capability changed."
 msgstr ""
 
 #. translators: %s: role name, in bold.
-#: admin/class-blt-toolkit-admin-activity.php:1007
+#: admin/class-blt-toolkit-admin-activity.php:1009
 msgid "Role added: %s"
 msgstr ""
 
 #. translators: %s: role name, in bold.
-#: admin/class-blt-toolkit-admin-activity.php:1009
+#: admin/class-blt-toolkit-admin-activity.php:1011
 msgid "Role removed: %s"
 msgstr ""
 
 #. translators: %s: number of capabilities.
-#: admin/class-blt-toolkit-admin-activity.php:1020
+#: admin/class-blt-toolkit-admin-activity.php:1022
 msgid "%s capability"
 msgid_plural "%s capabilities"
 msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of capabilities.
-#: admin/class-blt-toolkit-admin-activity.php:1022
+#: admin/class-blt-toolkit-admin-activity.php:1024
 msgid "%s capability it had"
 msgid_plural "%s capabilities it had"
 msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: old role name, 2: new role name.
-#: admin/class-blt-toolkit-admin-activity.php:1056
+#: admin/class-blt-toolkit-admin-activity.php:1058
 msgid "Renamed from “%1$s” to “%2$s”."
 msgstr ""
 
 #. translators: %s: number of capabilities.
-#: admin/class-blt-toolkit-admin-activity.php:1064
+#: admin/class-blt-toolkit-admin-activity.php:1066
 msgid "%s capability added"
 msgid_plural "%s capabilities added"
 msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of capabilities.
-#: admin/class-blt-toolkit-admin-activity.php:1069
+#: admin/class-blt-toolkit-admin-activity.php:1071
 msgid "%s capability removed"
 msgid_plural "%s capabilities removed"
 msgstr[0] ""
 msgstr[1] ""
 
-#: admin/class-blt-toolkit-admin-activity.php:1078
+#: admin/class-blt-toolkit-admin-activity.php:1080
 msgid "now denied (was granted)"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-activity.php:1078
+#: admin/class-blt-toolkit-admin-activity.php:1080
 msgid "now granted (was denied)"
 msgstr ""
 
 #. translators: %s: number of capabilities.
-#: admin/class-blt-toolkit-admin-activity.php:1085
+#: admin/class-blt-toolkit-admin-activity.php:1087
 msgid "%s capability switched between granted and denied"
 msgid_plural "%s capabilities switched between granted and denied"
 msgstr[0] ""
 msgstr[1] ""
 
-#: admin/class-blt-toolkit-admin-activity.php:1112
+#: admin/class-blt-toolkit-admin-activity.php:1114
 msgid "(denied)"
 msgstr ""
 
@@ -580,70 +608,94 @@ msgstr ""
 msgid "This screen will list every role with how many people hold it, and edit what each role can do in two views of the same data: Simple, with one plain-English access level per content type, and Advanced, with every capability. Each save will be reviewed first and snapshotted so it can be restored. Until then, BLT Toolkit changes no roles, apart from giving the Administrator role BLT Toolkit's own capabilities when it was activated."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:80
+#: admin/class-blt-toolkit-admin-settings.php:105
 msgid "General"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:81
+#: admin/class-blt-toolkit-admin-settings.php:106
 #: admin/views/settings-switching.php:22
 msgid "Switching"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:82
+#: admin/class-blt-toolkit-admin-settings.php:107
 #: admin/class-blt-toolkit-admin.php:172
 #: includes/class-blt-toolkit-plugin.php:212
 msgid "Usernames"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:85
+#: admin/class-blt-toolkit-admin-settings.php:110
 #: admin/views/settings-roles.php:24
 msgid "Advanced"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:122
+#: admin/class-blt-toolkit-admin-settings.php:147
 #: admin/views/settings-advanced.php:137
 msgid "Check for Updates"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:339
-msgid "Support Agent"
+#: admin/class-blt-toolkit-admin-settings.php:535
+msgid "This site's roles are defined in code, so they cannot be changed here."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:399
-msgid "Sign in to the dashboard and edit their own profile"
-msgstr ""
-
-#: admin/class-blt-toolkit-admin-settings.php:400
-msgid "See the list of users"
-msgstr ""
-
-#: admin/class-blt-toolkit-admin-settings.php:401
-msgid "Switch to users"
-msgstr ""
-
-#: admin/class-blt-toolkit-admin-settings.php:466
-msgid "The Support Agent role already exists."
-msgstr ""
-
-#: admin/class-blt-toolkit-admin-settings.php:471
-msgid "This site's roles are defined in code, so a role cannot be added here."
-msgstr ""
-
-#: admin/class-blt-toolkit-admin-settings.php:484
+#: admin/class-blt-toolkit-admin-settings.php:557
+#: admin/class-blt-toolkit-admin-settings.php:849
 #: includes/class-blt-toolkit-caps.php:114
 msgid "A copy of the roles could not be saved first, so no role was changed."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:492
+#: admin/class-blt-toolkit-admin-settings.php:591
+msgid "The roles could not be saved."
+msgstr ""
+
+#. translators: %l: list of role names, such as "Author and Editor".
+#: admin/class-blt-toolkit-admin-settings.php:650
+msgid "now allowed for %l"
+msgstr ""
+
+#. translators: %l: list of role names, such as "Author and Editor".
+#: admin/class-blt-toolkit-admin-settings.php:655
+msgid "no longer allowed for %l"
+msgstr ""
+
+#. translators: %s: what changed, such as "now allowed for Author; no longer allowed for Subscriber".
+#: admin/class-blt-toolkit-admin-settings.php:666
+msgid "Changed who can change their own username: %s."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:704
+msgid "Support Agent"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:764
+msgid "Sign in to the dashboard and edit their own profile"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:765
+msgid "See the list of users"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:766
+msgid "Switch to users"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:831
+msgid "The Support Agent role already exists."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:836
+msgid "This site's roles are defined in code, so a role cannot be added here."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:857
 msgid "The Support Agent role could not be created."
 msgstr ""
 
 #. translators: %s: role name, such as Support Agent.
-#: admin/class-blt-toolkit-admin-settings.php:503
+#: admin/class-blt-toolkit-admin-settings.php:868
 msgid "Created the %s role: it can sign in, see the list of users and switch to users who have no more access than itself."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:623
+#: admin/class-blt-toolkit-admin-settings.php:988
 #: admin/views/placeholder.php:46
 msgid "Coming soon"
 msgstr ""
@@ -748,40 +800,38 @@ msgstr ""
 msgid "BLT Toolkit keeps a baseline copy of your roles from when it was first activated, and a copy before every change it makes. This tab will list them, show what differs from your roles today, and restore any of them after a preview."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-usernames.php:41
+#: admin/class-blt-toolkit-admin-usernames.php:98
 msgid "Username settings"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-usernames.php:48
-msgid "Bulk rename from CSV"
+#: admin/class-blt-toolkit-admin-usernames.php:268
+#: admin/views/usernames-plan.php:27
+#: admin/views/usernames-plan.php:42
+msgid "Ready"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-usernames.php:49
-msgid "Change many usernames in one pass."
+#: admin/class-blt-toolkit-admin-usernames.php:273
+#: admin/views/usernames-plan.php:29
+#: admin/views/usernames-plan.php:51
+msgid "No change"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-usernames.php:50
-msgid "Bulk renaming is not here yet"
+#: admin/class-blt-toolkit-admin-usernames.php:297
+msgid "Downloaded the bulk rename template (every username they can see)."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-usernames.php:51
-msgid "You will be able to download a template of every user, upload a CSV of new usernames, check a dry run that flags every problem row, and then run the renames in the background with a progress bar. Single usernames will be changed from each user's profile."
+#: admin/class-blt-toolkit-admin-usernames.php:478
+msgid "Choose a CSV file to upload."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-usernames.php:54
-msgid "Recent changes"
+#: admin/class-blt-toolkit-admin-usernames.php:490
+#: admin/class-blt-toolkit-admin-usernames.php:501
+msgid "The file could not be uploaded. Try again."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-usernames.php:55
-msgid "Username changes from the activity log."
-msgstr ""
-
-#: admin/class-blt-toolkit-admin-usernames.php:56
-msgid "No username changes recorded yet"
-msgstr ""
-
-#: admin/class-blt-toolkit-admin-usernames.php:57
-msgid "Each change will be listed here with the old and new username, who made it and when."
+#. translators: %s: the largest file accepted, such as 2 MB.
+#: admin/class-blt-toolkit-admin-usernames.php:526
+msgid "The file is too large: it can be at most %s. Split it into smaller files."
 msgstr ""
 
 #: admin/class-blt-toolkit-admin.php:168
@@ -798,7 +848,7 @@ msgid "Tools"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin.php:178
-#: admin/class-blt-toolkit-admin.php:350
+#: admin/class-blt-toolkit-admin.php:371
 #: admin/views/overview.php:23
 #: admin/views/settings-support-agent.php:31
 #: admin/views/settings.php:26
@@ -806,180 +856,239 @@ msgid "Settings"
 msgstr ""
 
 #. translators: %s: screen name, such as Roles or Settings.
-#: admin/class-blt-toolkit-admin.php:277
+#: admin/class-blt-toolkit-admin.php:298
 msgid "BLT Toolkit %s"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:375
+#: admin/class-blt-toolkit-admin.php:396
 msgid "Sorry, you are not allowed to access this page."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:560
+#: admin/class-blt-toolkit-admin.php:581
+#: admin/views/usernames-plan.php:197
+#: admin/views/usernames-plan.php:201
 msgid "On"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:562
+#: admin/class-blt-toolkit-admin.php:583
 msgid "Conflict"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:564
+#: admin/class-blt-toolkit-admin.php:585
 msgid "Disabled in wp-config.php"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:567
+#: admin/class-blt-toolkit-admin.php:588
+#: admin/views/usernames-plan.php:197
+#: admin/views/usernames-plan.php:201
 msgid "Off"
 msgstr ""
 
 #. translators: 1: other plugin's name, such as User Switching, 2: module name.
-#: admin/class-blt-toolkit-admin.php:583
+#: admin/class-blt-toolkit-admin.php:604
 msgid "%1$s is active, so the %2$s module is not running. Deactivate %1$s to use it."
 msgstr ""
 
 #. translators: %s: constant name.
-#: admin/class-blt-toolkit-admin.php:593
+#: admin/class-blt-toolkit-admin.php:614
 msgid "It is also switched off by %s in wp-config.php; remove it from that constant too."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:607
+#: admin/class-blt-toolkit-admin.php:628
 msgid "Go to Plugins"
 msgstr ""
 
 #. translators: 1: module name, 2: constant name.
-#: admin/class-blt-toolkit-admin.php:616
+#: admin/class-blt-toolkit-admin.php:637
 msgid "The %1$s module is switched off by %2$s in wp-config.php, whatever its setting says. Remove it from that constant to use the module again."
 msgstr ""
 
 #. translators: %s: module name.
-#: admin/class-blt-toolkit-admin.php:625
+#: admin/class-blt-toolkit-admin.php:646
 msgid "The %s module is switched off, so its features are not available."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:630
+#: admin/class-blt-toolkit-admin.php:651
 msgid "Turn it on in Settings"
 msgstr ""
 
 #. translators: %s: module name, such as Roles.
-#: admin/class-blt-toolkit-admin.php:676
+#: admin/class-blt-toolkit-admin.php:697
 msgid "The %s module is not running"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:709
-#: includes/class-blt-toolkit-jobs.php:863
+#: admin/class-blt-toolkit-admin.php:730
+#: includes/class-blt-toolkit-jobs.php:908
+#: includes/class-blt-toolkit-username-shortcode.php:620
 msgid "This action needs a form submission."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:720
+#: admin/class-blt-toolkit-admin.php:741
 #: includes/class-blt-toolkit-guard.php:1723
-#: includes/class-blt-toolkit-jobs.php:875
-#: includes/class-blt-toolkit-rest.php:188
-#: includes/class-blt-toolkit-rest.php:302
+#: includes/class-blt-toolkit-jobs.php:920
+#: includes/class-blt-toolkit-rest.php:206
+#: includes/class-blt-toolkit-rest.php:315
+#: includes/class-blt-toolkit-rest.php:427
 msgid "You do not have permission to do that."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:844
+#: admin/class-blt-toolkit-admin.php:873
 msgid "Settings saved."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:847
+#: admin/class-blt-toolkit-admin.php:876
 msgid "Settings saved. A number was outside its allowed range or not a number, so the nearest allowed value, or the previous value, was saved instead. Check the values below."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:850
+#: admin/class-blt-toolkit-admin.php:880
+msgid "Settings saved, but no role was changed: you are not allowed to change who can change their own username for one of the roles you chose. BLT Toolkit protects the Administrator role, your own roles and roles with more access than yours."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:883
+msgid "Settings saved, but no role was changed: a copy of the roles could not be saved first. Try again; if this keeps happening, the PHP error log says why."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:886
+msgid "Settings saved, but no role was changed: this site's roles are defined in code, so who can change their own username must be set there."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:889
+msgid "Settings saved, but the roles could not be saved. Check who can change their own username below and try again."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:892
 msgid "Modules saved. A module that is switched off loads no code; protection for administrators and the activity log keep running."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:853
+#: admin/class-blt-toolkit-admin.php:895
 msgid "Settings saved. The GitHub token is stored encrypted. Use Test connection to check it."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:856
+#: admin/class-blt-toolkit-admin.php:898
 msgid "Settings saved, but the token was not: it does not look like a GitHub token. Paste it exactly as GitHub showed it."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:859
+#: admin/class-blt-toolkit-admin.php:901
 msgid "Settings saved, but the token was not: this server has neither libsodium nor OpenSSL AES-GCM, so it cannot be stored encrypted. Define BLT_TOOLKIT_GITHUB_TOKEN in wp-config.php instead."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:862
+#: admin/class-blt-toolkit-admin.php:904
 msgid "Settings saved, but the token could not be encrypted, so it was not stored. Try again."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:865
+#: admin/class-blt-toolkit-admin.php:907
 msgid "The stored GitHub token was removed. A token in wp-config.php or in the shared BLT settings, if there is one, still applies."
 msgstr ""
 
 #. translators: %s: error code from the HTTP library, such as http_request_failed.
-#: admin/class-blt-toolkit-admin.php:875
+#: admin/class-blt-toolkit-admin.php:917
 msgid "GitHub could not be reached from this server (%s). Check that the host allows outgoing HTTPS requests to api.github.com."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:881
+#: admin/class-blt-toolkit-admin.php:923
 msgid "The Support Agent role was created. Give it to someone from their profile or from the Users screen."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:884
+#: admin/class-blt-toolkit-admin.php:926
 msgid "The Support Agent role already exists, so nothing was changed."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:887
+#: admin/class-blt-toolkit-admin.php:929
 msgid "Nothing was changed: type the role name exactly as shown to confirm."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:890
+#: admin/class-blt-toolkit-admin.php:932
 msgid "Nothing was changed: a copy of the roles could not be saved first. Try again; if this keeps happening, the PHP error log says why."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:893
+#: admin/class-blt-toolkit-admin.php:935
 msgid "Nothing was changed: creating this role needs the \"Create roles\" permission and every capability the role would have."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:896
+#: admin/class-blt-toolkit-admin.php:938
 msgid "The Support Agent role could not be created. Try again."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:899
+#: admin/class-blt-toolkit-admin.php:942
+msgid "The bulk rename has started. It keeps running in the background if you leave this page; come back here to see how it went."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:945
+msgid "Nothing was renamed: confirm that you have a recent backup of this site first."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:948
+msgid "Nothing was renamed: another bulk rename is still running. Start this one when it has finished, or cancel the other."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:951
+msgid "Nothing was renamed: no row of the file is ready."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:954
+msgid "Nothing was renamed: the bulk rename could not be started. Try again."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:957
+msgid "Nothing was renamed: that dry run is no longer available. It expires after an hour, or when you upload another file. Upload the file again."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:960
+msgid "The file was checked, but the dry run could not be saved. Try again; if this keeps happening, upload fewer rows at a time."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:963
+msgid "The dry run was discarded. Nothing was renamed."
+msgstr ""
+
+#. translators: %s: the largest file accepted, such as 2 MB.
+#: admin/class-blt-toolkit-admin.php:970
+msgid "Nothing was uploaded: the file is larger than this server accepts. It can be at most %s; split it into smaller files."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:976
 msgid "Nothing was changed: the request could not be completed. Try again."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:915
+#: admin/class-blt-toolkit-admin.php:992
 msgid "with the token from wp-config.php"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:918
+#: admin/class-blt-toolkit-admin.php:995
 msgid "with the token stored here"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:921
+#: admin/class-blt-toolkit-admin.php:998
 msgid "with the token from the shared BLT settings"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:924
+#: admin/class-blt-toolkit-admin.php:1001
 msgid "without a token"
 msgstr ""
 
 #. translators: 1: GitHub repository such as S-FX-com/BLT-Toolkit, 2: how the request was made, such as "with the token stored here".
-#: admin/class-blt-toolkit-admin.php:934
+#: admin/class-blt-toolkit-admin.php:1011
 msgid "Connected. GitHub answered HTTP 200 for %1$s %2$s, so update checks will work."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:943
+#: admin/class-blt-toolkit-admin.php:1020
 msgid "GitHub rejected the token. It may have expired or been revoked; create a new one and save it here."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:947
+#: admin/class-blt-toolkit-admin.php:1024
 msgid "GitHub refused the request. The token may lack access to the repository, or this server reached GitHub's hourly limit for requests; try again later."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:950
+#: admin/class-blt-toolkit-admin.php:1027
 msgid "GitHub did not find the repository. For a private repository this means the token cannot see it: use a fine-grained token with read-only Contents access to it."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:953
+#: admin/class-blt-toolkit-admin.php:1030
 msgid "GitHub may be having trouble. Try again in a few minutes."
 msgstr ""
 
 #. translators: 1: HTTP status code, 2: GitHub repository, 3: how the request was made, 4: advice.
-#: admin/class-blt-toolkit-admin.php:960
+#: admin/class-blt-toolkit-admin.php:1037
 msgid "GitHub answered HTTP %1$d for %2$s %3$s. %4$s"
 msgstr ""
 
@@ -1309,7 +1418,7 @@ msgid "Keep entries for"
 msgstr ""
 
 #: admin/views/settings-log.php:29
-#: admin/views/settings-usernames.php:150
+#: admin/views/settings-usernames.php:181
 msgid "days"
 msgstr ""
 
@@ -1498,7 +1607,8 @@ msgid "Create Support Agent role"
 msgstr ""
 
 #: admin/views/settings-support-agent.php:159
-#: includes/class-blt-toolkit-jobs.php:1056
+#: includes/class-blt-toolkit-jobs.php:1107
+#: includes/class-blt-toolkit-username-profile.php:320
 msgid "Cancel"
 msgstr ""
 
@@ -1574,160 +1684,415 @@ msgstr ""
 msgid "Creating roles needs the \"Create roles\" permission, which your account does not have."
 msgstr ""
 
-#: admin/views/settings-usernames.php:19
+#: admin/views/settings-usernames.php:20
 msgid "Change it only when it was made from the old username (recommended)"
 msgstr ""
 
-#: admin/views/settings-usernames.php:20
+#: admin/views/settings-usernames.php:21
 msgid "Always change it to match the new username"
 msgstr ""
 
-#: admin/views/settings-usernames.php:21
+#: admin/views/settings-usernames.php:22
 msgid "Never change it"
 msgstr ""
 
-#: admin/views/settings-usernames.php:27
+#: admin/views/settings-usernames.php:28
 msgid "Rules for new usernames"
 msgstr ""
 
-#: admin/views/settings-usernames.php:28
+#: admin/views/settings-usernames.php:29
 msgid "Checked every time a username is changed, by an administrator, in bulk or by the person themselves. Existing usernames are never affected."
 msgstr ""
 
-#: admin/views/settings-usernames.php:32
+#: admin/views/settings-usernames.php:33
 msgid "Minimum length"
 msgstr ""
 
-#: admin/views/settings-usernames.php:35
+#: admin/views/settings-usernames.php:36
 msgid "characters"
 msgstr ""
 
-#: admin/views/settings-usernames.php:36
+#: admin/views/settings-usernames.php:37
 msgid "From 1 to 60. WordPress cannot store a username longer than 60 characters."
 msgstr ""
 
-#: admin/views/settings-usernames.php:40
+#: admin/views/settings-usernames.php:41
 msgid "Names that cannot be used"
 msgstr ""
 
-#: admin/views/settings-usernames.php:43
+#: admin/views/settings-usernames.php:44
 msgid "One per line. Capitals are ignored, so \"Admin\" is refused when \"admin\" is listed. Names that other plugins block are refused too."
 msgstr ""
 
-#: admin/views/settings-usernames.php:47
+#: admin/views/settings-usernames.php:48
 msgid "The @ sign"
 msgstr ""
 
-#: admin/views/settings-usernames.php:53
+#: admin/views/settings-usernames.php:54
 msgid "Allow @ in usernames"
 msgstr ""
 
-#: admin/views/settings-usernames.php:54
+#: admin/views/settings-usernames.php:55
 msgid "Email-style usernames are common with single sign-on and membership sites. Either way, a username can never be another person's email address, because WordPress also accepts email addresses at login."
 msgstr ""
 
-#: admin/views/settings-usernames.php:64
+#: admin/views/settings-usernames.php:65
 msgid "When a username changes"
 msgstr ""
 
-#: admin/views/settings-usernames.php:65
+#: admin/views/settings-usernames.php:66
 msgid "What else changes with it."
 msgstr ""
 
-#: admin/views/settings-usernames.php:69
+#: admin/views/settings-usernames.php:70
 msgid "Author URL"
 msgstr ""
 
-#: admin/views/settings-usernames.php:76
+#: admin/views/settings-usernames.php:77
 msgid "The author URL is the last part of the link to someone's posts, such as /author/jsmith/. WordPress makes it from the username, unless someone changed it since."
 msgstr ""
 
-#: admin/views/settings-usernames.php:80
+#: admin/views/settings-usernames.php:81
 msgid "Old links"
 msgstr ""
 
-#: admin/views/settings-usernames.php:86
+#: admin/views/settings-usernames.php:87
 msgid "Redirect old author URLs"
 msgstr ""
 
-#: admin/views/settings-usernames.php:87
+#: admin/views/settings-usernames.php:88
 msgid "A link to an old author URL goes to the new one with a permanent (301) redirect, which protects search rankings and inbound links. A current user's URL always wins over an old one."
 msgstr ""
 
-#: admin/views/settings-usernames.php:93
+#: admin/views/settings-usernames.php:94
 msgid "Sessions"
 msgstr ""
 
-#: admin/views/settings-usernames.php:99
+#: admin/views/settings-usernames.php:100
 msgid "Sign the person out everywhere"
 msgstr ""
 
-#: admin/views/settings-usernames.php:100
+#: admin/views/settings-usernames.php:101
 msgid "Their sign-in stops working once their username changes anyway; this also clears the dead sessions. Someone who changes their own username stays signed in."
 msgstr ""
 
-#: admin/views/settings-usernames.php:106
+#: admin/views/settings-usernames.php:107
 msgid "Email"
 msgstr ""
 
-#: admin/views/settings-usernames.php:112
+#: admin/views/settings-usernames.php:113
 msgid "Email the person about the change"
 msgstr ""
 
-#: admin/views/settings-usernames.php:113
+#: admin/views/settings-usernames.php:114
 msgid "A plain-text email, sent through the site's normal mail setup, so an SMTP plugin delivers it as usual."
 msgstr ""
 
-#: admin/views/settings-usernames.php:119
+#: admin/views/settings-usernames.php:120
 msgid "Email subject"
 msgstr ""
 
-#: admin/views/settings-usernames.php:122
+#: admin/views/settings-usernames.php:123
 msgid "Leave blank for the default subject, in the site's language."
 msgstr ""
 
-#: admin/views/settings-usernames.php:126
+#: admin/views/settings-usernames.php:127
 msgid "Email message"
 msgstr ""
 
-#: admin/views/settings-usernames.php:129
+#: admin/views/settings-usernames.php:130
 msgid "Leave blank for the default message, in the site's language. These tags are replaced when the email is sent:"
 msgstr ""
 
-#: admin/views/settings-usernames.php:142
+#: admin/views/settings-usernames.php:143
 msgid "Self-service"
 msgstr ""
 
-#: admin/views/settings-usernames.php:143
+#: admin/views/settings-usernames.php:144
 msgid "For people allowed to change their own username."
 msgstr ""
 
-#: admin/views/settings-usernames.php:147
-msgid "Wait between changes"
+#: admin/views/settings-usernames.php:148
+msgid "Who can change their own username"
 msgstr ""
 
 #: admin/views/settings-usernames.php:151
+msgid "This site has no roles."
+msgstr ""
+
+#: admin/views/settings-usernames.php:174
+msgid "People with a role switched on here can change their own username on their profile. This is the \"Change their own username\" permission on each role, so the Roles screen shows it too. Saving takes a copy of the roles first and is recorded in the activity log."
+msgstr ""
+
+#: admin/views/settings-usernames.php:178
+msgid "Wait between changes"
+msgstr ""
+
+#: admin/views/settings-usernames.php:182
 msgid "How long someone must wait before changing their own username again. 0 means no wait. A change made for someone else is never held back."
 msgstr ""
 
-#: admin/views/settings-usernames.php:155
+#: admin/views/settings-usernames.php:186
 msgid "Password"
 msgstr ""
 
-#: admin/views/settings-usernames.php:161
+#: admin/views/settings-usernames.php:192
 msgid "Ask for their current password"
 msgstr ""
 
-#: admin/views/settings-usernames.php:162
+#: admin/views/settings-usernames.php:193
 msgid "Asked when people change their own username. People who sign in through single sign-on may not know a WordPress password, so leave this off on such sites."
-msgstr ""
-
-#: admin/views/settings-usernames.php:168
-msgid "Choose which roles may change their own username. It will be a capability on each role, so the Roles screen shows it too."
 msgstr ""
 
 #: admin/views/settings.php:37
 msgid "Save changes"
+msgstr ""
+
+#: admin/views/usernames-plan.php:26
+msgid "All"
+msgstr ""
+
+#: admin/views/usernames-plan.php:28
+#: admin/views/usernames-plan.php:46
+msgid "Errors"
+msgstr ""
+
+#: admin/views/usernames-plan.php:35
+msgid "Rows"
+msgstr ""
+
+#: admin/views/usernames-plan.php:48
+msgid "Skipped"
+msgstr ""
+
+#. translators: %s: number of rows.
+#: admin/views/usernames-plan.php:58
+msgid "Plus %s row with no new username, not listed"
+msgid_plural "Plus %s rows with no new username, not listed"
+msgstr[0] ""
+msgstr[1] ""
+
+#: admin/views/usernames-plan.php:68
+msgid "Show rows"
+msgstr ""
+
+#: admin/views/usernames-plan.php:89
+msgid "No rows with this status"
+msgstr ""
+
+#: admin/views/usernames-plan.php:90
+msgid "Show every row"
+msgstr ""
+
+#: admin/views/usernames-plan.php:95
+msgid "Dry run of the bulk rename"
+msgstr ""
+
+#: admin/views/usernames-plan.php:98
+#: admin/views/usernames-plan.php:108
+msgid "Line"
+msgstr ""
+
+#: admin/views/usernames-plan.php:99
+#: admin/views/usernames-plan.php:109
+msgid "User ID"
+msgstr ""
+
+#: admin/views/usernames-plan.php:100
+#: admin/views/usernames-plan.php:110
+#: includes/class-blt-toolkit-username-profile.php:319
+msgid "Change"
+msgstr ""
+
+#: admin/views/usernames-plan.php:102
+#: admin/views/usernames-plan.php:122
+msgid "Notes"
+msgstr ""
+
+#: admin/views/usernames-plan.php:115
+msgid "to"
+msgstr ""
+
+#: admin/views/usernames-plan.php:141
+msgid "Dry run pages"
+msgstr ""
+
+#: admin/views/usernames-plan.php:143
+msgid "Previous"
+msgstr ""
+
+#. translators: 1: current page, 2: number of pages.
+#: admin/views/usernames-plan.php:149
+msgid "Page %1$s of %2$s"
+msgstr ""
+
+#: admin/views/usernames-plan.php:156
+msgid "Next"
+msgstr ""
+
+#: admin/views/usernames-plan.php:166
+msgid "Nothing to rename"
+msgstr ""
+
+#: admin/views/usernames-plan.php:167
+msgid "No row of this file is ready. Correct the rows with errors and upload the file again."
+msgstr ""
+
+#: admin/views/usernames-plan.php:172
+msgid "Your own username is in this file"
+msgstr ""
+
+#: admin/views/usernames-plan.php:173
+msgid "The renames run in the background, so when yours changes you are signed out. Sign in again with your new username."
+msgstr ""
+
+#: admin/views/usernames-plan.php:179
+msgid "Switched sessions will end"
+msgstr ""
+
+#. translators: %s: number of users.
+#: admin/views/usernames-plan.php:184
+msgid "%s user in this file is in a switched session right now. Renaming them ends that session; starting the bulk rename confirms it."
+msgid_plural "%s users in this file are in a switched session right now. Renaming them ends those sessions; starting the bulk rename confirms it."
+msgstr[0] ""
+msgstr[1] ""
+
+#: admin/views/usernames-plan.php:193
+msgid "What each rename does"
+msgstr ""
+
+#: admin/views/usernames-plan.php:198
+msgid "Email each user their new username"
+msgstr ""
+
+#: admin/views/usernames-plan.php:202
+msgid "Sign each renamed user out everywhere"
+msgstr ""
+
+#: admin/views/usernames-plan.php:210
+msgid "Author URLs change to match the new usernames."
+msgstr ""
+
+#: admin/views/usernames-plan.php:212
+msgid "Author URLs stay as they are."
+msgstr ""
+
+#: admin/views/usernames-plan.php:214
+msgid "Author URLs change only where they were made from the old username."
+msgstr ""
+
+#: admin/views/usernames-plan.php:220
+msgid "These settings are fixed when the renames start, so changing them during the run does not split the batch. The author URL rule is the one this dry run used."
+msgstr ""
+
+#: admin/views/usernames-plan.php:222
+msgid "Change them in Settings"
+msgstr ""
+
+#: admin/views/usernames-plan.php:234
+msgid "Backup"
+msgstr ""
+
+#: admin/views/usernames-plan.php:240
+msgid "I have a recent backup of this site"
+msgstr ""
+
+#: admin/views/usernames-plan.php:241
+msgid "A bulk rename changes many accounts at once. Each rename is logged, but there is no undo for the whole batch. You are asked once each time you sign in."
+msgstr ""
+
+#: admin/views/usernames-plan.php:250
+msgid "Another bulk rename is still running. Start this one when it has finished."
+msgstr ""
+
+#. translators: %s: number of users.
+#: admin/views/usernames-plan.php:258
+msgid "Rename %s user"
+msgid_plural "Rename %s users"
+msgstr[0] ""
+msgstr[1] ""
+
+#: admin/views/usernames-plan.php:269
+msgid "Discard and upload another file"
+msgstr ""
+
+#: admin/views/usernames-recent.php:21
+msgid "Recent changes"
+msgstr ""
+
+#: admin/views/usernames-recent.php:25
+msgid "Username changes, bulk renames and template downloads from the activity log, newest first."
+msgstr ""
+
+#: admin/views/usernames-recent.php:27
+msgid "The username changes, bulk renames and template downloads you made, newest first."
+msgstr ""
+
+#: admin/views/usernames-recent.php:33
+msgid "View all in Activity"
+msgstr ""
+
+#: admin/views/usernames-recent.php:40
+msgid "No username changes recorded yet"
+msgstr ""
+
+#: admin/views/usernames-recent.php:41
+msgid "Each change is listed here with the old and new username, who made it and when."
+msgstr ""
+
+#: admin/views/usernames-recent.php:46
+msgid "Recent username changes"
+msgstr ""
+
+#: admin/views/usernames-upload.php:20
+msgid "1. Download the template"
+msgstr ""
+
+#: admin/views/usernames-upload.php:24
+msgid "Download template"
+msgstr ""
+
+#: admin/views/usernames-upload.php:26
+msgid "A CSV file with a row for every user you can see: user_id, username and an empty new_username column. Fill in new_username for the users to rename and leave it empty for the others."
+msgstr ""
+
+#: admin/views/usernames-upload.php:31
+msgid "2. Upload the file"
+msgstr ""
+
+#: admin/views/usernames-upload.php:37
+msgid "Check the file"
+msgstr ""
+
+#. translators: 1: the most rows with a new username one file may have, such as 5,000. 2: the largest file accepted, such as 2 MB.
+#: admin/views/usernames-upload.php:43
+msgid "Columns user_id and new_username, or username and new_username, in the first row. UTF-8, with commas or semicolons, as saved by Excel, Numbers or Google Sheets. Up to %1$s rows with a new username (rows left empty are skipped), in a file of at most %2$s. Nothing changes yet: you see a dry run of every row first."
+msgstr ""
+
+#: admin/views/usernames.php:38
+msgid "That dry run is no longer available: it expired after an hour, was started, or was replaced by a newer upload. Upload the file again."
+msgstr ""
+
+#. translators: 1: file name, 2: what is wrong with it.
+#: admin/views/usernames.php:47
+msgid "%1$s could not be used: %2$s"
+msgstr ""
+
+#. translators: %s: what is wrong with the upload.
+#: admin/views/usernames.php:54
+msgid "Nothing was uploaded: %s"
+msgstr ""
+
+#: admin/views/usernames.php:72
+msgid "Bulk rename from CSV"
+msgstr ""
+
+#: admin/views/usernames.php:73
+msgid "Change many usernames in one pass: check a dry run of the whole file first, then the renames run in the background."
+msgstr ""
+
+#: admin/views/usernames.php:76
+msgid "Dry run"
 msgstr ""
 
 #. translators: %s: number of capabilities.
@@ -1757,6 +2122,41 @@ msgstr ""
 msgid "Stored value could not be decrypted. The security keys in wp-config.php may have changed."
 msgstr ""
 
+#: includes/class-blt-toolkit-csv.php:95
+#: includes/class-blt-toolkit-csv.php:171
+msgid "The file is empty."
+msgstr ""
+
+#. translators: %s: the most rows one file may have, such as 5,000.
+#: includes/class-blt-toolkit-csv.php:160
+msgid "The file has more than %s row with a new username. Split it into smaller files."
+msgid_plural "The file has more than %s rows with a new username. Split it into smaller files."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: line number in the file.
+#: includes/class-blt-toolkit-csv.php:330
+msgid "A quoted cell that starts on line %d is never closed."
+msgstr ""
+
+#. translators: 1: line number in the file, 2: the most columns a row may have.
+#: includes/class-blt-toolkit-csv.php:367
+msgid "The row on line %1$s has more than %2$s columns. Keep only the user_id or username column and new_username, then upload the file again."
+msgstr ""
+
+#. translators: %s: a column name, such as new_username.
+#: includes/class-blt-toolkit-csv.php:429
+msgid "The column %s appears more than once in the first row."
+msgstr ""
+
+#: includes/class-blt-toolkit-csv.php:442
+msgid "The first row must name the columns: user_id and new_username, or username and new_username."
+msgstr ""
+
+#: includes/class-blt-toolkit-csv.php:498
+msgid "The file is not UTF-8 text. In your spreadsheet, save it as \"CSV UTF-8\" and upload it again."
+msgstr ""
+
 #: includes/class-blt-toolkit-guard.php:696
 msgid "Sorry, you are not allowed to edit roles of this user."
 msgstr ""
@@ -1767,12 +2167,17 @@ msgid "New users would get the role %s, which has capabilities you do not have, 
 msgstr ""
 
 #: includes/class-blt-toolkit-guard.php:1673
+#: includes/class-blt-toolkit-rest.php:335
+#: includes/class-blt-toolkit-username-bulk.php:334
+#: includes/class-blt-toolkit-username-changer.php:122
+#: includes/class-blt-toolkit-username-changer.php:133
 msgid "That user does not exist."
 msgstr ""
 
 #: includes/class-blt-toolkit-guard.php:1676
-#: includes/class-blt-toolkit-rest.php:174
-#: includes/class-blt-toolkit-rest.php:298
+#: includes/class-blt-toolkit-rest.php:192
+#: includes/class-blt-toolkit-rest.php:309
+#: includes/class-blt-toolkit-rest.php:423
 msgid "You need to be signed in to do that."
 msgstr ""
 
@@ -1874,262 +2279,262 @@ msgstr ""
 msgid "The Administrator role has the capabilities it needs to manage the site and every BLT Toolkit capability. Remove %s from wp-config.php now; it is meant for emergencies only."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:310
+#: includes/class-blt-toolkit-jobs.php:321
 msgid "That kind of job is not available. Its module may be switched off."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:314
+#: includes/class-blt-toolkit-jobs.php:325
 msgid "There is nothing to do: the job has no items."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:326
-#: includes/class-blt-toolkit-jobs.php:332
+#: includes/class-blt-toolkit-jobs.php:341
+#: includes/class-blt-toolkit-jobs.php:347
 msgid "The job could not be saved, so it was not started. Try again."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:671
+#: includes/class-blt-toolkit-jobs.php:698
 msgid "The job is busy. Try again in a moment."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:871
-#: includes/class-blt-toolkit-jobs.php:2501
-#: includes/class-blt-toolkit-rest.php:180
-#: includes/class-blt-toolkit-rest.php:503
+#: includes/class-blt-toolkit-jobs.php:916
+#: includes/class-blt-toolkit-jobs.php:2554
+#: includes/class-blt-toolkit-rest.php:198
+#: includes/class-blt-toolkit-rest.php:628
 msgid "That job no longer exists."
 msgstr ""
 
 #. translators: %s: the item being worked on, such as "bob to carol".
-#: includes/class-blt-toolkit-jobs.php:936
+#: includes/class-blt-toolkit-jobs.php:987
 msgid "Working on: %s"
 msgstr ""
 
 #. translators: %s: number of seconds.
-#: includes/class-blt-toolkit-jobs.php:980
-#: includes/class-blt-toolkit-jobs.php:2681
+#: includes/class-blt-toolkit-jobs.php:1031
+#: includes/class-blt-toolkit-jobs.php:2734
 msgid "%s s"
 msgstr ""
 
 #. translators: 1: minutes, 2: seconds.
-#: includes/class-blt-toolkit-jobs.php:982
-#: includes/class-blt-toolkit-jobs.php:2686
+#: includes/class-blt-toolkit-jobs.php:1033
+#: includes/class-blt-toolkit-jobs.php:2739
 msgid "%1$s min %2$s s"
 msgstr ""
 
 #. translators: 1: hours, 2: minutes.
-#: includes/class-blt-toolkit-jobs.php:984
-#: includes/class-blt-toolkit-jobs.php:2690
+#: includes/class-blt-toolkit-jobs.php:1035
+#: includes/class-blt-toolkit-jobs.php:2743
 msgid "%1$s h %2$s min"
 msgstr ""
 
 #. translators: %s: a duration, such as "2 min 10 s".
-#: includes/class-blt-toolkit-jobs.php:986
-#: includes/class-blt-toolkit-jobs.php:2615
+#: includes/class-blt-toolkit-jobs.php:1037
+#: includes/class-blt-toolkit-jobs.php:2668
 msgid "About %s"
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:987
-#: includes/class-blt-toolkit-jobs.php:2611
+#: includes/class-blt-toolkit-jobs.php:1038
+#: includes/class-blt-toolkit-jobs.php:2664
 msgid "Estimating"
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:993
+#: includes/class-blt-toolkit-jobs.php:1044
 msgid "Lost contact with the server. This page keeps trying; check your connection."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:994
+#: includes/class-blt-toolkit-jobs.php:1045
 msgid "Your session has expired. Reload the page to keep following this job."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:995
+#: includes/class-blt-toolkit-jobs.php:1046
 msgid "This job no longer exists."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:996
+#: includes/class-blt-toolkit-jobs.php:1047
 msgid "You can no longer follow this job."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:997
+#: includes/class-blt-toolkit-jobs.php:1048
 msgid "Cancel this job? Items that already finished stay finished."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:1057
+#: includes/class-blt-toolkit-jobs.php:1108
 msgid "Retry failed"
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:1058
+#: includes/class-blt-toolkit-jobs.php:1109
 msgid "Continue now"
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:1063
+#: includes/class-blt-toolkit-jobs.php:1114
 msgid "Progress"
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:1069
+#: includes/class-blt-toolkit-jobs.php:1120
 msgid "Done"
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:1074
+#: includes/class-blt-toolkit-jobs.php:1125
 msgid "Elapsed"
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:1078
+#: includes/class-blt-toolkit-jobs.php:1129
 msgid "Time left"
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:1087
+#: includes/class-blt-toolkit-jobs.php:1138
 msgid "Keep this tab open"
 msgstr ""
 
 #. translators: %s: the item and what went wrong, such as "bob to carol: That username is taken."
-#: includes/class-blt-toolkit-jobs.php:1115
+#: includes/class-blt-toolkit-jobs.php:1166
 msgid "Failed: %s"
 msgstr ""
 
 #. translators: %s: the item and the warning, such as "bob to carol: The email could not be sent."
-#: includes/class-blt-toolkit-jobs.php:1120
+#: includes/class-blt-toolkit-jobs.php:1171
 msgid "Warning: %s"
 msgstr ""
 
 #. translators: 1: a job item, such as "bob to carol", 2: what happened to it.
-#: includes/class-blt-toolkit-jobs.php:1124
+#: includes/class-blt-toolkit-jobs.php:1175
 msgctxt "job item and its problem"
 msgid "%1$s: %2$s"
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:1325
+#: includes/class-blt-toolkit-jobs.php:1378
 msgid "The item was missing from the job."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:1351
+#: includes/class-blt-toolkit-jobs.php:1404
 msgid "The item could not be processed."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:1478
+#: includes/class-blt-toolkit-jobs.php:1531
 msgid "There are no failed items to retry, or the job is still running."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:1538
+#: includes/class-blt-toolkit-jobs.php:1591
 msgid "Processing stopped unexpectedly here several times in a row (a PHP error or a time limit), so this item was skipped."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:2128
+#: includes/class-blt-toolkit-jobs.php:2181
 msgid "The person who started this job no longer has an account, so it was stopped."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:2132
+#: includes/class-blt-toolkit-jobs.php:2185
 msgid "The person who started this job is no longer allowed to run it, so it was stopped."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:2515
+#: includes/class-blt-toolkit-jobs.php:2568
 msgid "Cancelling"
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:2520
+#: includes/class-blt-toolkit-jobs.php:2573
 msgid "Waiting"
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:2522
+#: includes/class-blt-toolkit-jobs.php:2575
 msgid "Running"
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:2524
+#: includes/class-blt-toolkit-jobs.php:2577
 msgid "Finished"
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:2526
+#: includes/class-blt-toolkit-jobs.php:2579
 msgid "Cancelled"
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:2529
+#: includes/class-blt-toolkit-jobs.php:2582
 msgid "Stopped"
 msgstr ""
 
 #. translators: 1: items done, 2: items in the job.
 #. translators: 1: units done, 2: units in all.
-#: includes/class-blt-toolkit-jobs.php:2563
-#: includes/class-blt-toolkit-jobs.php:2572
+#: includes/class-blt-toolkit-jobs.php:2616
+#: includes/class-blt-toolkit-jobs.php:2625
 msgid "%1$s of %2$s"
 msgstr ""
 
 #. translators: %s: number of items.
-#: includes/class-blt-toolkit-jobs.php:2594
+#: includes/class-blt-toolkit-jobs.php:2647
 msgid "%s failed"
 msgid_plural "%s failed"
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/class-blt-toolkit-jobs.php:2629
+#: includes/class-blt-toolkit-jobs.php:2682
 msgid "Cancelling: the item in progress finishes first, then the job stops."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:2634
+#: includes/class-blt-toolkit-jobs.php:2687
 msgid "Waiting to start."
 msgstr ""
 
 #. translators: %s: number of steps.
-#: includes/class-blt-toolkit-jobs.php:2639
+#: includes/class-blt-toolkit-jobs.php:2692
 msgid "Working: %s step so far."
 msgid_plural "Working: %s steps so far."
 msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: number processed, 2: number in all.
-#: includes/class-blt-toolkit-jobs.php:2643
+#: includes/class-blt-toolkit-jobs.php:2696
 msgid "Working: %1$s of %2$s processed."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:2647
+#: includes/class-blt-toolkit-jobs.php:2700
 msgid "Finished."
 msgstr ""
 
 #. translators: 1: number of items done, 2: number of items that failed.
-#: includes/class-blt-toolkit-jobs.php:2652
+#: includes/class-blt-toolkit-jobs.php:2705
 msgid "Finished: %1$s done, %2$s failed. You can retry the failed item."
 msgid_plural "Finished: %1$s done, %2$s failed. You can retry the failed items."
 msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of items.
-#: includes/class-blt-toolkit-jobs.php:2656
+#: includes/class-blt-toolkit-jobs.php:2709
 msgid "Finished: %s item done."
 msgid_plural "Finished: all %s items done."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/class-blt-toolkit-jobs.php:2660
+#: includes/class-blt-toolkit-jobs.php:2713
 msgid "Cancelled. The work done before the cancel is kept."
 msgstr ""
 
 #. translators: 1: number of items done, 2: number of items in the job.
-#: includes/class-blt-toolkit-jobs.php:2664
+#: includes/class-blt-toolkit-jobs.php:2717
 msgid "Cancelled: %1$s of %2$s done. The rest were not started."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:2667
+#: includes/class-blt-toolkit-jobs.php:2720
 msgid "Stopped before the end."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:2699
+#: includes/class-blt-toolkit-jobs.php:2752
 msgid "Background processing does not seem to be running on this server. With JavaScript on, this page does the work while it stays open; without it, press Continue now to run the next part."
 msgstr ""
 
-#: includes/class-blt-toolkit-jobs.php:2708
+#: includes/class-blt-toolkit-jobs.php:2761
 msgid "Background processing is not running on this server, so this page is doing the work. Keep this tab open until the job finishes."
 msgstr ""
 
-#: includes/class-blt-toolkit-log.php:216
+#: includes/class-blt-toolkit-log.php:226
 msgid "Remove old activity log entries"
 msgstr ""
 
 #. translators: %s: number of days.
-#: includes/class-blt-toolkit-log.php:1529
+#: includes/class-blt-toolkit-log.php:1601
 msgid "%s day"
 msgid_plural "%s days"
 msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: number of entries, 2: an age such as "365 days".
-#: includes/class-blt-toolkit-log.php:1540
+#: includes/class-blt-toolkit-log.php:1612
 msgid "Removed %1$s activity log entry older than %2$s."
 msgid_plural "Removed %1$s activity log entries older than %2$s."
 msgstr[0] ""
@@ -2167,24 +2572,114 @@ msgstr ""
 msgid "BLT Toolkit supports single-site installs only in this version, so it is not running on this network. Deactivate it from the Plugins screen."
 msgstr ""
 
-#: includes/class-blt-toolkit-rest.php:114
+#: includes/class-blt-toolkit-rename-planner.php:125
+msgid "You cannot change this user's username."
+msgstr ""
+
+#: includes/class-blt-toolkit-rename-planner.php:143
+msgid "This username cannot be used."
+msgstr ""
+
+#: includes/class-blt-toolkit-rename-planner.php:230
+msgid "This row has more cells than the first row has columns. Usernames cannot contain commas or semicolons, so check for a stray one."
+msgstr ""
+
+#. translators: %s: the value found in the user_id column.
+#: includes/class-blt-toolkit-rename-planner.php:248
+msgid "%s is not a user ID."
+msgstr ""
+
+#. translators: %d: a user ID.
+#: includes/class-blt-toolkit-rename-planner.php:259
+msgid "No user has the ID %d."
+msgstr ""
+
+#. translators: 1: a user ID. 2: that user's username. 3: the username the row gives.
+#: includes/class-blt-toolkit-rename-planner.php:276
+msgid "User ID %1$d has the username %2$s, not %3$s."
+msgstr ""
+
+#. translators: %s: a username.
+#: includes/class-blt-toolkit-rename-planner.php:295
+msgid "No user has the username %s."
+msgstr ""
+
+#: includes/class-blt-toolkit-rename-planner.php:301
+msgid "This row does not say which user to rename."
+msgstr ""
+
+#: includes/class-blt-toolkit-rename-planner.php:309
+msgid "The new username is the same as the current one."
+msgstr ""
+
+#. translators: %s: comma-separated line numbers.
+#: includes/class-blt-toolkit-rename-planner.php:336
+msgid "This user appears in more than one row (lines %s)."
+msgstr ""
+
+#. translators: 1: a username. 2: comma-separated line numbers.
+#: includes/class-blt-toolkit-rename-planner.php:347
+msgid "More than one row renames a user to %1$s (lines %2$s)."
+msgstr ""
+
+#. translators: %s: comma-separated line numbers.
+#: includes/class-blt-toolkit-rename-planner.php:382
+msgid "Swap detected: rename one of these to a temporary name first (lines %s)."
+msgstr ""
+
+#. translators: 1: a username. 2: a line number.
+#: includes/class-blt-toolkit-rename-planner.php:433
+msgid "%1$s is still taken: the row on line %2$d that would free it cannot run."
+msgstr ""
+
+#: includes/class-blt-toolkit-rename-planner.php:482
+msgid "This is your own account."
+msgstr ""
+
+#: includes/class-blt-toolkit-rename-planner.php:486
+msgid "Someone is switched into this account, or it is switched into another. Renaming ends that switched session."
+msgstr ""
+
+#: includes/class-blt-toolkit-rename-planner.php:490
+msgid "The author URL will change."
+msgstr ""
+
+#: includes/class-blt-toolkit-rename-planner.php:634
+msgid "No new username given."
+msgstr ""
+
+#: includes/class-blt-toolkit-rest.php:132
 msgid "Job ID."
 msgstr ""
 
-#: includes/class-blt-toolkit-rest.php:184
+#: includes/class-blt-toolkit-rest.php:202
 msgid "This job belongs to a module that is not running, so it cannot be shown or continued."
 msgstr ""
 
-#: includes/class-blt-toolkit-rest.php:265
+#: includes/class-blt-toolkit-rest.php:283
+msgid "The user whose username would change."
+msgstr ""
+
+#: includes/class-blt-toolkit-rest.php:289
+msgid "The proposed username, as typed."
+msgstr ""
+
+#. translators: %s: a username.
+#: includes/class-blt-toolkit-rest.php:350
+#: includes/class-blt-toolkit-username-profile.php:325
+msgid "\"%s\" is available."
+msgstr ""
+
+#: includes/class-blt-toolkit-rest.php:390
 msgid "Part of a name, username or email address: at least 2 characters."
 msgstr ""
 
-#: includes/class-blt-toolkit-rest.php:281
+#: includes/class-blt-toolkit-rest.php:406
 msgid "The URL that switches to this user, or null when the current user may not switch to them."
 msgstr ""
 
 #. translators: 1: shortest length, 2: longest length.
-#: includes/class-blt-toolkit-rest.php:339
+#: includes/class-blt-toolkit-rest.php:464
 msgid "Search for between %1$d and %2$d characters."
 msgstr ""
 
@@ -2381,23 +2876,359 @@ msgid "Switched off."
 msgstr ""
 
 #. translators: 1: name of the user who is switched in, 2: name of the user to switch to, 3: how long ago, such as "5 mins".
-#: includes/class-blt-toolkit-switch.php:1331
+#: includes/class-blt-toolkit-switch.php:1361
 msgid "%1$s is currently switched to %2$s. They switched %3$s ago. Continue?"
 msgstr ""
 
 #. translators: %s: name of the user to switch to.
-#: includes/class-blt-toolkit-switch.php:1338
+#: includes/class-blt-toolkit-switch.php:1368
 msgid "Yes, switch to %s"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch.php:1352
+#: includes/class-blt-toolkit-switch.php:1382
 msgid "No, go back"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch.php:1354
+#: includes/class-blt-toolkit-switch.php:1384
 msgid "Someone is already switched in"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch.php:1520
+#: includes/class-blt-toolkit-switch.php:1550
 msgid "When a user with permission switches to another user's account, BLT Toolkit sets cookies that let them switch back. Like the cookies WordPress sets when you log in, they contain the username of the user who switched, an expiration time and a secure hash. They expire after two days at most, when the browser is closed unless that user chose \"Remember Me\" when logging in, and as soon as anyone logs in or out in that browser."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-bulk.php:99
+msgid "Bulk rename usernames"
+msgstr ""
+
+#. translators: %s: number of usernames.
+#: includes/class-blt-toolkit-username-bulk.php:155
+msgid "Retried %s failed username of a bulk rename."
+msgid_plural "Retried %s failed usernames of a bulk rename."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-blt-toolkit-username-bulk.php:158
+msgid "Cancelled a bulk rename. Usernames already changed stay changed."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-bulk.php:705
+msgid "Another bulk rename is still running."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-bulk.php:711
+msgid "No row in the dry run is ready to rename."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-bulk.php:789
+msgid "That user no longer exists."
+msgstr ""
+
+#. translators: 1: the username now, 2: the username in the dry run.
+#: includes/class-blt-toolkit-username-bulk.php:807
+msgid "The username is now %1$s, not %2$s as in the dry run, so it was not changed."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-bulk.php:850
+msgid "This was your own username: sign in again with the new one."
+msgstr ""
+
+#. translators: 1: current username, 2: new username.
+#: includes/class-blt-toolkit-username-bulk.php:868
+msgid "%1$s to %2$s"
+msgstr ""
+
+#. translators: %s: number of usernames.
+#: includes/class-blt-toolkit-username-bulk.php:891
+msgid "Started a bulk rename of %s username from a CSV file."
+msgid_plural "Started a bulk rename of %s usernames from a CSV file."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: current username, 2: the username it could not be changed to, 3: why.
+#: includes/class-blt-toolkit-username-bulk.php:930
+msgid "Could not change the username %1$s to %2$s: %3$s"
+msgstr ""
+
+#: includes/class-blt-toolkit-username-changer.php:210
+msgid "The username was changed by another request at the same moment, so this change was not saved. Reload the page to see the username now."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-changer.php:213
+msgid "The username could not be saved. Nothing was changed; try again."
+msgstr ""
+
+#. translators: %s: date and time.
+#: includes/class-blt-toolkit-username-changer.php:368
+msgid "You changed your username recently. You can change it again after %s."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-changer.php:378
+#: includes/class-blt-toolkit-username-shortcode.php:359
+msgid "You are not allowed to change your own username."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-changer.php:381
+msgid "You are not allowed to change this user's username."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-changer.php:454
+#: includes/class-blt-toolkit-username-shortcode.php:351
+msgid "Your current password is not correct, so your username was not changed."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-changer.php:679
+msgid "Someone is switched into this account, and this person is switched into another account, right now. Changing the username ends both switched sessions. Confirm to go ahead."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-changer.php:683
+msgid "Someone is switched into this account right now. Changing the username ends that switched session. Confirm to go ahead."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-changer.php:686
+msgid "This person is switched into another account right now. Changing the username ends that switched session, and they cannot switch back. Confirm to go ahead."
+msgstr ""
+
+#. translators: Email subject. Keep the tag in braces as it is.
+#: includes/class-blt-toolkit-username-changer.php:1001
+msgid "[{sitename}] Your username has changed"
+msgstr ""
+
+#. translators: Plain-text email. Keep the tags in braces as they are.
+#: includes/class-blt-toolkit-username-changer.php:1011
+msgid ""
+"Hi {display_name},\n"
+"\n"
+"Your username on {sitename} has changed from {old_username} to {new_username}.\n"
+"\n"
+"Sign in with your new username, or with your email address, at:\n"
+"{loginurl}\n"
+"\n"
+"If you did not expect this change, contact the site's administrator.\n"
+"\n"
+"{sitename}\n"
+"{siteurl}"
+msgstr ""
+
+#. translators: 1: previous username, 2: new username.
+#: includes/class-blt-toolkit-username-changer.php:1082
+msgid "Changed their own username from %1$s to %2$s."
+msgstr ""
+
+#. translators: 1: previous username, 2: new username.
+#: includes/class-blt-toolkit-username-changer.php:1089
+msgid "Changed the username %1$s to %2$s."
+msgstr ""
+
+#. translators: 1: current username, 2: the username it could not be changed to.
+#: includes/class-blt-toolkit-username-changer.php:1150
+msgid "Could not change the username %1$s to %2$s."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:174
+msgid "You stay signed in here. Use the new username the next time you sign in."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:176
+msgid "They are signed out everywhere and sign in again with the new username."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:178
+msgid "They need to sign in again with the new username."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:184
+#: includes/class-blt-toolkit-username-profile.php:249
+#: includes/class-blt-toolkit-username-profile.php:635
+#: templates/username-form.php:161
+msgid "Change username"
+msgstr ""
+
+#. translators: 1: current username, 2: shortest length, 3: longest length.
+#: includes/class-blt-toolkit-username-profile.php:197
+msgid "Leave blank to keep \"%1$s\". From %2$d to %3$d characters."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:217
+msgid "Change the username and end the switched session"
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:224
+msgid "Your current password"
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:226
+msgid "Needed to change your username. Leave blank if you are not changing it."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:285
+msgid "The author URL changes to match, and links to the old one redirect to it."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:288
+msgid "The author URL changes to match."
+msgstr ""
+
+#. translators: %s: the user's display name.
+#: includes/class-blt-toolkit-username-profile.php:322
+#: includes/class-blt-toolkit-username-profile.php:634
+msgid "Change the username of %s"
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:323
+msgid "Checking…"
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:326
+msgid "The name could not be checked just now. It is checked again when you save."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:375
+msgid "The username was not changed because the form had expired. Try again."
+msgstr ""
+
+#. translators: %s: why the username was not changed.
+#: includes/class-blt-toolkit-username-profile.php:563
+msgid "The username was not changed: %s"
+msgstr ""
+
+#. translators: 1: previous username, 2: new username.
+#: includes/class-blt-toolkit-username-profile.php:575
+msgid "Username changed from \"%1$s\" to \"%2$s\"."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:583
+msgid "The author URL changed too; links to the old one redirect to it."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:584
+msgid "The author URL changed too."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:589
+msgid "You are still signed in. Use the new username the next time you sign in."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:590
+msgid "Sign in again with the new username."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:592
+msgid "They were signed out everywhere and sign in again with the new username."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-profile.php:594
+msgid "They sign in with the new username from now on."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-shortcode.php:236
+msgid "Your username was not changed. Tick the box below to confirm that the switched session may end, then try again."
+msgstr ""
+
+#. translators: %s: the new username.
+#: includes/class-blt-toolkit-username-shortcode.php:329
+msgid "Your username is now %s. You are still signed in; use it the next time you sign in."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-shortcode.php:335
+msgid "Your author URL changed too; links to the old one lead to the new one."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-shortcode.php:336
+msgid "Your author URL changed too."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-shortcode.php:342
+msgid "Your username was not changed because the form had expired. Try again."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-shortcode.php:345
+msgid "Enter the new username you want."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-shortcode.php:348
+msgid "That username cannot be used. Choose another."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-shortcode.php:356
+msgid "You changed your username recently, so it was not changed again."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-shortcode.php:362
+msgid "Your account is in a switched session right now. Confirm below to change your username and end it."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-shortcode.php:365
+msgid "Your username could not be changed. Nothing was changed; try again."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-validator.php:62
+msgid "That username is already taken."
+msgstr ""
+
+#. translators: %d: maximum number of characters.
+#: includes/class-blt-toolkit-username-validator.php:77
+msgid "Usernames can be at most %d character long."
+msgid_plural "Usernames can be at most %d characters long."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: minimum number of characters.
+#: includes/class-blt-toolkit-username-validator.php:134
+msgid "Usernames must be at least %d character long."
+msgid_plural "Usernames must be at least %d characters long."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-blt-toolkit-username-validator.php:146
+#: includes/class-blt-toolkit-username-validator.php:246
+msgid "That username is not valid on this site."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-validator.php:151
+msgid "That username is reserved and cannot be used."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-validator.php:169
+msgid "That username is the email address of another account. Both can be used to sign in, so they must not match."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-validator.php:177
+msgid "Usernames cannot contain the @ symbol on this site."
+msgstr ""
+
+#: includes/class-blt-toolkit-username-validator.php:182
+msgid "That is already the current username."
+msgstr ""
+
+#. translators: %s: the symbols allowed in usernames, such as ". - _ @".
+#: includes/class-blt-toolkit-username-validator.php:353
+msgid "Usernames can contain only letters without accents, numbers, spaces and these symbols: %s"
+msgstr ""
+
+#. translators: 1: the symbols allowed in usernames, such as ". - _ @". 2: a suggested username.
+#: includes/class-blt-toolkit-username-validator.php:359
+msgid "Usernames can contain only letters without accents, numbers, spaces and these symbols: %1$s. Try %2$s instead."
+msgstr ""
+
+#. translators: %s: the person's current username.
+#: templates/username-form.php:84
+msgid "Your username is %s."
+msgstr ""
+
+#. translators: 1: shortest length, 2: longest length, 3: the symbols allowed, such as ". - _ @".
+#: templates/username-form.php:114
+msgid "From %1$d to %2$d characters: letters without accents, numbers, spaces and %3$s. You stay signed in after the change."
+msgstr ""
+
+#: templates/username-form.php:125
+msgid "Current password"
+msgstr ""
+
+#: templates/username-form.php:138
+msgid "Needed to confirm that it is you."
+msgstr ""
+
+#: templates/username-form.php:155
+msgid "Change my username and end the switched session"
 msgstr ""

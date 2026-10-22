@@ -21,10 +21,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  *   Users list row action (UN-16 to UN-19).
  * - BLT_Toolkit_Author_Redirects: 301s from old author slugs (UN-13a),
  *   hooked only when `usernames.redirect_old_slugs` is on.
- * - BLT_Toolkit_Username_Shortcode: `[blt_toolkit_username_form]` (UN-23),
- *   when that class ships.
+ * - BLT_Toolkit_Username_Shortcode: `[blt_toolkit_username_form]` and its
+ *   admin-post.php handlers, the front-end self-service form (UN-23).
  * - The `username_bulk` job type (UN-30, JOB-5), registered on `init`
- *   priority 5 by the class that runs it, when that class ships.
+ *   priority 5 by BLT_Toolkit_Username_Bulk. The bulk screen's admin-post.php
+ *   actions go through BLT_Toolkit_Admin's router.
  * - BLT_Toolkit_Rest registers `GET blt-toolkit/v1/usernames/check` while
  *   this module runs (UN-16, advisory).
  *
@@ -91,7 +92,7 @@ class BLT_Toolkit_Usernames implements BLT_Toolkit_Module {
 		// UN-13a.
 		BLT_Toolkit_Author_Redirects::boot();
 
-		// UN-23 (Phase 3b).
+		// UN-23: the shortcode and its admin-post.php handlers.
 		if ( class_exists( 'BLT_Toolkit_Username_Shortcode' ) && is_callable( array( 'BLT_Toolkit_Username_Shortcode', 'boot' ) ) ) {
 			BLT_Toolkit_Username_Shortcode::boot();
 		}

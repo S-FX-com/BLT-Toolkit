@@ -359,7 +359,7 @@ class BLT_Toolkit_Rest {
 		$out  = array(
 			'valid'    => false,
 			'username' => $name,
-			'code'     => $code,
+			'code'     => BLT_Toolkit_Username_Changer::public_error_code( $code ),
 			'message'  => BLT_Toolkit_Username_Changer::public_error_message( $code, $errors->get_error_message( $code ) ),
 		);
 

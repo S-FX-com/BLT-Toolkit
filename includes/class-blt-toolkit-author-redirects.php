@@ -95,7 +95,7 @@ class BLT_Toolkit_Author_Redirects {
 
 		add_user_meta( $user_id, self::META, $old_nicename );
 
-		$kept = get_user_meta( $user_id, self::META );
+		$kept = get_user_meta( $user_id, self::META, false );
 
 		foreach ( self::overflow( is_array( $kept ) ? $kept : array(), self::MAX_KEPT ) as $slug ) {
 			if ( '' !== $slug ) {

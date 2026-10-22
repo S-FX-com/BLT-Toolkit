@@ -69,6 +69,22 @@ foreach ( array( 'blt_toolkit_no_role_count', 'blt_toolkit_recovery_in_code', 'b
 	delete_transient( $blt_toolkit_transient );
 }
 
+// Per-user transients, named with a user ID: the bulk rename's dry run
+// (UN-30, an hour), the profile's rename notice (UN-18) and the username
+// form's result (UN-23), five minutes each. Found by prefix in the options
+// table, with their timeouts; on a site with a persistent object cache they
+// live there instead and expire on their own.
+foreach ( array( 'blt_toolkit_bulk_plan_', 'blt_toolkit_username_notice_', 'blt_toolkit_username_form_' ) as $blt_toolkit_prefix ) {
+	foreach ( array( '_transient_', '_transient_timeout_' ) as $blt_toolkit_kind ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-off lookup during uninstall.
+		$blt_toolkit_names = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( $blt_toolkit_kind . $blt_toolkit_prefix ) . '%' ) );
+
+		foreach ( (array) $blt_toolkit_names as $blt_toolkit_option ) {
+			delete_option( $blt_toolkit_option );
+		}
+	}
+}
+
 // The plugin's own capabilities (SPEC 5.1) and every read-only marker. Other
 // BLT plugins' blt_* capabilities (blt_view_activity_log, say) stay.
 $blt_toolkit_caps = array(

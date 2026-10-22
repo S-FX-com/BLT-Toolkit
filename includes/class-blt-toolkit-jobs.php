@@ -28,6 +28,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  *   step, so changing a toggle mid-run cannot split behavior. The person who
  *   started the job is pinned too: every tick runs as that user, whoever or
  *   whatever drives it, and the job stops if they lose the type's capability.
+ *   The switch chain of the starting request is pinned with them, so log
+ *   rows written by a tick still name the human who signed in (LOG-2,
+ *   BLT_Toolkit_Log::with_switch_chain()).
  * - JOB-4: progress (bar, current item, done/total, elapsed, estimate,
  *   per-item warnings) through view(), the REST routes and render_ui(); it
  *   survives closing the tab because the job lives on the server. Cancel
@@ -182,7 +185,7 @@ class BLT_Toolkit_Jobs {
 	/**
 	 * Registered job types, keyed by type.
 	 *
-	 * @var array<string,array{label:string,capability:string,mode:string,process:callable,describe:callable|null}>
+	 * @var array<string,array{label:string,capability:string,mode:string,process:callable,describe:callable|null,can_use:callable|null,audit:callable|null}>
 	 */
 	private static $types = array();
 
@@ -238,6 +241,12 @@ class BLT_Toolkit_Jobs {
 	 *     @type callable $process    items: function( $item, array $pinned ): true|string|WP_Error.
 	 *                                cursor: function( array &$state, array $pinned ): bool, true when finished.
 	 *     @type callable $describe   Optional, items mode: function( $item ): string, the label shown as the current item.
+	 *     @type callable $can_use    Optional: function( array $job, WP_User $user ): bool, a further check after the
+	 *                                capability, for a type whose jobs show or act on what only some holders of the
+	 *                                capability may see (a bulk rename lists logins SEC-6 hides from a delegate).
+	 *     @type callable $audit      Optional: function( string $verb, array $job ): void, called in the request of the
+	 *                                person who cancelled (`cancel`) or retried (`retry`) a job, after it took effect, so
+	 *                                the type can log who did it (a retry runs as the job's owner, JOB-3).
 	 * }
 	 * @return bool Whether it was registered.
 	 */
@@ -257,6 +266,8 @@ class BLT_Toolkit_Jobs {
 			'mode'       => $mode,
 			'process'    => $args['process'],
 			'describe'   => isset( $args['describe'] ) && is_callable( $args['describe'] ) ? $args['describe'] : null,
+			'can_use'    => isset( $args['can_use'] ) && is_callable( $args['can_use'] ) ? $args['can_use'] : null,
+			'audit'      => isset( $args['audit'] ) && is_callable( $args['audit'] ) ? $args['audit'] : null,
 		);
 
 		self::register();
@@ -322,6 +333,10 @@ class BLT_Toolkit_Jobs {
 
 		$job['runner'] = self::runner();
 
+		// LOG-2: the switch chain of the request that starts the job, so the
+		// rows its ticks write name the human who signed in (tick_locked()).
+		$job['chain'] = BLT_Toolkit_Log::current_switch_chain();
+
 		if ( 'items' === $def['mode'] && ! add_option( self::items_option( $id ), $built['items'], '', false ) ) {
 			return new WP_Error( 'blt_toolkit_job_not_saved', __( 'The job could not be saved, so it was not started. Try again.', 'blt-toolkit' ), array( 'status' => 500 ) );
 		}
@@ -385,11 +400,13 @@ class BLT_Toolkit_Jobs {
 
 		$job['mode'] = $mode;
 
-		foreach ( array( 'pinned', 'failed', 'warnings', 'cursor', 'crash' ) as $key ) {
+		foreach ( array( 'pinned', 'failed', 'warnings', 'cursor', 'crash', 'chain' ) as $key ) {
 			if ( ! is_array( $job[ $key ] ) ) {
 				$job[ $key ] = $defaults['job'][ $key ];
 			}
 		}
+
+		$job['chain'] = BLT_Toolkit_Log::clean_chain( $job['chain'] );
 
 		if ( null !== $job['queue'] && ! is_array( $job['queue'] ) ) {
 			$job['queue'] = null;
@@ -542,14 +559,21 @@ class BLT_Toolkit_Jobs {
 			}
 
 			try {
-				$job = self::run_tick(
-					$job,
-					$type,
-					$items,
-					$budget,
-					'microtime',
-					static function ( array $state ) use ( $id, $lock ) {
-						return self::checkpoint( $id, $lock['token'], $state );
+				// LOG-2: rows written by the work name the chain pinned at
+				// start, whoever drives this tick.
+				$job = BLT_Toolkit_Log::with_switch_chain(
+					$job['chain'],
+					static function () use ( $job, $type, $items, $budget, $id, $lock ) {
+						return self::run_tick(
+							$job,
+							$type,
+							$items,
+							$budget,
+							'microtime',
+							static function ( array $state ) use ( $id, $lock ) {
+								return self::checkpoint( $id, $lock['token'], $state );
+							}
+						);
 					}
 				);
 			} finally {
@@ -620,6 +644,8 @@ class BLT_Toolkit_Jobs {
 			// If the holder died, the tick that takes over applies the cancel.
 			self::ensure_continuation( $id, $budget );
 
+			self::audit( 'cancel', $job );
+
 			return self::view( $job );
 		}
 
@@ -644,6 +670,7 @@ class BLT_Toolkit_Jobs {
 
 		if ( '' !== $was ) {
 			self::finish( $id, $job, $was );
+			self::audit( 'cancel', $job );
 		}
 
 		return self::view( $job );
@@ -692,9 +719,27 @@ class BLT_Toolkit_Jobs {
 		/** This action is documented in includes/class-blt-toolkit-jobs.php */
 		do_action( 'blt_toolkit_before_job', $job );
 
+		self::audit( 'retry', $job );
+
 		self::dispatch( $id );
 
 		return self::view( $job );
+	}
+
+	/**
+	 * Hand a cancel or retry to the job type's `audit` callback, in the
+	 * request of the person who asked for it.
+	 *
+	 * @param string $verb `cancel` or `retry`.
+	 * @param array  $job  The job's state after the change.
+	 * @return void
+	 */
+	private static function audit( $verb, array $job ) {
+		$type = self::type( $job['type'] );
+
+		if ( null !== $type && null !== $type['audit'] ) {
+			call_user_func( $type['audit'], (string) $verb, $job );
+		}
 	}
 
 	/**
@@ -893,7 +938,9 @@ class BLT_Toolkit_Jobs {
 
 	/**
 	 * Whether the current user may view, drive, cancel and retry a job: they
-	 * hold its type's capability. A job whose type is not registered (its
+	 * hold its type's capability, and the type's `can_use` check, when it
+	 * has one, agrees (a bulk rename: only the person who started it or a
+	 * toolkit administrator, SEC-6). A job whose type is not registered (its
 	 * module is off) cannot be checked, so nobody may.
 	 *
 	 * @param array $job Stored state.
@@ -902,7 +949,11 @@ class BLT_Toolkit_Jobs {
 	public static function current_user_can_use( array $job ) {
 		$type = self::type( isset( $job['type'] ) ? $job['type'] : '' );
 
-		return null !== $type && current_user_can( $type['capability'] );
+		if ( null === $type || ! current_user_can( $type['capability'] ) ) {
+			return false;
+		}
+
+		return null === $type['can_use'] || (bool) call_user_func( $type['can_use'], $job, wp_get_current_user() );
 	}
 
 	// ---------- Progress for people ----------
@@ -1208,6 +1259,8 @@ class BLT_Toolkit_Jobs {
 			),
 			'error'           => '',
 			'runner'          => '',
+			// LOG-2: the switch chain the job started under (start()).
+			'chain'           => array(),
 		);
 
 		return array(

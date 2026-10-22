@@ -19,6 +19,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *   user of the switch chain) and `acting_as_id` the current user; the chain
  *   goes into details. The Switch module supplies the chain through
  *   set_switch_chain_provider(); without a provider nobody counts as switched.
+ *   A background job pins the chain it started under (with_switch_chain()),
+ *   so its rows name that human whoever drives the tick.
  * - LOG-3: writing never blocks or interrupts the action being recorded. A
  *   failed insert goes to error_log() and sets the `blt_toolkit_log_failure`
  *   flag (autoload no) for the Site Health test; the person never sees it.
@@ -161,6 +163,14 @@ class BLT_Toolkit_Log {
 	private static $chain_provider = null;
 
 	/**
+	 * Switch chains pinned by with_switch_chain(), innermost last. While one
+	 * is set it replaces the provider's answer (LOG-2 for background jobs).
+	 *
+	 * @var array<int,int[]>
+	 */
+	private static $pinned_chains = array();
+
+	/**
 	 * Whether register() already ran.
 	 *
 	 * @var bool
@@ -256,6 +266,64 @@ class BLT_Toolkit_Log {
 	 */
 	public static function set_switch_chain_provider( callable $provider ) {
 		self::$chain_provider = $provider;
+	}
+
+	/**
+	 * The switch chain rows written now are attributed to (LOG-2): the one
+	 * pinned by with_switch_chain(), else the provider's. User IDs, oldest
+	 * first; empty when not switched.
+	 *
+	 * BLT_Toolkit_Jobs::start() stores this with a job, so the rows its ticks
+	 * write name the human who started it even when WP-Cron runs them.
+	 *
+	 * @return int[]
+	 */
+	public static function current_switch_chain() {
+		return self::switch_chain();
+	}
+
+	/**
+	 * Run a callable with a pinned switch chain (LOG-2), then restore what
+	 * was there before, even when it throws.
+	 *
+	 * A job tick runs as the person who started the job (JOB-3), but in a
+	 * request without their cookies (WP-Cron, the loopback), or driven by
+	 * someone else's browser, so the provider cannot know the chain then.
+	 * BLT_Toolkit_Jobs wraps each tick in this with the chain it pinned at
+	 * start, and every row the tick writes keeps its actor: the human who
+	 * signed in, acting as the job's owner. An empty chain pins "not
+	 * switched". Calls nest.
+	 *
+	 * @param array    $chain    User IDs, oldest first (anything else is dropped).
+	 * @param callable $callback What to run.
+	 * @return mixed What `$callback` returns.
+	 */
+	public static function with_switch_chain( array $chain, callable $callback ) {
+		self::$pinned_chains[] = self::clean_chain( $chain );
+
+		try {
+			return call_user_func( $callback );
+		} finally {
+			array_pop( self::$pinned_chains );
+		}
+	}
+
+	/**
+	 * A chain as positive user IDs, in order. Pure.
+	 *
+	 * @param array $chain Candidate chain.
+	 * @return int[]
+	 */
+	public static function clean_chain( array $chain ) {
+		$out = array();
+
+		foreach ( $chain as $id ) {
+			if ( is_numeric( $id ) && (int) $id > 0 ) {
+				$out[] = (int) $id;
+			}
+		}
+
+		return $out;
 	}
 
 	// ---------- Writing ----------
@@ -503,6 +571,10 @@ class BLT_Toolkit_Log {
 	 * @return array
 	 */
 	private static function switch_chain() {
+		if ( array() !== self::$pinned_chains ) {
+			return self::$pinned_chains[ count( self::$pinned_chains ) - 1 ];
+		}
+
 		if ( null === self::$chain_provider ) {
 			return array();
 		}

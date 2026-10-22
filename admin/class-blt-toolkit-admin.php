@@ -224,6 +224,27 @@ class BLT_Toolkit_Admin {
 				'method' => 'handle_export',
 				'cap'    => 'blt_view_toolkit_log',
 			),
+			// UN-30. The template streams a CSV and exits instead of redirecting.
+			'blt_toolkit_bulk_template'        => array(
+				'screen' => 'usernames',
+				'method' => 'handle_template',
+				'cap'    => 'blt_change_usernames',
+			),
+			'blt_toolkit_bulk_plan'            => array(
+				'screen' => 'usernames',
+				'method' => 'handle_plan',
+				'cap'    => 'blt_change_usernames',
+			),
+			'blt_toolkit_bulk_start'           => array(
+				'screen' => 'usernames',
+				'method' => 'handle_start',
+				'cap'    => 'blt_change_usernames',
+			),
+			'blt_toolkit_bulk_discard'         => array(
+				'screen' => 'usernames',
+				'method' => 'handle_discard',
+				'cap'    => 'blt_change_usernames',
+			),
 		);
 	}
 
@@ -726,6 +747,14 @@ class BLT_Toolkit_Admin {
 			);
 		}
 
+		// UN-30 step 2: an upload over post_max_size reaches here with an
+		// empty body (the upload form puts its action in the URL), so there
+		// is no nonce to check. Nothing is written; say why instead of
+		// failing the nonce or leaving a blank admin-post.php page.
+		if ( 'usernames' === $route['screen'] && class_exists( 'BLT_Toolkit_Admin_Usernames' ) && BLT_Toolkit_Admin_Usernames::body_dropped() ) {
+			self::redirect( $route['screen'], array(), 'bulk_too_large' );
+		}
+
 		check_admin_referer( $action, self::NONCE_FIELD );
 
 		$screen = $this->screen( $route['screen'] );
@@ -846,6 +875,19 @@ class BLT_Toolkit_Admin {
 			case 'saved_adjusted':
 				return self::make_notice( 'warning', __( 'Settings saved. A number was outside its allowed range or not a number, so the nearest allowed value, or the previous value, was saved instead. Check the values below.', 'blt-toolkit' ) );
 
+			// UN-20: the other settings were saved; the self-service roles were not.
+			case 'self_service_denied':
+				return self::make_notice( 'error', __( 'Settings saved, but no role was changed: you are not allowed to change who can change their own username for one of the roles you chose. BLT Toolkit protects the Administrator role, your own roles and roles with more access than yours.', 'blt-toolkit' ) );
+
+			case 'self_service_snapshot':
+				return self::make_notice( 'error', __( 'Settings saved, but no role was changed: a copy of the roles could not be saved first. Try again; if this keeps happening, the PHP error log says why.', 'blt-toolkit' ) );
+
+			case 'self_service_in_code':
+				return self::make_notice( 'error', __( 'Settings saved, but no role was changed: this site\'s roles are defined in code, so who can change their own username must be set there.', 'blt-toolkit' ) );
+
+			case 'self_service_failed':
+				return self::make_notice( 'error', __( 'Settings saved, but the roles could not be saved. Check who can change their own username below and try again.', 'blt-toolkit' ) );
+
 			case 'modules_saved':
 				return self::make_notice( 'success', __( 'Modules saved. A module that is switched off loads no code; protection for administrators and the activity log keep running.', 'blt-toolkit' ) );
 
@@ -894,6 +936,41 @@ class BLT_Toolkit_Admin {
 
 			case 'support_agent_failed':
 				return self::make_notice( 'error', __( 'The Support Agent role could not be created. Try again.', 'blt-toolkit' ) );
+
+			// UN-30, the bulk rename.
+			case 'bulk_started':
+				return self::make_notice( 'success', __( 'The bulk rename has started. It keeps running in the background if you leave this page; come back here to see how it went.', 'blt-toolkit' ) );
+
+			case 'bulk_ack':
+				return self::make_notice( 'error', __( 'Nothing was renamed: confirm that you have a recent backup of this site first.', 'blt-toolkit' ) );
+
+			case 'bulk_busy':
+				return self::make_notice( 'error', __( 'Nothing was renamed: another bulk rename is still running. Start this one when it has finished, or cancel the other.', 'blt-toolkit' ) );
+
+			case 'bulk_nothing':
+				return self::make_notice( 'error', __( 'Nothing was renamed: no row of the file is ready.', 'blt-toolkit' ) );
+
+			case 'bulk_not_started':
+				return self::make_notice( 'error', __( 'Nothing was renamed: the bulk rename could not be started. Try again.', 'blt-toolkit' ) );
+
+			case 'bulk_expired':
+				return self::make_notice( 'error', __( 'Nothing was renamed: that dry run is no longer available. It expires after an hour, or when you upload another file. Upload the file again.', 'blt-toolkit' ) );
+
+			case 'bulk_not_stored':
+				return self::make_notice( 'error', __( 'The file was checked, but the dry run could not be saved. Try again; if this keeps happening, upload fewer rows at a time.', 'blt-toolkit' ) );
+
+			case 'bulk_discarded':
+				return self::make_notice( 'success', __( 'The dry run was discarded. Nothing was renamed.', 'blt-toolkit' ) );
+
+			case 'bulk_too_large':
+				return self::make_notice(
+					'error',
+					sprintf(
+						/* translators: %s: the largest file accepted, such as 2 MB. */
+						__( 'Nothing was uploaded: the file is larger than this server accepts. It can be at most %s; split it into smaller files.', 'blt-toolkit' ),
+						size_format( BLT_Toolkit_Admin_Usernames::max_upload() )
+					)
+				);
 
 			case 'failed':
 				return self::make_notice( 'error', __( 'Nothing was changed: the request could not be completed. Try again.', 'blt-toolkit' ) );

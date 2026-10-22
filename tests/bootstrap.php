@@ -547,6 +547,13 @@ if ( ! class_exists( 'WP_User' ) ) {
 		public $display_name = '';
 
 		/**
+		 * Role IDs.
+		 *
+		 * @var string[]
+		 */
+		public $roles = array();
+
+		/**
 		 * Constructor.
 		 *
 		 * @param array $fields Field => value.
@@ -567,6 +574,19 @@ if ( ! class_exists( 'WP_User' ) ) {
 		public function exists() {
 			return $this->ID > 0;
 		}
+	}
+}
+
+if ( ! function_exists( 'number_format_i18n' ) ) {
+	/**
+	 * WP shim: English number formatting.
+	 *
+	 * @param float $number   Number.
+	 * @param int   $decimals Decimals.
+	 * @return string
+	 */
+	function number_format_i18n( $number, $decimals = 0 ) {
+		return number_format( (float) $number, (int) $decimals );
 	}
 }
 

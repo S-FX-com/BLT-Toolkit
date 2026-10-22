@@ -6,8 +6,9 @@
  *
  * @package Blt_Toolkit
  *
- * @var array  $settings BLT_Toolkit_Settings::all().
- * @var string $field    Name of the settings field array.
+ * @var array  $settings     BLT_Toolkit_Settings::all().
+ * @var string $field        Name of the settings field array.
+ * @var array  $self_service BLT_Toolkit_Admin_Settings::self_service_state(): role ID => name, on, editable, reason (UN-20).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -144,6 +145,36 @@ $tags      = array( '{old_username}', '{new_username}', '{display_name}', '{emai
 	</div>
 	<div class="blt-card-body">
 		<div class="blt-field">
+			<div class="blt-field-label" id="blt-toolkit-self-service-label"><?php esc_html_e( 'Who can change their own username', 'blt-toolkit' ); ?></div>
+			<div>
+				<?php if ( empty( $self_service ) ) : ?>
+					<p class="blt-text-muted"><?php esc_html_e( 'This site has no roles.', 'blt-toolkit' ); ?></p>
+				<?php else : ?>
+					<div class="blt-toggle-stack" role="group" aria-labelledby="blt-toolkit-self-service-label">
+						<?php foreach ( $self_service as $role_id => $role_state ) : ?>
+							<label class="blt-toggle">
+								<input type="checkbox" name="<?php echo esc_attr( BLT_Toolkit_Admin_Settings::SELF_SERVICE_FIELD ); ?>[]" value="<?php echo esc_attr( $role_id ); ?>" <?php checked( $role_state['on'] ); ?> <?php disabled( ! $role_state['editable'] ); ?> />
+								<span class="blt-toggle-track" aria-hidden="true"><span class="blt-toggle-thumb"></span></span>
+								<span class="blt-toggle-text">
+									<span class="blt-toggle-label"><?php echo esc_html( $role_state['name'] ); ?></span>
+									<?php if ( ! $role_state['editable'] && '' !== $role_state['reason'] ) : ?>
+										<span class="blt-toggle-desc"><?php echo esc_html( $role_state['reason'] ); ?></span>
+									<?php endif; ?>
+								</span>
+							</label>
+							<?php if ( $role_state['editable'] ) : ?>
+								<input type="hidden" name="<?php echo esc_attr( BLT_Toolkit_Admin_Settings::SELF_SERVICE_SHOWN ); ?>[]" value="<?php echo esc_attr( $role_id ); ?>" />
+								<?php if ( $role_state['on'] ) : ?>
+									<input type="hidden" name="<?php echo esc_attr( BLT_Toolkit_Admin_Settings::SELF_SERVICE_WAS ); ?>[]" value="<?php echo esc_attr( $role_id ); ?>" />
+								<?php endif; ?>
+							<?php endif; ?>
+						<?php endforeach; ?>
+					</div>
+				<?php endif; ?>
+				<p class="blt-field-desc"><?php esc_html_e( 'People with a role switched on here can change their own username on their profile. This is the "Change their own username" permission on each role, so the Roles screen shows it too. Saving takes a copy of the roles first and is recorded in the activity log.', 'blt-toolkit' ); ?></p>
+			</div>
+		</div>
+		<div class="blt-field">
 			<div class="blt-field-label"><label for="blt-toolkit-cooldown"><?php esc_html_e( 'Wait between changes', 'blt-toolkit' ); ?></label></div>
 			<div>
 				<?php BLT_Toolkit_Admin_Settings::number( 'usernames', 'cooldown_days', $usernames['cooldown_days'], 'blt-toolkit-cooldown' ); ?>
@@ -165,5 +196,4 @@ $tags      = array( '{old_username}', '{new_username}', '{display_name}', '{emai
 			</div>
 		</div>
 	</div>
-	<?php BLT_Toolkit_Admin_Settings::later( __( 'Choose which roles may change their own username. It will be a capability on each role, so the Roles screen shows it too.', 'blt-toolkit' ) ); ?>
 </div>

@@ -133,7 +133,7 @@ class BLT_Toolkit_Nicename {
 			return false;
 		}
 
-		return $nicename === self::suffixed( $base, $match[2] );
+		return self::suffixed( $base, $match[2] ) === $nicename;
 	}
 
 	/**

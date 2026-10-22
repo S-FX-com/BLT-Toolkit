@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * The rules run in SPEC order and the first one that fails is the only
  * error returned, each with its own code and message:
  *
- * - UN-1 `blt_toolkit_username_sanitize`: sanitize_user( $new, true ) must
+ * - UN-1 `blt_toolkit_username_sanitize`: sanitize_user( $username, true ) must
  *   leave the trimmed name unchanged; data `suggestion` holds the cleaned
  *   name (without `@` when UN-7 forbids it).
  * - UN-2 `blt_toolkit_username_length`: between the minimum and 60
@@ -53,14 +53,41 @@ class BLT_Toolkit_Username_Validator {
 	const MAX_LENGTH = 60;
 
 	/**
+	 * UN-5's message. BLT_Toolkit_Username_Changer::public_error_message()
+	 * gives UN-6 the same words for people who may not list users.
+	 *
+	 * @return string
+	 */
+	public static function taken_message() {
+		return __( 'That username is already taken.', 'blt-toolkit' );
+	}
+
+	/**
+	 * UN-2's message for a name over the maximum. Also used by a caller that
+	 * refuses input far too long to validate at all (the shortcode).
+	 *
+	 * @param int $max Maximum number of characters.
+	 * @return string
+	 */
+	public static function too_long_message( $max = self::MAX_LENGTH ) {
+		$max = (int) $max;
+
+		return sprintf(
+			/* translators: %d: maximum number of characters. */
+			_n( 'Usernames can be at most %d character long.', 'Usernames can be at most %d characters long.', $max, 'blt-toolkit' ),
+			$max
+		);
+	}
+
+	/**
 	 * The name every rule sees: the input as a string, trimmed (UN-1). A
 	 * caller that writes the name stores this value, never the raw input.
 	 *
-	 * @param mixed $new Proposed username.
+	 * @param mixed $username Proposed username.
 	 * @return string
 	 */
-	public static function normalize( $new ) {
-		return is_scalar( $new ) ? trim( (string) $new ) : '';
+	public static function normalize( $username ) {
+		return is_scalar( $username ) ? trim( (string) $username ) : '';
 	}
 
 	/**
@@ -77,69 +104,64 @@ class BLT_Toolkit_Username_Validator {
 	 * - `sanitize_user` callable( string $name, bool $strict ): string.
 	 * - `validate_username` callable( string $name ): bool.
 	 *
-	 * @param string $new     Proposed username (trimmed here, see normalize()).
-	 * @param array  $context Rule inputs and lookups.
+	 * @param string $username Proposed username (trimmed here, see normalize()).
+	 * @param array  $context  Rule inputs and lookups.
 	 * @return WP_Error Empty (no error code) when the name passes.
 	 */
-	public static function check( $new, array $context ) {
-		$new     = self::normalize( $new );
-		$context = self::complete( $context );
+	public static function check( $username, array $context ) {
+		$username = self::normalize( $username );
+		$context  = self::complete( $context );
 
 		// UN-1: the strict sanitizer must leave the name as typed.
-		$sanitized = (string) call_user_func( $context['sanitize_user'], $new, true );
+		$sanitized = (string) call_user_func( $context['sanitize_user'], $username, true );
 
-		if ( $sanitized !== $new ) {
+		if ( $sanitized !== $username ) {
 			return self::sanitize_error( $sanitized, $context );
 		}
 
 		// UN-2: length, on the server (UC-4, UC-6).
-		$length = mb_strlen( $new );
+		$length = mb_strlen( $username );
 
-		if ( $length < $context['min_length'] ) {
-			return new WP_Error(
-				'blt_toolkit_username_length',
-				sprintf(
+		if ( $length < $context['min_length'] || $length > $context['max_length'] ) {
+			$bounds = array(
+				'min' => $context['min_length'],
+				'max' => $context['max_length'],
+			);
+
+			if ( $length < $context['min_length'] ) {
+				$message = sprintf(
 					/* translators: %d: minimum number of characters. */
 					_n( 'Usernames must be at least %d character long.', 'Usernames must be at least %d characters long.', $context['min_length'], 'blt-toolkit' ),
 					$context['min_length']
-				),
-				self::data( 'UN-2', array( 'min' => $context['min_length'], 'max' => $context['max_length'] ) )
-			);
-		}
+				);
+			} else {
+				$message = self::too_long_message( $context['max_length'] );
+			}
 
-		if ( $length > $context['max_length'] ) {
-			return new WP_Error(
-				'blt_toolkit_username_length',
-				sprintf(
-					/* translators: %d: maximum number of characters. */
-					_n( 'Usernames can be at most %d character long.', 'Usernames can be at most %d characters long.', $context['max_length'], 'blt-toolkit' ),
-					$context['max_length']
-				),
-				self::data( 'UN-2', array( 'min' => $context['min_length'], 'max' => $context['max_length'] ) )
-			);
+			return new WP_Error( 'blt_toolkit_username_length', $message, self::data( 'UN-2', $bounds ) );
 		}
 
 		// UN-3: core's own test, with its `validate_username` filter.
-		if ( ! call_user_func( $context['validate_username'], $new ) ) {
+		if ( ! call_user_func( $context['validate_username'], $username ) ) {
 			return new WP_Error( 'blt_toolkit_username_invalid', __( 'That username is not valid on this site.', 'blt-toolkit' ), self::data( 'UN-3' ) );
 		}
 
 		// UN-4: case-insensitive on both sides (UC-5).
-		if ( self::is_disallowed( $new, $context['disallowed'] ) ) {
+		if ( self::is_disallowed( $username, $context['disallowed'] ) ) {
 			return new WP_Error( 'blt_toolkit_username_disallowed', __( 'That username is reserved and cannot be used.', 'blt-toolkit' ), self::data( 'UN-4' ) );
 		}
 
 		// UN-5: free, or already this user's (a change of case).
-		$owner = (int) call_user_func( $context['login_owner'], $new );
+		$owner = (int) call_user_func( $context['login_owner'], $username );
 
 		if ( $owner > 0 && $owner !== $context['user_id'] ) {
-			return new WP_Error( 'blt_toolkit_username_taken', __( 'That username is already taken.', 'blt-toolkit' ), self::data( 'UN-5' ) );
+			return new WP_Error( 'blt_toolkit_username_taken', self::taken_message(), self::data( 'UN-5' ) );
 		}
 
 		// UN-6: WordPress accepts an email address at sign-in, and only a name
 		// containing `@` can be one, so other names need no lookup.
-		if ( false !== strpos( $new, '@' ) ) {
-			$owner = (int) call_user_func( $context['email_owner'], $new );
+		if ( false !== strpos( $username, '@' ) ) {
+			$owner = (int) call_user_func( $context['email_owner'], $username );
 
 			if ( $owner > 0 && $owner !== $context['user_id'] ) {
 				return new WP_Error(
@@ -151,12 +173,12 @@ class BLT_Toolkit_Username_Validator {
 		}
 
 		// UN-7: `@` is allowed by default (D13).
-		if ( ! $context['allow_at'] && false !== strpos( $new, '@' ) ) {
+		if ( ! $context['allow_at'] && false !== strpos( $username, '@' ) ) {
 			return new WP_Error( 'blt_toolkit_username_at_sign', __( 'Usernames cannot contain the @ symbol on this site.', 'blt-toolkit' ), self::data( 'UN-7' ) );
 		}
 
 		// UN-8: identical only; `jsmith` to `JSmith` is a change.
-		if ( $new === $context['current_login'] ) {
+		if ( $username === $context['current_login'] ) {
 			return new WP_Error( 'blt_toolkit_username_unchanged', __( 'That is already the current username.', 'blt-toolkit' ), self::data( 'UN-8' ) );
 		}
 
@@ -181,7 +203,7 @@ class BLT_Toolkit_Username_Validator {
 		$own = apply_filters( 'blt_toolkit_disallowed_usernames', isset( $settings['disallowed'] ) ? (array) $settings['disallowed'] : array() );
 
 		// Core's list, as wp_insert_user() reads it.
-		$core = apply_filters( 'illegal_user_logins', array() );
+		$core = apply_filters( 'illegal_user_logins', array() ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- UN-4: core's hook.
 
 		return array(
 			'user_id'           => (int) $user->ID,
@@ -206,17 +228,17 @@ class BLT_Toolkit_Username_Validator {
 	 * (BLT_Toolkit_Rename_Planner::owner_lookup()) while every rule, and the
 	 * filter, still run.
 	 *
-	 * @param string  $new       Proposed username.
+	 * @param string  $username  Proposed username.
 	 * @param WP_User $user      The user being renamed.
 	 * @param array   $overrides Context keys to replace.
 	 * @return WP_Error Empty when the name passes.
 	 */
-	public static function validate( $new, WP_User $user, array $overrides = array() ) {
-		$new    = self::normalize( $new );
-		$errors = self::check( $new, array_merge( self::context_for( $user ), $overrides ) );
+	public static function validate( $username, WP_User $user, array $overrides = array() ) {
+		$username = self::normalize( $username );
+		$errors   = self::check( $username, array_merge( self::context_for( $user ), $overrides ) );
 
 		/** This filter is documented in HOOKS.md (UN-9). */
-		$filtered = apply_filters( 'blt_toolkit_validate_username', $errors, $new, $user );
+		$filtered = apply_filters( 'blt_toolkit_validate_username', $errors, $username, $user );
 
 		// A filter that breaks the contract refuses the name rather than
 		// letting it through unchecked.
@@ -294,12 +316,12 @@ class BLT_Toolkit_Username_Validator {
 	 * UN-4 comparison: both sides trimmed and lowercased, as core lowercases
 	 * `illegal_user_logins` (strtolower(), like wp_insert_user()).
 	 *
-	 * @param string $new        Proposed username.
+	 * @param string $username   Proposed username.
 	 * @param array  $disallowed Disallowed names, any case.
 	 * @return bool
 	 */
-	private static function is_disallowed( $new, array $disallowed ) {
-		$needle = strtolower( $new );
+	private static function is_disallowed( $username, array $disallowed ) {
+		$needle = strtolower( $username );
 
 		foreach ( $disallowed as $name ) {
 			if ( is_scalar( $name ) && strtolower( trim( (string) $name ) ) === $needle ) {
@@ -313,7 +335,7 @@ class BLT_Toolkit_Username_Validator {
 	/**
 	 * The UN-1 error, with the cleaned name as a suggestion when there is one.
 	 *
-	 * @param string $sanitized sanitize_user( $new, true ).
+	 * @param string $sanitized sanitize_user( $username, true ).
 	 * @param array  $context   Completed context.
 	 * @return WP_Error
 	 */

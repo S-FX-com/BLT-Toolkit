@@ -46,6 +46,20 @@
 	}
 
 	/**
+	 * Show or hide an element. Core's narrow-screen styles give some profile
+	 * elements their own `display`, which beats the `hidden` attribute, so
+	 * the inline style is set too.
+	 *
+	 * @param {HTMLElement} element Element.
+	 * @param {boolean}     hide    Whether to hide it.
+	 * @return {void}
+	 */
+	function setHidden( element, hide ) {
+		element.hidden = hide;
+		element.style.display = hide ? 'none' : '';
+	}
+
+	/**
 	 * Set up the field once the page is parsed.
 	 *
 	 * @return {void}
@@ -68,7 +82,7 @@
 		var note = cell.querySelector( '.description' );
 
 		if ( note ) {
-			note.hidden = true;
+			setHidden( note, true );
 		}
 
 		var button = document.createElement( 'button' );
@@ -94,7 +108,7 @@
 		}
 
 		cell.appendChild( field );
-		section.hidden = true;
+		setHidden( section, true );
 
 		var timer = null;
 		var controller = null;
@@ -108,7 +122,7 @@
 		 * @return {void}
 		 */
 		function setOpen( open, focus ) {
-			field.hidden = ! open;
+			setHidden( field, ! open );
 			button.setAttribute( 'aria-expanded', open ? 'true' : 'false' );
 			button.textContent = open ? ( strings.cancel || 'Cancel' ) : ( strings.change || 'Change' );
 
@@ -222,13 +236,8 @@
 						return;
 					}
 
-					var text = String( body.message || '' );
-
-					if ( body.suggestion && strings.tryThis ) {
-						text += ' ' + format( strings.tryThis, body.suggestion );
-					}
-
-					say( text, 'invalid' );
+					// The message already offers the cleaned name when there is one (UN-1).
+					say( String( body.message || '' ), 'invalid' );
 				} )
 				.catch( function ( error ) {
 					if ( error && 'AbortError' === error.name ) {
@@ -275,13 +284,26 @@
 		var linked = window.location.hash === '#' + ( config.anchor || 'blt-tk-username' );
 
 		if ( '' !== input.value || linked || field.querySelector( 'input[type="checkbox"]:checked' ) ) {
-			setOpen( true, linked );
-
-			if ( linked ) {
-				row.scrollIntoView( { block: 'center' } );
-			}
+			setOpen( true, false );
 		} else {
-			field.hidden = true;
+			setHidden( field, true );
+		}
+
+		if ( linked ) {
+			// The browser moves to the fragment once the page has loaded, which
+			// takes focus back to the document; focus the field after that.
+			var focusField = function () {
+				window.setTimeout( function () {
+					row.scrollIntoView( { block: 'center' } );
+					input.focus( { preventScroll: true } );
+				}, 0 );
+			};
+
+			if ( 'complete' === document.readyState ) {
+				focusField();
+			} else {
+				window.addEventListener( 'load', focusField );
+			}
 		}
 	}
 

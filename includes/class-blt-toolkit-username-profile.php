@@ -273,7 +273,11 @@ class BLT_Toolkit_Username_Profile {
 			return '';
 		}
 
-		if ( 'always' !== $policy && ! BLT_Toolkit_Nicename::is_derived( (string) $user->user_nicename, (string) $user->user_login ) ) {
+		// UN-13: one derivation rule. The same sanitizer as the rename
+		// (sanitize_title() then `pre_user_nicename`), so the note matches
+		// what BLT_Toolkit_Username_Changer::new_nicename() will do on a site
+		// that filters slugs.
+		if ( 'always' !== $policy && ! BLT_Toolkit_Nicename::is_derived( (string) $user->user_nicename, (string) $user->user_login, array( 'BLT_Toolkit_Username_Changer', 'sanitize_nicename' ) ) ) {
 			return '';
 		}
 
@@ -319,8 +323,6 @@ class BLT_Toolkit_Username_Profile {
 				'checking'  => __( 'Checking…', 'blt-toolkit' ),
 				/* translators: %s: a username. */
 				'available' => __( '"%s" is available.', 'blt-toolkit' ),
-				/* translators: %s: a username. */
-				'tryThis'   => __( 'Try "%s".', 'blt-toolkit' ),
 				'failed'    => __( 'The name could not be checked just now. It is checked again when you save.', 'blt-toolkit' ),
 			),
 		);
@@ -339,7 +341,9 @@ class BLT_Toolkit_Username_Profile {
 	 * `user_profile_update_errors` callback.
 	 *
 	 * Any failure is added to core's errors, so core saves nothing and shows
-	 * the form again with the message (and the typed name).
+	 * the form again with the message (and the typed name). Messages are
+	 * escaped here: WordPress 6.3 prints profile errors as they are, and a
+	 * validator message can carry a suggestion made from what was typed.
 	 *
 	 * @param WP_Error $errors Core's errors, by reference in core.
 	 * @param bool     $update Whether an existing user is being updated.
@@ -368,7 +372,7 @@ class BLT_Toolkit_Username_Profile {
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		if ( ! wp_verify_nonce( $nonce, self::NONCE_ACTION . $user_id ) ) {
-			$errors->add( 'blt_toolkit_username_nonce', __( 'The username was not changed because the form had expired. Try again.', 'blt-toolkit' ) );
+			$errors->add( 'blt_toolkit_username_nonce', esc_html__( 'The username was not changed because the form had expired. Try again.', 'blt-toolkit' ) );
 
 			return;
 		}
@@ -380,7 +384,7 @@ class BLT_Toolkit_Username_Profile {
 
 		if ( ! current_user_can( 'blt_change_username', $user_id ) ) { // phpcs:ignore WordPress.WP.Capabilities.Unknown -- BLT Toolkit's meta capability (SPEC 5.1).
 			$refusal = BLT_Toolkit_Username_Changer::refusal( $user_id );
-			$errors->add( $refusal->get_error_code(), $refusal->get_error_message() );
+			$errors->add( $refusal->get_error_code(), esc_html( $refusal->get_error_message() ) );
 
 			return;
 		}
@@ -396,7 +400,7 @@ class BLT_Toolkit_Username_Profile {
 		if ( is_wp_error( $result ) && $result->has_errors() ) {
 			foreach ( $result->get_error_codes() as $code ) {
 				foreach ( $result->get_error_messages( $code ) as $message ) {
-					$errors->add( $code, BLT_Toolkit_Username_Changer::public_error_message( $code, $message ) );
+					$errors->add( BLT_Toolkit_Username_Changer::public_error_code( $code ), esc_html( BLT_Toolkit_Username_Changer::public_error_message( $code, $message ) ) );
 				}
 			}
 
@@ -409,7 +413,7 @@ class BLT_Toolkit_Username_Profile {
 			$checked = BLT_Toolkit_Username_Changer::check_password( $target, $password );
 
 			if ( is_wp_error( $checked ) ) {
-				$errors->add( $checked->get_error_code(), $checked->get_error_message() );
+				$errors->add( $checked->get_error_code(), esc_html( $checked->get_error_message() ) );
 
 				return;
 			}
@@ -420,7 +424,7 @@ class BLT_Toolkit_Username_Profile {
 		$state = BLT_Toolkit_Username_Changer::switched_state( $user_id, $self ? BLT_Toolkit_Username_Changer::session_token( $user_id, (string) $target->user_login ) : '' );
 
 		if ( ( $state['switched_from'] || $state['switched_into'] ) && ! $confirmed ) {
-			$errors->add( 'blt_toolkit_username_switched', BLT_Toolkit_Username_Changer::switched_message( $state ) );
+			$errors->add( 'blt_toolkit_username_switched', esc_html( BLT_Toolkit_Username_Changer::switched_message( $state ) ) );
 
 			return;
 		}

@@ -31,7 +31,7 @@ Updates arrive through the normal Plugins screen. The plugin checks GitHub at mo
 
 ## What works out of the box
 
-Default behavior as specified (SPEC 1.1). Each row becomes available when its phase lands.
+Default behavior as specified (SPEC 1.1), except that SPEC 1.1 lists self-service and bulk rename as "off until enabled", while what they actually do out of the box is described below (see `tasks/lessons.md`, Phase 3 review fixes). Each row becomes available when its phase lands.
 
 | Area | Default behavior |
 | --- | --- |
@@ -40,7 +40,9 @@ Default behavior as specified (SPEC 1.1). Each row becomes available when its ph
 | Roles | Roles screen opens in Simple view. Every save is snapshotted and can be restored. |
 | Protection | Non-administrators can never edit, delete, rename, re-role or switch into an administrator, and can never grant a capability they do not hold. |
 | Activity log | Every switch, rename and role change is logged with who did it, including "acting as" when the change was made from a switched session. |
-| Self-service, bulk rename, separate CPT permissions | Off until enabled. |
+| Self-service | Administrators can change their own username from their profile (activation gives them `blt_change_own_username`). Other roles get it only when it is switched on for them in Settings > Usernames. |
+| Bulk rename | On the Usernames screen for anyone with `blt_change_usernames` (administrators by default): download a template, upload a CSV, check the dry run, then the renames run in the background. There is no setting to turn it on or off. |
+| Separate CPT permissions | Off until enabled for a post type. |
 
 ### Where to find it
 
@@ -61,11 +63,14 @@ Switching and username changes also appear where people already work: row action
 
 ### `[blt_toolkit_username_form]`
 
-Front-end form that lets signed-in users change their own username (UN-23, scheduled for Phase 3b). It is a real form that posts to `admin-post.php` and redirects back to the same page with the result. It renders nothing for visitors and for users without `blt_change_own_username`, and its stylesheet loads only on pages that contain it. The same validation, cooldown and password rule apply as on the profile screen.
+Front-end form that lets signed-in users change their own username (UN-23). It is a real form that posts to `admin-post.php` and redirects back to the same page with the result, so it works with JavaScript disabled. It renders nothing for visitors and for users without `blt_change_own_username`; someone who holds it but changed their username within the **Wait between changes** period sees, instead of the form, when they can change it again (UN-21). Its stylesheet loads only on pages where a styled form renders. The same validation, cooldown, password rule and switched-session confirmation apply as on the profile screen, and the change is logged with source `shortcode`.
 
 | Attribute | Default or Values | Description |
 | --- | --- | --- |
 | `style` | `styled` (default), `none` | `styled` loads `blt-toolkit-front.css`. `none` outputs the same markup with its `.blt-tk-*` classes and no stylesheet, for a theme that styles it itself. |
+| `class` | Empty | Extra classes for the form's wrapper, separated by spaces. |
+
+To change the markup, copy `templates/username-form.php` to `your-theme/blt-toolkit/username-form.php` (see [Templates](#templates)). Core's `shortcode_atts_blt_toolkit_username_form` filter can change the defaults for every form ([HOOKS.md](HOOKS.md)).
 
 No block or Bricks element is planned for v1.
 
@@ -89,9 +94,9 @@ No block or Bricks element is planned for v1.
 | Usernames | Allow `@` in usernames | On | Email-style usernames are common with SSO; a name that equals another user's email is always refused (UN-6, UN-7, D13). |
 | Usernames | Author URL | Only when it was generated from the username | Or Always, or Never (UN-13, D6). |
 | Usernames | Redirect old author URLs | On | 301 to the current author URL (UN-13a). |
-| Usernames | Sign the person out everywhere | On | When renaming someone else; their old cookies stop working anyway (UN-14, D7). |
+| Usernames | Sign the person out everywhere | On | Renaming someone else ends all their sessions; their old cookies stop working anyway. Renaming yourself keeps this session and ends your others (UN-14, D7). |
 | Usernames | Email the person about the change | Off | Plain text through `wp_mail()`. Subject and body are editable; tags `{old_username}`, `{new_username}`, `{display_name}`, `{email}`, `{sitename}`, `{siteurl}`, `{loginurl}` (UN-15). |
-| Usernames | Can change their own username | No role | One checkbox per role. Saving grants or removes `blt_change_own_username` on that role, so Simple view shows it too (UN-20). |
+| Usernames | Who can change their own username | Administrator (given on activation) | One toggle per role. Saving gives or takes `blt_change_own_username` on that role, after a snapshot of the roles, checked by the protection rules and logged, so Simple view shows it too (UN-20). |
 | Usernames | Wait between changes | 0 days | Days between self-service changes (UN-21). |
 | Usernames | Ask for their current password | Off | Users who sign in through SSO may not know a WordPress password (UN-22). |
 | Roles | Opens in | Simple | Each user's last choice is remembered (RS-1). |
@@ -122,13 +127,13 @@ Define these in `wp-config.php`.
 
 ### Templates
 
-`templates/username-form.php` renders the self-service form. Copy it to `your-theme/blt-toolkit/username-form.php` to change the markup.
+`templates/username-form.php` renders the self-service form. Copy it to `your-theme/blt-toolkit/username-form.php` (a child theme's copy wins over the parent's) to change the markup. Keep the field names, the hidden fields and the form's method and action; the template's header lists every value it receives in `$args`. The server checks the nonce, the capability, the cooldown and every validation rule whatever the markup says.
 
 ### CSS tokens
 
 BLT Toolkit puts two things on the front end: the "Switch back" link (SW-17) and the username form (UN-23). Both are styled by `assets/css/blt-toolkit-front.css` with `.blt-tk-*` classes and `--blt-tk-*` custom properties: no global resets, no framework, safe inside a Bricks page, and nothing loaded for visitors who are not switched or not on a page with the shortcode. The `tk` prefix is pending confirmation that it does not collide with BLT Tube's (D14).
 
-The stylesheet only reads the tokens, never declares them, so a theme can set any of them on `:root`, `body` or a wrapper. Each falls back to the BLT design token where there is one, then to the literal value. The list is also in the stylesheet's header; the username form's tokens are added in Phase 3b.
+The stylesheet only reads the tokens, never declares them, so a theme can set any of them on `:root`, `body` or a wrapper. Each falls back to the BLT design token where there is one, then to the literal value. The list is also in the stylesheet's header. The username form uses the first five as well, for its button and focus ring.
 
 | Token | Used for | Fallback |
 | --- | --- | --- |
@@ -141,6 +146,15 @@ The stylesheet only reads the tokens, never declares them, so a theme can set an
 | `--blt-tk-offset` | Distance from the bottom-left corner | `16px` |
 | `--blt-tk-z` | Stacking order | `99999` |
 | `--blt-tk-shadow` | Shadow | `0 2px 8px rgba(0, 0, 0, 0.25)` |
+| `--blt-tk-form-width` | Username form: largest width | `32rem` |
+| `--blt-tk-gap` | Username form: space between rows | `1em` |
+| `--blt-tk-input-bg` | Username form: field background | `--blt-surface`, then `#fff` |
+| `--blt-tk-input-fg` | Username form: field text | `--blt-fg`, then `#1e1e1e` |
+| `--blt-tk-input-border` | Username form: field border | `#8c8f94` |
+| `--blt-tk-muted` | Username form: help text | Inherits the text color |
+| `--blt-tk-success-bg`, `--blt-tk-success-fg` | Username form: success message background, and its text and border | `--blt-success-bg` / `--blt-success-fg`, then `#edfaef` / `#005c12` |
+| `--blt-tk-danger-bg`, `--blt-tk-danger-fg` | Username form: error message background, and its text and border | `--blt-danger-bg` / `--blt-danger-fg`, then `#fcf0f1` / `#8a2424` |
+| `--blt-tk-warning-bg`, `--blt-tk-warning-fg` | Username form: switched-session warning background, and its text and border | `--blt-warning-bg` / `--blt-warning-fg`, then `#fef8ee` / `#94660c` |
 
 The toolbar's "Viewing as" node uses `var(--blt-primary, #2271b1)`. Admin screens use the family design system (`blt-design-system.css`) and its tokens.
 

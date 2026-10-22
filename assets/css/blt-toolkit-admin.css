@@ -366,3 +366,86 @@
 		width: 100%;
 	}
 }
+
+/* ---------- Usernames screen (UN-30, SPEC 13.2) ----------
+   Layout only: the dry run and recent-changes tables scroll sideways inside
+   their card on a narrow screen instead of pushing the page wider. */
+.blt-toolkit-usernames .blt-toolkit-table-scroll {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+.blt-toolkit-usernames .blt-toolkit-bulk-change code {
+	overflow-wrap: anywhere;
+}
+
+.blt-toolkit-usernames .blt-toolkit-table-scroll .blt-badge {
+	white-space: nowrap;
+}
+
+.blt-toolkit-usernames .blt-toolkit-bulk-warnings,
+.blt-toolkit-usernames .blt-toolkit-bulk-settings {
+	margin: 4px 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.blt-toolkit-usernames .blt-toolkit-bulk-warnings li,
+.blt-toolkit-usernames .blt-toolkit-bulk-settings li {
+	margin: 0 0 4px;
+}
+
+.blt-toolkit-usernames .blt-toolkit-bulk-upload {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}
+
+.blt-toolkit-usernames .blt-toolkit-bulk-upload input[type="file"] {
+	max-width: 100%;
+}
+
+.blt-toolkit-usernames .blt-toolkit-bulk-pages {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+}
+
+.blt-toolkit-usernames .blt-toolkit-bulk-filter {
+	gap: 8px 16px;
+}
+
+/* Narrow screens: each table row becomes a stack of labelled cells (the
+   label comes from the cell's data-label), so Status and Notes stay in view
+   without sideways scrolling. The header row stays for screen readers. */
+@media screen and (max-width: 600px) {
+	.blt-toolkit-usernames .blt-toolkit-table-scroll thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+	}
+
+	.blt-toolkit-usernames .blt-toolkit-table-scroll tr,
+	.blt-toolkit-usernames .blt-toolkit-table-scroll td {
+		display: block;
+	}
+
+	.blt-toolkit-usernames .blt-toolkit-table-scroll tr {
+		padding: 8px 0;
+		border-bottom: 1px solid var(--blt-border, #dcdcde);
+	}
+
+	.blt-toolkit-usernames .blt-toolkit-table-scroll td {
+		padding: 2px 10px;
+	}
+
+	.blt-toolkit-usernames .blt-toolkit-table-scroll td[data-label]::before {
+		content: attr(data-label) ": ";
+		font-weight: 600;
+		color: var(--blt-muted-fg, #646970);
+	}
+}

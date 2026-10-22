@@ -5,6 +5,10 @@
  * where that link is printed: someone switched, or switched off, and the
  * toolbar is not showing. Visitors who are not switched never load it.
  *
+ * Also loaded on a page that shows the `[blt_toolkit_username_form]`
+ * shortcode in its Styled mode (UN-23); those rules are the section at the
+ * end of this file, under the same rules and tokens.
+ *
  * Rules:
  * - Every selector is a `.blt-tk-*` class; nothing styles an element, the
  *   page or the theme (no resets), so it sits cleanly inside a Bricks page.
@@ -92,5 +96,242 @@
 @media print {
 	.blt-tk-switch-back {
 		display: none;
+	}
+}
+
+/* ==========================================================================
+   Username form (UN-23)
+
+   The `[blt_toolkit_username_form]` shortcode. This file loads on a page
+   where that form renders with style="styled" (the default); style="none"
+   loads nothing. Every rule below is scoped to the
+   `.blt-tk-username-form--styled` modifier, so a form printed with
+   style="none" stays unstyled even when another form or the "Switch back"
+   link loads this file on the same page.
+
+   Same rules as above: `.blt-tk-*` classes only (nothing styles a bare
+   element, the page or the theme), and every value is a `--blt-tk-*` custom
+   property read with a fallback, never declared here. Text color and font
+   are inherited from the theme, so the form matches the page around it.
+
+   Tokens (all optional; the first five are shared with the link above):
+     --blt-tk-accent          Button background             (#2271b1)
+     --blt-tk-accent-hover    Button background on hover    (#135e96)
+     --blt-tk-on-accent       Button text                   (#ffffff)
+     --blt-tk-focus           Focus ring                    (#1e1e1e)
+     --blt-tk-radius          Corner radius                 (4px)
+     --blt-tk-form-width      Largest width of the form     (32rem)
+     --blt-tk-gap             Space between rows            (1em)
+     --blt-tk-input-bg        Field background              (#ffffff)
+     --blt-tk-input-fg        Field text                    (#1e1e1e)
+     --blt-tk-input-border    Field border                  (#8c8f94)
+     --blt-tk-muted           Help text                     (inherits the text color)
+     --blt-tk-success-bg      Success message background    (#edfaef)
+     --blt-tk-success-fg      Success message text, border  (#005c12)
+     --blt-tk-danger-bg       Error message background      (#fcf0f1)
+     --blt-tk-danger-fg       Error message text, border    (#8a2424)
+     --blt-tk-warning-bg      Switched-session warning      (#fef8ee)
+     --blt-tk-warning-fg      Its text and border           (#94660c)
+   ========================================================================== */
+
+.blt-tk-username-form--styled {
+	box-sizing: border-box;
+	max-width: var(--blt-tk-form-width, 32rem);
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__form {
+	display: grid;
+	gap: var(--blt-tk-gap, 1em);
+	margin: 0;
+	padding: 0;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__notice {
+	box-sizing: border-box;
+	margin: 0 0 var(--blt-tk-gap, 1em);
+	padding: 0.75em 1em;
+	border: 0;
+	border-inline-start: 4px solid currentColor;
+	border-radius: var(--blt-tk-radius, var(--blt-radius-sm, 4px));
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__notice--success {
+	background: var(--blt-tk-success-bg, var(--blt-success-bg, #edfaef));
+	color: var(--blt-tk-success-fg, var(--blt-success-fg, #005c12));
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__notice--error {
+	background: var(--blt-tk-danger-bg, var(--blt-danger-bg, #fcf0f1));
+	color: var(--blt-tk-danger-fg, var(--blt-danger-fg, #8a2424));
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__notice:focus {
+	outline: 2px solid var(--blt-tk-focus, var(--blt-fg, #1e1e1e));
+	outline-offset: 2px;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__notice:focus:not(:focus-visible) {
+	outline: none;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__notice-text,
+.blt-tk-username-form--styled .blt-tk-username-form__cooldown,
+.blt-tk-username-form--styled .blt-tk-username-form__current,
+.blt-tk-username-form--styled .blt-tk-username-form__help,
+.blt-tk-username-form--styled .blt-tk-username-form__warning,
+.blt-tk-username-form--styled .blt-tk-username-form__confirm,
+.blt-tk-username-form--styled .blt-tk-username-form__actions {
+	margin: 0;
+	padding: 0;
+	overflow-wrap: break-word;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__login,
+.blt-tk-username-form--styled .blt-tk-username-form__literal {
+	display: inline-block; /* Moves to the next line whole; breaks inside only when longer than a line. */
+	box-sizing: border-box;
+	max-width: 100%;
+	padding: 0 0.2em;
+	font-size: 1em;
+	font-variant-ligatures: none;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__field {
+	display: grid;
+	gap: 0.375em;
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__label {
+	display: block;
+	margin: 0;
+	padding: 0;
+	font-weight: 600;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__input {
+	display: block;
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 100%;
+	min-height: 2.75em;
+	margin: 0;
+	padding: 0.5em 0.75em;
+	border: 1px solid var(--blt-tk-input-border, #8c8f94);
+	border-radius: var(--blt-tk-radius, var(--blt-radius-sm, 4px));
+	background: var(--blt-tk-input-bg, var(--blt-surface, #fff));
+	box-shadow: none;
+	color: var(--blt-tk-input-fg, var(--blt-fg, #1e1e1e));
+	font: inherit;
+	font-variant-ligatures: none; /* A username is shown exactly: no "--" drawn as a dash. */
+	line-height: 1.4;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__input:focus {
+	outline: 2px solid var(--blt-tk-focus, var(--blt-fg, #1e1e1e));
+	outline-offset: 1px;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__input[aria-invalid="true"] {
+	border-color: var(--blt-tk-danger-fg, var(--blt-danger-fg, #8a2424));
+	box-shadow: inset 4px 0 0 var(--blt-tk-danger-fg, var(--blt-danger-fg, #8a2424));
+}
+
+[dir="rtl"] .blt-tk-username-form--styled .blt-tk-username-form__input[aria-invalid="true"] {
+	box-shadow: inset -4px 0 0 var(--blt-tk-danger-fg, var(--blt-danger-fg, #8a2424));
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__help {
+	color: var(--blt-tk-muted, inherit);
+	font-size: 0.875em;
+	line-height: 1.5;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__symbols {
+	padding: 0 0.25em;
+	font-size: 1em;
+	font-variant-ligatures: none;
+	white-space: nowrap;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__warning {
+	padding: 0.75em 1em;
+	border-inline-start: 4px solid currentColor;
+	border-radius: var(--blt-tk-radius, var(--blt-radius-sm, 4px));
+	background: var(--blt-tk-warning-bg, var(--blt-warning-bg, #fef8ee));
+	color: var(--blt-tk-warning-fg, var(--blt-warning-fg, #94660c));
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__confirm {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5em;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__checkbox {
+	flex: none;
+	width: 1.125em;
+	height: 1.125em;
+	margin: 0.15em 0 0;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__checkbox:focus {
+	outline: 2px solid var(--blt-tk-focus, var(--blt-fg, #1e1e1e));
+	outline-offset: 2px;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__confirm-label {
+	margin: 0;
+	padding: 0;
+	font-weight: normal;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__button {
+	display: inline-block;
+	box-sizing: border-box;
+	min-height: 2.75em;
+	max-width: 100%;
+	margin: 0;
+	padding: 0.6em 1.25em;
+	border: 0;
+	border-radius: var(--blt-tk-radius, var(--blt-radius-sm, 4px));
+	background: var(--blt-tk-accent, var(--blt-primary, #2271b1));
+	box-shadow: none;
+	color: var(--blt-tk-on-accent, var(--blt-surface, #fff));
+	cursor: pointer;
+	font: inherit;
+	font-weight: 600;
+	line-height: 1.4;
+	text-align: center;
+	text-decoration: none;
+	text-transform: none;
+	white-space: normal;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__button:hover,
+.blt-tk-username-form--styled .blt-tk-username-form__button:focus {
+	background: var(--blt-tk-accent-hover, var(--blt-primary-hover, #135e96));
+	color: var(--blt-tk-on-accent, var(--blt-surface, #fff));
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__button:focus {
+	outline: 2px solid var(--blt-tk-focus, var(--blt-fg, #1e1e1e));
+	outline-offset: 2px;
+}
+
+.blt-tk-username-form--styled .blt-tk-username-form__button:focus:not(:focus-visible) {
+	outline: none;
+}
+
+/* Windows high contrast and forced colors: keep borders and focus visible. */
+@media (forced-colors: active) {
+	.blt-tk-username-form--styled .blt-tk-username-form__notice,
+	.blt-tk-username-form--styled .blt-tk-username-form__warning,
+	.blt-tk-username-form--styled .blt-tk-username-form__button {
+		border: 1px solid CanvasText;
 	}
 }
