@@ -1,8 +1,9 @@
 <?php
 /**
  * The session rules of the switch module: binding the old-user cookie to
- * the current session (SW-5, SW-10, SW-17) and following switched sessions
- * back to the person who signed in (SW-5, LOG-2).
+ * the current session (SW-5, SW-10, SW-17), following switched sessions
+ * back to the person who signed in (SW-5, LOG-2) and telling a live switch
+ * from one whose origin ended (SW-8).
  *
  * Reading sessions from WordPress, destroying an orphaned session on
  * `determine_current_user` and expiring stale cookies need a real install
@@ -14,7 +15,7 @@
 use PHPUnit\Framework\TestCase;
 
 /**
- * Tests for BLT_Toolkit_Switch::is_bound() and follow_links().
+ * Tests for BLT_Toolkit_Switch::is_bound(), follow_links() and live_switch_from().
  */
 class Test_Switch_Session extends TestCase {
 
@@ -178,5 +179,32 @@ class Test_Switch_Session extends TestCase {
 		$this->assertFalse( $deep['intact'] );
 		$this->assertCount( BLT_Toolkit_Switch_Cookies::MAX_DEPTH, $deep['ids'] );
 		$this->assertTrue( BLT_Toolkit_Switch::follow_links( $this->sessions['112|v112'], array( $this, 'lookup' ), 12 )['intact'] );
+	}
+
+	/**
+	 * SW-8: a session counts as someone else's switch only while it leads
+	 * back to the person who signed in. After a sign-in over the switched
+	 * browser (SSO, password, two-factor) ended the originating session, the
+	 * switched session left behind raises no duplicate-switch warning.
+	 *
+	 * @return void
+	 */
+	public function test_sw8_only_a_live_switch_is_a_duplicate() {
+		$lookup = array( $this, 'lookup' );
+
+		$this->assertSame( 1, BLT_Toolkit_Switch::live_switch_from( $this->sessions['2|v-ua'], 5, $lookup ), 'admin is switched into usera.' );
+		$this->assertSame( 2, BLT_Toolkit_Switch::live_switch_from( $this->sessions['3|v-ub'], 5, $lookup ), 'Nested: the user who switched in last.' );
+		$this->assertSame( 1, BLT_Toolkit_Switch::live_switch_from( array( 'blt_switched_from_id' => '1', 'blt_switched_from_session' => 'v-a' ), '5', $lookup ), 'Numeric strings from storage.' );
+
+		$this->assertSame( 0, BLT_Toolkit_Switch::live_switch_from( $this->sessions['2|v-ua'], 1, $lookup ), 'The actor\'s own switch.' );
+		$this->assertSame( 0, BLT_Toolkit_Switch::live_switch_from( $this->sessions['1|v-a'], 5, $lookup ), 'Nobody switched in.' );
+		$this->assertSame( 0, BLT_Toolkit_Switch::live_switch_from( 'not a session', 5, $lookup ) );
+		$this->assertSame( 0, BLT_Toolkit_Switch::live_switch_from( array( 'blt_switched_from_id' => 1 ), 5, $lookup ), 'No verifier.' );
+
+		// admin's session ended (a sign-in over the switched browser).
+		unset( $this->sessions['1|v-a'] );
+
+		$this->assertSame( 0, BLT_Toolkit_Switch::live_switch_from( $this->sessions['2|v-ua'], 5, $lookup ) );
+		$this->assertSame( 0, BLT_Toolkit_Switch::live_switch_from( $this->sessions['3|v-ub'], 5, $lookup ), 'Broken further up the chain.' );
 	}
 }

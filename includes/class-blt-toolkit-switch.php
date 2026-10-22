@@ -1288,7 +1288,8 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 	/**
 	 * Someone other than the actor who is switched into the target right
 	 * now (SW-8): the first of the target's live sessions that carries
-	 * `blt_switched_from_id` for another existing user.
+	 * `blt_switched_from_id` for another existing user and still leads back
+	 * to the person who signed in (live_switch_from()).
 	 *
 	 * @param WP_User $target The user to switch to.
 	 * @param WP_User $actor  The user switching.
@@ -1298,11 +1299,13 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 		$sessions = WP_Session_Tokens::get_instance( (int) $target->ID )->get_all();
 
 		foreach ( $sessions as $session ) {
-			if ( ! is_array( $session ) || empty( $session[ self::FROM_ID ] ) || (int) $session[ self::FROM_ID ] === (int) $actor->ID ) {
+			$from_id = self::live_switch_from( $session, (int) $actor->ID, array( __CLASS__, 'session_by_verifier' ) );
+
+			if ( $from_id <= 0 ) {
 				continue;
 			}
 
-			$from = get_userdata( (int) $session[ self::FROM_ID ] );
+			$from = get_userdata( $from_id );
 
 			if ( $from instanceof WP_User ) {
 				return array(
@@ -1313,6 +1316,33 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Who switched into a session, when that is someone other than the
+	 * actor and the switch is still on (SW-8). Pure: sessions are found
+	 * through `$lookup`.
+	 *
+	 * A switch is on while its links lead back to the person who signed in
+	 * (follow_links()). Once that session ends (a sign-in or sign-out over
+	 * the switched browser, which ends the sessions the switch could return
+	 * to, "Log out everywhere", expiry), the switched session is over too,
+	 * even before end_orphaned_session() destroys it on its next request,
+	 * so it never raises the duplicate-switch warning.
+	 *
+	 * @param mixed    $session  One of the target's sessions.
+	 * @param int      $actor_id The user switching.
+	 * @param callable $lookup   function( int $user_id, string $verifier ): array|null, as follow_links().
+	 * @return int The user who switched in, or 0.
+	 */
+	public static function live_switch_from( $session, $actor_id, callable $lookup ) {
+		$from_id = is_array( $session ) && isset( $session[ self::FROM_ID ] ) && is_numeric( $session[ self::FROM_ID ] ) ? (int) $session[ self::FROM_ID ] : 0;
+
+		if ( $from_id <= 0 || (int) $actor_id === $from_id ) {
+			return 0;
+		}
+
+		return self::follow_links( $session, $lookup )['intact'] ? $from_id : 0;
 	}
 
 	/**

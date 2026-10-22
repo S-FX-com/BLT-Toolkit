@@ -242,3 +242,16 @@ Gotchas found while building, and decisions recorded with their reasons (includi
 ## 2026-10-22: Repository location resolved
 
 - **The repository now lives at `github.com/S-FX-com/BLT-Toolkit`, where SPEC 3 and the update checker already point.** It was transferred from `sfxdotcom/BLT-Toolkit`; GitHub redirects the old URL for git, so existing clones keep working. This closes the "owner to confirm" item recorded on 2026-10-21. The repository is private, so a site needs a token to see updates: the `BLT_TOOLKIT_GITHUB_TOKEN` constant, the encrypted token on Settings > Advanced, or the shared BLT `github` group when the owner enables it. The Phase 0 criterion "a second release updates a test site through the updater" can now be exercised once a merge to `main` publishes releases there.
+
+## 2026-10-22: Phase 2 re-verification of h and i
+
+### Decisions
+
+- **SW-8 counts a session as someone else's switch only while its links lead back to the person who signed in** (`BLT_Toolkit_Switch::live_switch_from()`, pure, used by `duplicate_switch()`). Since the review fixes, a sign-in over a switched browser (SSO, password or BLT Secure's two-factor) ends the originating session through `end_sessions()`, so the target's switched session left behind is orphaned; the duplicate check still counted it, and for up to 48 hours a second admin got a false 409 "admin is currently switched to {Target}". This supplements the Phase 2 entry "A normal `wp_login` over a switched browser … leaves the target's switched session in `session_tokens`": that session still stays until its next request (`end_orphaned_session()` signs it out and destroys it) or its 48-hour expiry, but it can no longer be used or raise the warning. Destroying it at the sign-in itself (from the request's logged-in cookie) was left out as not needed for SW-8.
+
+### WordPress, PHP and environment gotchas
+
+- **BLT Secure's TOTP replay guard keeps the last accepted 30-second slice per user and accepts one slice either side**, so a test that signs the same user in several times (enrollment counts) must track the last slice and wait for the next one. A later run can read the secret with `( new Blt_Secure_Crypto() )->decrypt( get_user_meta( ID, '_blt_secure_totp_secret', true ) )` and the slice from `_blt_secure_totp_last_slice` in `wp eval`.
+- **BLT Secure fires `wp_login` itself after a valid code** (the password POST exits on the code form first), so SW-10's `end_sessions()` runs on the code POST.
+- **Opening the login screen while signed in does not fire `wp_login`:** `wp_signon()` without credentials tries the `auth` cookie, whose path is `/wp-admin`, so the browser does not send it to `wp-login.php` or a custom slug, and a switched browser stays switched there.
+- **WooCommerce 11.2.1 installed by WP-CLI on these SQLite dev sites starts with legacy order storage**, so test the post screen first, then `wc hpos sync` and `wc hpos enable` for the HPOS screen on the same order.
