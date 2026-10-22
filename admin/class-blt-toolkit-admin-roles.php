@@ -993,9 +993,12 @@ class BLT_Toolkit_Admin_Roles {
 				} elseif ( BLT_Toolkit_Guard::is_protected_role( $role ) && $checked && isset( $lockout[ $cap ] ) ) {
 					// SEC-12.
 					$locked = __( 'The Administrator role always keeps this, so nobody can be locked out of the site.', 'blt-toolkit' );
-				} elseif ( ! $is_admin && ! $checked && empty( $own[ $cap ] ) ) {
-					// SEC-3.
+				} elseif ( ! $is_admin && ! $checked && empty( $own[ $cap ] ) && ! BLT_Toolkit_Superset::is_marker( $cap ) ) {
+					// SEC-3. A read-only marker only narrows access (RS-14).
 					$locked = __( 'You do not have this capability yourself, so you cannot grant it.', 'blt-toolkit' );
+				} elseif ( ! $is_admin && $checked && BLT_Toolkit_Superset::is_marker( $cap ) && array() !== BLT_Toolkit_Guard::lift_missing( $actor, $cap ) ) {
+					// SEC-3, RS-14: taking a marker away lets people edit again.
+					$locked = __( 'Taking this away would let people edit this content again, and you cannot edit it yourself.', 'blt-toolkit' );
 				}
 
 				if ( '' === $locked ) {
@@ -1418,23 +1421,39 @@ class BLT_Toolkit_Admin_Roles {
 			$reason = $editable->get_error_message();
 		}
 
+		// RS-32: types with separate permissions whose plugin is inactive
+		// have no row, so say so here, with the way back.
+		$unregistered = array();
+
+		if ( class_exists( 'BLT_Toolkit_Isolation' ) ) {
+			foreach ( BLT_Toolkit_Isolation::isolated() as $type => $unused ) {
+				if ( ! post_type_exists( (string) $type ) ) {
+					$unregistered[] = array(
+						'type' => (string) $type,
+						'url'  => $context['isolate'] ? self::isolation_url( 'revert', (string) $type, $role ) : '',
+					);
+				}
+			}
+		}
+
 		return array(
-			'available' => true,
-			'role'      => $role,
-			'sections'  => array_filter(
+			'available'    => true,
+			'unregistered' => $unregistered,
+			'role'         => $role,
+			'sections'     => array_filter(
 				$sections,
 				static function ( $section ) {
 					return array() !== $section['controls'];
 				}
 			),
-			'read_only' => $read_only,
-			'protected' => $protected,
-			'reason'    => $reason,
-			'hash'      => BLT_Toolkit_Role_Store::role_hash( $role ),
-			'back'      => http_build_query( self::state_args( $state ) ),
-			'discard'   => self::state_url( $state ),
-			'advanced'  => $state['can_advanced'] ? self::state_url( $state, array( 'view' => 'advanced' ) ) : '',
-			'script'    => array(
+			'read_only'    => $read_only,
+			'protected'    => $protected,
+			'reason'       => $reason,
+			'hash'         => BLT_Toolkit_Role_Store::role_hash( $role ),
+			'back'         => http_build_query( self::state_args( $state ) ),
+			'discard'      => self::state_url( $state ),
+			'advanced'     => $state['can_advanced'] ? self::state_url( $state, array( 'view' => 'advanced' ) ) : '',
+			'script'       => array(
 				'role'      => self::role_name( $role ),
 				'names'     => array_values( array_unique( array_filter( array( self::role_name( $role ), self::stored_role_name( $role ) ) ) ) ),
 				'threshold' => self::REVIEW_THRESHOLD,
@@ -1585,11 +1604,17 @@ class BLT_Toolkit_Admin_Roles {
 			return $view;
 		}
 
+		// RS-13: View is enforced in the dashboard only when it grants the
+		// read-only marker, which needs a distinct `create_posts` and an
+		// `edit_posts` named `edit_...` (BLT_Toolkit_Simple_Mapper::marker()).
+		// A type such as `course` (edit_posts `manage_courses`) has a
+		// distinct create but no marker, so its View is site-only.
+		$enforced                = '' !== BLT_Toolkit_Simple_Mapper::marker( $control['map'] );
 		$view['create_distinct'] = $control['create_distinct'];
+		$view['enforced']        = $enforced;
 
-		// RS-13: "Enforced by BLT Toolkit" while the row is at View and the
-		// type has a create capability of its own.
-		if ( $control['create_distinct'] ) {
+		// RS-13: "Enforced by BLT Toolkit" while the row is at View.
+		if ( $enforced ) {
 			$view['badges'][] = array( 'on', __( 'Enforced by BLT Toolkit', 'blt-toolkit' ), 'view' );
 		}
 
@@ -1632,7 +1657,7 @@ class BLT_Toolkit_Admin_Roles {
 
 		$view_help = BLT_Toolkit_Simple_Controls::level_help( 'view', $plural );
 
-		if ( ! $control['create_distinct'] ) {
+		if ( ! $enforced ) {
 			$view_help .= ' ' . BLT_Toolkit_Simple_Controls::site_only_help( $plural, false );
 
 			foreach ( $separate as $type_label ) {
@@ -1641,9 +1666,19 @@ class BLT_Toolkit_Admin_Roles {
 			}
 		}
 
+		// SEC-3, RS-14: the read-only marker only narrows access, so it is
+		// never "lacked"; leaving View (taking the marker away) needs what
+		// the Guard asks for a lift.
+		$marker = BLT_Toolkit_Simple_Mapper::marker( $control['map'] );
+		$lift   = '' !== $marker && ! $context['is_admin'] && in_array( $marker, $control['granted'], true ) ? BLT_Toolkit_Guard::lift_missing( wp_get_current_user(), $marker ) : array();
+
 		foreach ( BLT_Toolkit_Simple_Mapper::LEVELS as $level ) {
 			$target = BLT_Toolkit_Simple_Mapper::caps_for( $control['map'], $level, BLT_Toolkit_Simple_Mapper::default_mods( $control['map'], $level ) );
-			$lacks  = $context['is_admin'] ? array() : array_diff( $target, array_keys( $own ) );
+			$lacks  = $context['is_admin'] ? array() : array_diff( $target, array_keys( $own ), array( $marker ) );
+
+			if ( array() !== $lift && ! in_array( $marker, $target, true ) ) {
+				$lacks = array_merge( $lacks, $lift );
+			}
 
 			$view['options'][ $level ] = array(
 				'label'    => $labels[ $level ],
@@ -1952,8 +1987,10 @@ class BLT_Toolkit_Admin_Roles {
 				'back'     => $back,
 				'controls' => $plan['controls'],
 				'meta'     => $plan['meta'],
-				// RS-2: "Save and switch" lands in the other view.
+				// RS-2: "Save and switch" lands in the other view, narrowed
+				// to one control when "Edit in Advanced" asked for it.
 				'then'     => in_array( self::posted( 'then_view' ), array( 'simple', 'advanced' ), true ) ? self::posted( 'then_view' ) : '',
+				'then_ctl' => self::clean_group( self::posted( 'then_ctl' ) ),
 			);
 			$reviewed = false;
 		}
@@ -1967,6 +2004,18 @@ class BLT_Toolkit_Admin_Roles {
 
 		if ( array() === $data['on_page'] && array() === $data['meta'] ) {
 			self::back( $back, 'warning', __( 'Nothing was saved: you did not change anything.', 'blt-toolkit' ) );
+		}
+
+		// SEC-1, SEC-2, SEC-5 for role metadata: the toolbar flag is the
+		// role's too, so a change of it alone is checked as Role details
+		// checks it (handle_details()); capability changes are checked by
+		// the role store below.
+		if ( array() !== $data['meta'] ) {
+			$editable = BLT_Toolkit_Guard::check_role_change( wp_get_current_user(), $role, array(), array() );
+
+			if ( true !== $editable ) {
+				$this->refused( $editable, $data );
+			}
 		}
 
 		$client             = ! $reviewed && '1' === self::posted( self::REVIEWED_FIELD );
@@ -2040,6 +2089,10 @@ class BLT_Toolkit_Admin_Roles {
 
 		if ( ! empty( $data['then'] ) && ( 'simple' === $data['then'] || self::can_advanced() ) ) {
 			$back['view'] = $data['then'];
+
+			if ( 'advanced' === $data['then'] && ! empty( $data['then_ctl'] ) ) {
+				$back['ctl'] = (string) $data['then_ctl'];
+			}
 		}
 
 		self::back(

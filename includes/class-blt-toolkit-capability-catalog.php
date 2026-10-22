@@ -2008,7 +2008,48 @@ class BLT_Toolkit_Capability_Catalog {
 		 *
 		 * @param array $groups Group key => array( 'label' => string, 'caps' => string[] ).
 		 */
-		return self::clean_declared( apply_filters( 'blt_toolkit_capability_groups', $defaults ) );
+		$declared = self::clean_declared( apply_filters( 'blt_toolkit_capability_groups', $defaults ) );
+
+		return $declared + self::clean_declared( self::isolated_groups() );
+	}
+
+	/**
+	 * A named group for each type with separate permissions that are not in
+	 * effect now (its plugin is inactive, or RS-33 found its capabilities
+	 * changed): its isolated strings and marker (RO-11, RS-32). The type is
+	 * still on the isolated list, so they are BLT Toolkit's and come back
+	 * into use with the type; they are never orphans, and RO-24 never
+	 * offers to delete them. Reverting (RS-32) and then the cleanup step is
+	 * the way to remove them. Not filterable.
+	 *
+	 * @return array Group key => array( 'label', 'caps' ).
+	 */
+	private static function isolated_groups() {
+		if ( ! class_exists( 'BLT_Toolkit_Isolation' ) ) {
+			return array();
+		}
+
+		$failed = BLT_Toolkit_Isolation::failed();
+		$out    = array();
+
+		foreach ( BLT_Toolkit_Isolation::isolated() as $type => $info ) {
+			$type = (string) $type;
+
+			if ( post_type_exists( $type ) && ! isset( $failed[ $type ] ) ) {
+				continue;
+			}
+
+			$object = get_post_type_object( $type );
+			$label  = $object && isset( $object->labels->name ) ? (string) $object->labels->name : $type;
+
+			$out[ 'blt-isolated-' . $type ] = array(
+				/* translators: %s: content type name or key, such as Events. */
+				'label' => sprintf( __( '%s: separate permissions not in effect', 'blt-toolkit' ), $label ),
+				'caps'  => BLT_Toolkit_Isolation::new_strings( BLT_Toolkit_Isolation::new_caps( $type, $info['singular'], $info['plural'] ), $info['plural'] ),
+			);
+		}
+
+		return $out;
 	}
 
 	/**

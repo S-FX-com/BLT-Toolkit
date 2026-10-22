@@ -634,7 +634,7 @@ class Test_Guard extends TestCase {
 		$this->assertNull( BLT_Toolkit_Guard::user_roles_violation( $facts( $this->caps_with_roles( array( 'boss' ), array( 'install_plugins' => false ) ) ) ) );
 
 		// An actor who holds the capability, or a toolkit admin, may.
-		$actor_with = $facts( $this->caps_with_roles( array( 'boss' ) ) );
+		$actor_with                                  = $facts( $this->caps_with_roles( array( 'boss' ) ) );
 		$actor_with['actor_caps']['install_plugins'] = true;
 		$this->assertNull( BLT_Toolkit_Guard::user_roles_violation( $actor_with ) );
 
@@ -643,7 +643,16 @@ class Test_Guard extends TestCase {
 		$this->assertNull( BLT_Toolkit_Guard::user_roles_violation( $admin ) );
 
 		// The deprecated levels are left out, as for SEC-4.
-		$this->assertNull( BLT_Toolkit_Guard::user_roles_violation( $facts( array( 'read' => true, 'level_1' => true ) ) ) );
+		$this->assertNull(
+			BLT_Toolkit_Guard::user_roles_violation(
+				$facts(
+					array(
+						'read'    => true,
+						'level_1' => true,
+					)
+				)
+			)
+		);
 	}
 
 	/**
@@ -704,7 +713,14 @@ class Test_Guard extends TestCase {
 		$this->assertSame( 'blt_toolkit_role_name_cap', $violation['code'], 'can_grant() refuses a role-named deny too.' );
 
 		$this->assertNull(
-			BLT_Toolkit_Guard::user_caps_violation( $this->user_caps_facts( array( 'actor_is_admin' => true, 'denies' => array( 'administrator' ) ) ) ),
+			BLT_Toolkit_Guard::user_caps_violation(
+				$this->user_caps_facts(
+					array(
+						'actor_is_admin' => true,
+						'denies'         => array( 'administrator' ),
+					)
+				)
+			),
 			'An administrator may change role keys (they may promote anyone anyway).'
 		);
 	}
@@ -716,13 +732,43 @@ class Test_Guard extends TestCase {
 	 * @return void
 	 */
 	public function test_sec5_no_editing_your_own_capabilities() {
-		$this->assertSame( 'blt_toolkit_own_caps', BLT_Toolkit_Guard::user_caps_violation( $this->user_caps_facts( array( 'same_user' => true, 'grants' => array( 'read' ) ) ) )['code'] );
+		$this->assertSame(
+			'blt_toolkit_own_caps',
+			BLT_Toolkit_Guard::user_caps_violation(
+				$this->user_caps_facts(
+					array(
+						'same_user' => true,
+						'grants'    => array( 'read' ),
+					)
+				)
+			)['code']
+		);
 		$this->assertSame( 'SEC-5', BLT_Toolkit_Guard::user_caps_violation( $this->user_caps_facts( array( 'same_user' => true ) ) )['rule'] );
 		$this->assertSame( 'blt_toolkit_protected_admin', BLT_Toolkit_Guard::user_caps_violation( $this->user_caps_facts( array( 'target_is_admin' => true ) ) )['code'] );
 		$this->assertSame( 'blt_toolkit_target_exceeds_actor', BLT_Toolkit_Guard::user_caps_violation( $this->user_caps_facts( array( 'missing' => array( 'publish_posts' ) ) ) )['code'] );
 		$this->assertSame( 'blt_toolkit_no_user', BLT_Toolkit_Guard::user_caps_violation( $this->user_caps_facts( array( 'target_exists' => false ) ) )['code'] );
-		$this->assertNull( BLT_Toolkit_Guard::user_caps_violation( $this->user_caps_facts( array( 'grants' => array( 'edit_posts' ), 'denies' => array( 'delete_posts' ) ) ) ) );
-		$this->assertNull( BLT_Toolkit_Guard::user_caps_violation( $this->user_caps_facts( array( 'actor_is_admin' => true, 'same_user' => true, 'grants' => array( 'manage_options' ) ) ) ), 'An administrator may edit anyone, themselves included.' );
+		$this->assertNull(
+			BLT_Toolkit_Guard::user_caps_violation(
+				$this->user_caps_facts(
+					array(
+						'grants' => array( 'edit_posts' ),
+						'denies' => array( 'delete_posts' ),
+					)
+				)
+			)
+		);
+		$this->assertNull(
+			BLT_Toolkit_Guard::user_caps_violation(
+				$this->user_caps_facts(
+					array(
+						'actor_is_admin' => true,
+						'same_user'      => true,
+						'grants'         => array( 'manage_options' ),
+					)
+				)
+			),
+			'An administrator may edit anyone, themselves included.'
+		);
 	}
 
 	/**
@@ -745,7 +791,14 @@ class Test_Guard extends TestCase {
 		$this->assertSame( array( 'publish_posts' ), $violation['caps'] );
 
 		$this->assertNull(
-			BLT_Toolkit_Guard::user_caps_violation( $this->user_caps_facts( array( 'target_denied' => array( 'edit_posts' ), 'removes' => array( 'edit_posts' ) ) ) ),
+			BLT_Toolkit_Guard::user_caps_violation(
+				$this->user_caps_facts(
+					array(
+						'target_denied' => array( 'edit_posts' ),
+						'removes'       => array( 'edit_posts' ),
+					)
+				)
+			),
 			'Lifting a deny of a capability the actor holds is fine.'
 		);
 
@@ -899,6 +952,175 @@ class Test_Guard extends TestCase {
 		$this->assertStringContainsString( 'manage_options, read', $error->get_error_message() );
 
 		$this->assertSame( 'You do not have permission to do that.', BLT_Toolkit_Guard::error( array( 'code' => 'anything_else' ) )->get_error_message() );
+	}
+
+	/**
+	 * RS-14, SEC-2, SEC-3: a read-only marker is a restriction. A manager
+	 * with the type's editing may edit a role held at View, grant View
+	 * (the marker included) and take the marker away; a manager who is
+	 * held read-only on the type may not take it away, by removing or by
+	 * denying it.
+	 *
+	 * @return void
+	 */
+	public function test_rs14_role_markers_are_restrictions() {
+		$restrictions = array(
+			'blt_readonly_books' => array(
+				'edit'   => 'edit_books',
+				'create' => array( 'create_books' ),
+			),
+		);
+		$full         = array_fill_keys( array( 'read', 'blt_edit_roles', 'edit_books', 'create_books', 'read_private_books', 'publish_books' ), true );
+		$viewer       = array_fill_keys( array( 'read', 'edit_books', 'read_private_books', 'blt_readonly_books' ), true );
+		$base         = array(
+			'actor_caps'   => $full,
+			'role_caps'    => $viewer,
+			'restrictions' => $restrictions,
+		);
+
+		$this->assertNull( BLT_Toolkit_Guard::role_change_violation( $this->role_facts( $base ) ), 'Editing a View role is not SEC-2.' );
+		$this->assertNull( BLT_Toolkit_Guard::role_change_violation( $this->role_facts( $base + array( 'grants' => array( 'edit_books', 'read_private_books', 'blt_readonly_books' ) ) ) ), 'Granting View needs no marker.' );
+		$this->assertNull( BLT_Toolkit_Guard::role_change_violation( $this->role_facts( $base + array( 'removes' => array( 'blt_readonly_books' ) ) ) ), 'A manager who can edit may lift it.' );
+
+		$held = array_fill_keys( array( 'read', 'blt_edit_roles', 'edit_books', 'read_private_books', 'blt_readonly_books' ), true );
+
+		foreach ( array( array( 'removes' => array( 'blt_readonly_books' ) ), array( 'denies' => array( 'blt_readonly_books' ) ) ) as $change ) {
+			$violation = BLT_Toolkit_Guard::role_change_violation( $this->role_facts( array_merge( $base, array( 'actor_caps' => $held ), $change ) ) );
+
+			$this->assertSame( 'blt_toolkit_lift_exceeds_actor', $violation['code'] );
+			$this->assertSame( 'SEC-3', $violation['rule'] );
+			$this->assertSame( array( 'create_books' ), $violation['caps'] );
+		}
+
+		$violation = BLT_Toolkit_Guard::role_change_violation(
+			$this->role_facts(
+				array_merge(
+					$base,
+					array(
+						'actor_caps' => array_fill_keys( array( 'read', 'blt_edit_roles' ), true ),
+						'role_caps'  => array(
+							'read'               => true,
+							'blt_readonly_books' => true,
+						),
+						'removes'    => array( 'blt_readonly_books' ),
+					)
+				)
+			)
+		);
+		$this->assertSame( array( 'edit_books' ), $violation['caps'], 'Lifting needs the edit string.' );
+
+		// Removing a denied marker narrows: no lift, no grant to check.
+		$this->assertNull(
+			BLT_Toolkit_Guard::role_change_violation(
+				$this->role_facts(
+					array_merge(
+						$base,
+						array(
+							'actor_caps'  => $held,
+							'role_caps'   => array( 'read' => true ),
+							'role_denied' => array( 'blt_readonly_books' ),
+							'removes'     => array( 'blt_readonly_books' ),
+						)
+					)
+				)
+			)
+		);
+
+		// SEC-1's "deny in a role an administrator holds" is about taking
+		// access away, which a marker deny never does.
+		$this->assertNull(
+			BLT_Toolkit_Guard::role_change_violation(
+				$this->role_facts(
+					$base + array(
+						'denies'           => array( 'blt_readonly_books' ),
+						'admin_holds_role' => true,
+					)
+				)
+			)
+		);
+
+		$error = BLT_Toolkit_Guard::error(
+			array(
+				'code' => 'blt_toolkit_lift_exceeds_actor',
+				'caps' => array( 'create_books' ),
+			)
+		);
+		$this->assertStringContainsString( 'create_books', $error->get_error_message() );
+	}
+
+	/**
+	 * RS-14, SEC-2: a manager held read-only on a type does not in effect
+	 * hold its `edit_posts`, so a role with that string and no marker is out
+	 * of reach.
+	 *
+	 * @return void
+	 */
+	public function test_rs14_read_only_actor_cannot_edit_an_editing_role() {
+		$violation = BLT_Toolkit_Guard::role_change_violation(
+			$this->role_facts(
+				array(
+					'actor_caps'   => array_fill_keys( array( 'read', 'blt_edit_roles', 'edit_books', 'blt_readonly_books' ), true ),
+					'role_caps'    => array_fill_keys( array( 'read', 'edit_books' ), true ),
+					'restrictions' => array(),
+				)
+			)
+		);
+
+		$this->assertSame( 'blt_toolkit_role_exceeds_actor', $violation['code'] );
+		$this->assertSame( array( 'edit_books' ), $violation['caps'] );
+	}
+
+	/**
+	 * RS-14, SEC-3 for users: denying a marker to a user, or removing a
+	 * marker they hold of their own, is a lift; granting one is not checked.
+	 * Losing a marker through a change of roles while keeping the type's
+	 * edit string is a lift too.
+	 *
+	 * @return void
+	 */
+	public function test_rs14_user_marker_lifts() {
+		$held = array( 'actor_caps' => array_fill_keys( array( 'read', 'edit_books', 'blt_readonly_books', 'blt_edit_capabilities' ), true ) );
+
+		$this->assertNull( BLT_Toolkit_Guard::user_caps_violation( $this->user_caps_facts( array( 'grants' => array( 'blt_readonly_books' ) ) ) ) );
+
+		foreach ( array( array( 'denies' => array( 'blt_readonly_books' ) ), array( 'removes' => array( 'blt_readonly_books' ) ) ) as $change ) {
+			$violation = BLT_Toolkit_Guard::user_caps_violation( $this->user_caps_facts( $held + $change ) );
+
+			$this->assertSame( 'blt_toolkit_lift_exceeds_actor', $violation['code'] );
+			$this->assertSame( array( 'create_books' ), $violation['caps'] );
+		}
+
+		// Removing a deny of the marker narrows.
+		$this->assertNull(
+			BLT_Toolkit_Guard::user_caps_violation(
+				$this->user_caps_facts(
+					$held + array(
+						'removes'       => array( 'blt_readonly_books' ),
+						'target_denied' => array( 'blt_readonly_books' ),
+					)
+				)
+			)
+		);
+
+		$facts = array(
+			'actor_caps' => array_fill_keys( array( 'read', 'edit_books', 'blt_readonly_books' ), true ),
+			'after_caps' => array_fill_keys( array( 'read', 'edit_books' ), true ),
+		);
+
+		$violation = BLT_Toolkit_Guard::user_roles_violation( $facts );
+		$this->assertSame( 'blt_toolkit_roles_exceed_actor', $violation['code'], 'A read-only actor lacks edit_books in effect.' );
+
+		$facts['actor_caps'] = array_fill_keys( array( 'read', 'edit_books' ), true );
+		$this->assertNull( BLT_Toolkit_Guard::user_roles_violation( $facts ), 'An actor who can edit may lift it.' );
+
+		$facts['after_caps'] = array( 'read' => true );
+		$facts['actor_caps'] = array( 'read' => true );
+		$this->assertNull( BLT_Toolkit_Guard::user_roles_violation( $facts ), 'Losing the marker with the edit string lifts nothing.' );
+
+		$facts['after_caps'] = array_fill_keys( array( 'read', 'edit_books', 'read_private_books', 'blt_readonly_books' ), true );
+		$facts['actor_caps'] = array_fill_keys( array( 'read', 'edit_books', 'blt_readonly_books' ), true );
+		$violation           = BLT_Toolkit_Guard::user_roles_violation( $facts );
+		$this->assertSame( array( 'read_private_books' ), $violation['caps'], 'The marker is never reported, only real powers.' );
 	}
 
 	/**

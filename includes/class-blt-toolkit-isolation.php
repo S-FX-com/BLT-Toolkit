@@ -30,44 +30,33 @@ if ( ! defined( 'ABSPATH' ) ) {
  *   BLT_Toolkit_User_Caps::save(), the type is stored under
  *   `roles.isolated_post_types` with `since`, the change is logged and
  *   `blt_toolkit_post_type_isolated` fires.
- * - RS-31 filter_args(): the `register_post_type_args` filter added when the
- *   main file loads (SPEC 4.2) sets `capability_type => array( singular,
- *   plural )`, `map_meta_cap => true` and `capabilities => array(
- *   'create_posts' => "create_{plural}" )`, through
- *   `blt_toolkit_isolation_caps`. It returns its input untouched at once
- *   when no type is isolated, and reads only the autoloaded settings.
- * - RS-32 revert() and cleanup(): reverting only takes the type off the
- *   list (it shares Posts again on the next request) and fires
- *   `blt_toolkit_post_type_shared`; a separate dry-run step removes the
+ * - RS-31 and RS-33 (the filter, verification, the stored list and the
+ *   state option) live in BLT_Toolkit_Isolation_Core, which every request
+ *   loads; this class adds the flows and is loaded only where they run
+ *   (SEC-9). Failures are kept in memory for the request (failed(), which
+ *   Simple view uses to lock the level selector), shown in an admin notice
+ *   (admin_notice()), and stored in the `blt_toolkit_isolation_state`
+ *   option for the Site Health test (stored_failures()).
+ * - RS-32 revert() and cleanup(): reverting takes the type off the list (it
+ *   shares Posts again on the next request) and fires
+ *   `blt_toolkit_post_type_shared`. It writes no role, but every role and
+ *   user it gives Posts' (or Pages') access back to is checked with the
+ *   Guard first for someone who is not a toolkit admin (SEC-2, SEC-3,
+ *   SEC-5), as isolating is. A separate dry-run step removes the
  *   now-unused `*_{plural}` and marker capabilities from roles and users,
  *   and only while nothing registers them (RO-11).
- * - RS-33 verify(): at `init` priority `PHP_INT_MAX`, each isolated type
- *   that is registered must have `cap->edit_posts === "edit_{plural}"`.
- *   Failures are kept in memory for the request (failed(), which Simple
- *   view uses to lock the level selector), shown in an admin notice, and
- *   stored in the `blt_toolkit_isolation_state` option for the Site Health
- *   test (stored_failures()) on admin, cron and WP-CLI requests only, and
- *   only when they change.
  * - RS-34 plugin_row(): the warning under BLT Toolkit on the Plugins screen
  *   while any type is isolated (and while a role holds a read-only marker
  *   for a type whose `create_posts` is distinct on its own, since RS-14
  *   enforcement also stops on deactivation, SPEC 14.6).
  *
  * The rules that need no WordPress are pure and unit-tested in
- * tests/test-isolation.php: isolation_args(), applies_to(),
- * candidate_reason(), default_names(), name_error(), caps_from_args(),
+ * tests/test-isolation.php: candidate_reason(), default_names(),
  * new_strings(), collisions(), seed_map(), seed_changes(), access_diff(),
- * check(), cleanup_strings() and plan_hash().
+ * cleanup_strings() and plan_hash() here, and those listed in
+ * BLT_Toolkit_Isolation_Core.
  */
-class BLT_Toolkit_Isolation {
-
-	/**
-	 * Option holding the RS-33 failure flag, the records of reverted types
-	 * (for the RS-32 cleanup) and which type each isolated type shared.
-	 * Autoloaded, so reading it on an admin request costs nothing; it is
-	 * created on the first isolation and never read on the front end.
-	 */
-	const STATE_OPTION = 'blt_toolkit_isolation_state';
+class BLT_Toolkit_Isolation extends BLT_Toolkit_Isolation_Core {
 
 	/**
 	 * Snapshot reason of every isolation write (SPEC 14.3).
@@ -80,21 +69,6 @@ class BLT_Toolkit_Isolation {
 	const CONTEXT = 'isolation';
 
 	/**
-	 * Prefix of the read-only marker (RS-13).
-	 */
-	const MARKER_PREFIX = 'blt_readonly_';
-
-	/**
-	 * Longest singular or plural accepted.
-	 */
-	const NAME_MAX = 60;
-
-	/**
-	 * Capability types a candidate may have (RS-30).
-	 */
-	const SOURCES = array( 'post', 'page' );
-
-	/**
 	 * Types never offered by default (RS-35): Bricks templates. See
 	 * tasks/lessons.md (Phase 5): Bricks gates templates through its own
 	 * builder access and `edit_posts`, so separate capabilities would not
@@ -102,217 +76,7 @@ class BLT_Toolkit_Isolation {
 	 */
 	const DEFAULT_EXCLUDED = array( 'bricks_template' );
 
-	/**
-	 * Keys of a cap object that are primitives seeded and compared (the
-	 * SPEC 10.4 table). `read` and the per-item meta keys are left out.
-	 */
-	const LEVEL_KEYS = array(
-		'edit_posts',
-		'edit_others_posts',
-		'edit_published_posts',
-		'edit_private_posts',
-		'publish_posts',
-		'read_private_posts',
-		'delete_posts',
-		'delete_others_posts',
-		'delete_published_posts',
-		'delete_private_posts',
-		'create_posts',
-	);
-
-	/**
-	 * Per-item (meta) keys of a cap object.
-	 */
-	const META_KEYS = array( 'edit_post', 'read_post', 'delete_post' );
-
-	/**
-	 * Whether register() ran.
-	 *
-	 * @var bool
-	 */
-	private static $registered = false;
-
-	/**
-	 * RS-33 failures found this request by verify(), or null before it ran.
-	 *
-	 * @var array<string,array{expected:string,found:string}>|null
-	 */
-	private static $failed = null;
-
-	/**
-	 * Post type => the capability type it was registered with before
-	 * filter_args() replaced it (`post` or `page`), seen this request.
-	 *
-	 * @var array<string,string>
-	 */
-	private static $shares = array();
-
-	// ---------- Wiring ----------
-
-	/**
-	 * Add the hooks. Called once by BLT_Toolkit_Plugin::boot(), whatever
-	 * the Roles module's state, because the filter that isolates types is
-	 * added when the main file loads and must be verified and warned about
-	 * whenever it applies.
-	 *
-	 * - `init` at `PHP_INT_MAX`: verify() (RS-33, SPEC 4.2 step 4).
-	 * - Admin only: the RS-33 notice, the RS-34 Plugins row, and the flow
-	 *   pages' admin-post.php routes (BLT_Toolkit_Admin_Isolation::boot()).
-	 *
-	 * @return void
-	 */
-	public static function register() {
-		if ( self::$registered ) {
-			return;
-		}
-
-		self::$registered = true;
-
-		add_action( 'init', array( __CLASS__, 'verify' ), PHP_INT_MAX );
-
-		if ( ! is_admin() ) {
-			return;
-		}
-
-		add_action( 'admin_notices', array( __CLASS__, 'admin_notice' ) );
-		add_action( 'after_plugin_row_' . BLT_TOOLKIT_BASENAME, array( __CLASS__, 'plugin_row' ), 10, 0 );
-
-		if ( class_exists( 'BLT_Toolkit_Admin_Isolation' ) ) {
-			BLT_Toolkit_Admin_Isolation::boot();
-		}
-	}
-
-	// ---------- RS-31: the filter ----------
-
-	/**
-	 * `register_post_type_args` callback, added when the main file loads
-	 * (SPEC 4.2): give each isolated type its own capabilities (RS-31).
-	 *
-	 * Returns `$args` untouched at once when no type is isolated or this
-	 * type is not, and when the type no longer registers as a Posts or Pages
-	 * type (its plugin gave it capabilities of its own since; RS-33 then
-	 * reports it). Reads only the autoloaded settings: no query.
-	 *
-	 * @param array  $args      Registration arguments.
-	 * @param string $post_type Post type key.
-	 * @return array
-	 */
-	public static function filter_args( $args, $post_type ) {
-		if ( ! is_array( $args ) || ( function_exists( 'is_multisite' ) && is_multisite() ) ) {
-			return $args;
-		}
-
-		$isolated = BLT_Toolkit_Settings::get( 'roles', 'isolated_post_types' );
-
-		if ( ! is_array( $isolated ) || array() === $isolated || ! isset( $isolated[ $post_type ] ) ) {
-			return $args;
-		}
-
-		$info = $isolated[ $post_type ];
-
-		if ( ! is_array( $info ) || '' !== self::name_error( isset( $info['singular'] ) ? $info['singular'] : '', isset( $info['plural'] ) ? $info['plural'] : '' ) ) {
-			return $args;
-		}
-
-		$base = self::applies_to( $args );
-
-		if ( '' === $base ) {
-			return $args;
-		}
-
-		self::$shares[ (string) $post_type ] = $base;
-
-		return array_merge( $args, self::filtered_args( (string) $post_type, $info ) );
-	}
-
-	/**
-	 * The arguments isolation applies to a type, through
-	 * `blt_toolkit_isolation_caps`.
-	 *
-	 * @param string $post_type Post type.
-	 * @param array  $info      Its stored entry: `singular`, `plural`, `since`.
-	 * @return array
-	 */
-	public static function filtered_args( $post_type, array $info ) {
-		$singular = isset( $info['singular'] ) ? (string) $info['singular'] : '';
-		$plural   = isset( $info['plural'] ) ? (string) $info['plural'] : '';
-
-		/**
-		 * Filter the registration arguments applied to an isolated post type
-		 * (RS-31). They are merged over the type's own arguments.
-		 *
-		 * @param array  $args      `capability_type => array( singular, plural )`, `map_meta_cap => true`,
-		 *                          `capabilities => array( 'create_posts' => "create_{plural}" )`.
-		 * @param string $post_type The post type.
-		 * @param array  $info      Its stored entry: `singular`, `plural`, `since`.
-		 */
-		$filtered = apply_filters( 'blt_toolkit_isolation_caps', self::isolation_args( $singular, $plural ), (string) $post_type, $info );
-
-		return is_array( $filtered ) ? $filtered : self::isolation_args( $singular, $plural );
-	}
-
-	/**
-	 * The arguments RS-31 sets. Pure.
-	 *
-	 * @param string $singular Singular capability base.
-	 * @param string $plural   Plural capability base.
-	 * @return array
-	 */
-	public static function isolation_args( $singular, $plural ) {
-		return array(
-			'capability_type' => array( (string) $singular, (string) $plural ),
-			'map_meta_cap'    => true,
-			'capabilities'    => array( 'create_posts' => 'create_' . (string) $plural ),
-		);
-	}
-
-	/**
-	 * Whether registration arguments still describe a type that shares
-	 * Posts' or Pages' capabilities: `capability_type` missing (core's
-	 * default, `post`), `post` or `page`, or an array starting with one of
-	 * them. Pure.
-	 *
-	 * @param array $args Registration arguments.
-	 * @return string `post`, `page`, or '' when the type has a capability type of its own.
-	 */
-	public static function applies_to( array $args ) {
-		$type = array_key_exists( 'capability_type', $args ) ? $args['capability_type'] : 'post';
-
-		if ( is_array( $type ) ) {
-			$type = array_values( $type );
-			$type = isset( $type[0] ) ? $type[0] : '';
-		}
-
-		$type = is_scalar( $type ) ? (string) $type : '';
-
-		return in_array( $type, self::SOURCES, true ) ? $type : '';
-	}
-
 	// ---------- Reading ----------
-
-	/**
-	 * Isolated types as stored: type => array( 'singular', 'plural', 'since' ).
-	 *
-	 * @return array<string,array{singular:string,plural:string,since:int}>
-	 */
-	public static function isolated() {
-		$isolated = BLT_Toolkit_Settings::get( 'roles', 'isolated_post_types' );
-
-		return is_array( $isolated ) ? $isolated : array();
-	}
-
-	/**
-	 * Whether a post type has separate permissions (it is on the list,
-	 * whether or not they are in effect; see failed()).
-	 *
-	 * @param string $type Post type.
-	 * @return bool
-	 */
-	public static function is_isolated( $type ) {
-		$isolated = self::isolated();
-
-		return is_string( $type ) && isset( $isolated[ $type ] );
-	}
 
 	/**
 	 * The type map of an isolated type for BLT_Toolkit_Simple_Mapper (its
@@ -513,100 +277,6 @@ class BLT_Toolkit_Isolation {
 			'singular' => $type,
 			'plural'   => $type . 's',
 		);
-	}
-
-	/**
-	 * Why a singular and plural cannot be used, or ''. Pure.
-	 *
-	 * Each must be 1 to 60 characters of lowercase letters, digits, `_` and
-	 * `-` with at least one letter (the capability name rules of RO-23), and
-	 * they must differ, or the per-item `edit_{singular}` would be the same
-	 * string as `edit_{plural}`.
-	 *
-	 * @param string $singular Singular.
-	 * @param string $plural   Plural.
-	 * @return string `singular_invalid`, `plural_invalid`, `same` or ''.
-	 */
-	public static function name_error( $singular, $plural ) {
-		$singular = is_scalar( $singular ) ? (string) $singular : '';
-		$plural   = is_scalar( $plural ) ? (string) $plural : '';
-
-		if ( ! self::valid_name( $singular ) ) {
-			return 'singular_invalid';
-		}
-
-		if ( ! self::valid_name( $plural ) ) {
-			return 'plural_invalid';
-		}
-
-		return $singular === $plural ? 'same' : '';
-	}
-
-	/**
-	 * Whether one name is usable. Pure.
-	 *
-	 * @param string $name Name.
-	 * @return bool
-	 */
-	private static function valid_name( $name ) {
-		return '' !== $name && strlen( $name ) <= self::NAME_MAX && 1 === preg_match( '/^[a-z0-9_-]+$/', $name ) && 1 === preg_match( '/[a-z]/', $name );
-	}
-
-	/**
-	 * The cap object WordPress builds from registration arguments, as
-	 * get_post_type_capabilities() does it (without recording meta
-	 * capabilities, which would change a global). Pure.
-	 *
-	 * @param array $args `capability_type`, `map_meta_cap`, `capabilities`.
-	 * @return array<string,string>
-	 */
-	public static function caps_from_args( array $args ) {
-		$type = array_key_exists( 'capability_type', $args ) ? $args['capability_type'] : 'post';
-
-		if ( ! is_array( $type ) ) {
-			$type = array( (string) $type, (string) $type . 's' );
-		}
-
-		$type     = array_values( $type );
-		$singular = isset( $type[0] ) && is_scalar( $type[0] ) ? (string) $type[0] : '';
-		$plural   = isset( $type[1] ) && is_scalar( $type[1] ) ? (string) $type[1] : $singular . 's';
-
-		$caps = array(
-			'edit_post'          => 'edit_' . $singular,
-			'read_post'          => 'read_' . $singular,
-			'delete_post'        => 'delete_' . $singular,
-			'edit_posts'         => 'edit_' . $plural,
-			'edit_others_posts'  => 'edit_others_' . $plural,
-			'delete_posts'       => 'delete_' . $plural,
-			'publish_posts'      => 'publish_' . $plural,
-			'read_private_posts' => 'read_private_' . $plural,
-		);
-
-		if ( ! empty( $args['map_meta_cap'] ) ) {
-			$caps = array_merge(
-				$caps,
-				array(
-					'read'                   => 'read',
-					'delete_private_posts'   => 'delete_private_' . $plural,
-					'delete_published_posts' => 'delete_published_' . $plural,
-					'delete_others_posts'    => 'delete_others_' . $plural,
-					'edit_private_posts'     => 'edit_private_' . $plural,
-					'edit_published_posts'   => 'edit_published_' . $plural,
-				)
-			);
-		}
-
-		foreach ( isset( $args['capabilities'] ) && is_array( $args['capabilities'] ) ? $args['capabilities'] : array() as $key => $value ) {
-			if ( is_scalar( $value ) ) {
-				$caps[ (string) $key ] = (string) $value;
-			}
-		}
-
-		if ( ! isset( $caps['create_posts'] ) ) {
-			$caps['create_posts'] = $caps['edit_posts'];
-		}
-
-		return $caps;
 	}
 
 	/**
@@ -837,41 +507,6 @@ class BLT_Toolkit_Isolation {
 	}
 
 	/**
-	 * RS-33: the isolated types whose separate permissions are not in
-	 * effect. A type that is not registered (its plugin is off) is not a
-	 * failure. Pure.
-	 *
-	 * @param array $isolated Type => array( 'singular', 'plural', ... ).
-	 * @param array $caps     Type => its registered cap object as an array, or null when not registered.
-	 * @return array<string,array{expected:string,found:string}>
-	 */
-	public static function check( array $isolated, array $caps ) {
-		$out = array();
-
-		foreach ( $isolated as $type => $info ) {
-			$type = (string) $type;
-
-			if ( ! isset( $caps[ $type ] ) || ! is_array( $caps[ $type ] ) ) {
-				continue;
-			}
-
-			$expected = 'edit_' . ( is_array( $info ) && isset( $info['plural'] ) ? (string) $info['plural'] : '' );
-			$found    = isset( $caps[ $type ]['edit_posts'] ) ? (string) $caps[ $type ]['edit_posts'] : '';
-
-			if ( $found !== $expected ) {
-				$out[ $type ] = array(
-					'expected' => $expected,
-					'found'    => $found,
-				);
-			}
-		}
-
-		ksort( $out, SORT_STRING );
-
-		return $out;
-	}
-
-	/**
 	 * The strings a reverted type left behind that RS-32's cleanup may
 	 * remove: its isolated strings and marker, less any still registered by
 	 * something (RO-11: only orphans). Pure.
@@ -1005,28 +640,6 @@ class BLT_Toolkit_Isolation {
 	}
 
 	// ---------- RS-30: dry run and isolation ----------
-
-	/**
-	 * The new cap object a type would get with these names, after
-	 * `blt_toolkit_isolation_caps`.
-	 *
-	 * @param string $type     Post type.
-	 * @param string $singular Singular.
-	 * @param string $plural   Plural.
-	 * @return array<string,string>
-	 */
-	public static function new_caps( $type, $singular, $plural ) {
-		return self::caps_from_args(
-			self::filtered_args(
-				(string) $type,
-				array(
-					'singular' => (string) $singular,
-					'plural'   => (string) $plural,
-					'since'    => 0,
-				)
-			)
-		);
-	}
 
 	/**
 	 * Capability strings in use by anything but this type: every other
@@ -1546,6 +1159,12 @@ class BLT_Toolkit_Isolation {
 			return new WP_Error( 'blt_toolkit_not_isolated', __( 'This content type does not have separate permissions.', 'blt-toolkit' ), array( 'status' => 404 ) );
 		}
 
+		$guard = self::check_revert( $type, $actor );
+
+		if ( is_wp_error( $guard ) ) {
+			return $guard;
+		}
+
 		$isolated = self::isolated();
 		$info     = $isolated[ $type ];
 		$shares   = self::shares( $type );
@@ -1606,6 +1225,79 @@ class BLT_Toolkit_Isolation {
 		do_action( 'blt_toolkit_post_type_shared', $type );
 
 		return array( 'log_id' => (int) $log_id );
+	}
+
+	/**
+	 * The Guard on a revert (RS-32, SEC-2, SEC-3, SEC-5). Reverting writes
+	 * no role, but every role and user that holds a Posts (or Pages)
+	 * capability without its isolated counterpart gets that access to the
+	 * type back: a grant, judged as if the actor gave them those strings.
+	 * Someone who is not a toolkit admin may therefore revert only when the
+	 * Guard would let them make each of those grants, so not when it gives
+	 * access back to their own role, to a role or user more powerful than
+	 * them, or to an administrator, just as they could not isolate the type.
+	 * A toolkit admin may always revert.
+	 *
+	 * @param string  $type  Post type.
+	 * @param WP_User $actor Who is acting.
+	 * @return true|WP_Error The first refusal, its message naming the role or user.
+	 */
+	public static function check_revert( $type, WP_User $actor ) {
+		if ( BLT_Toolkit_Guard::is_toolkit_admin( $actor ) ) {
+			return true;
+		}
+
+		$plan = self::revert_plan( $type );
+
+		if ( is_wp_error( $plan ) ) {
+			return $plan;
+		}
+
+		foreach ( $plan['roles'] as $role => $change ) {
+			if ( array() === $change['gains'] ) {
+				continue;
+			}
+
+			$check = BLT_Toolkit_Guard::check_role_change( $actor, (string) $role, array_fill_keys( $change['gains'], true ), array() );
+
+			if ( is_wp_error( $check ) ) {
+				return new WP_Error(
+					$check->get_error_code(),
+					sprintf(
+						/* translators: 1: role name. 2: the reason. */
+						__( 'Sharing Posts\' permissions again would give the %1$s role access back, which you may not do: %2$s', 'blt-toolkit' ),
+						$change['name'],
+						$check->get_error_message()
+					),
+					$check->get_error_data()
+				);
+			}
+		}
+
+		foreach ( $plan['users'] as $id => $change ) {
+			$user = get_userdata( (int) $id );
+
+			if ( array() === $change['gains'] || ! $user instanceof WP_User ) {
+				continue;
+			}
+
+			$check = BLT_Toolkit_Guard::can_change_user_caps( $actor, $user, array_fill_keys( $change['gains'], true ), array() );
+
+			if ( is_wp_error( $check ) ) {
+				return new WP_Error(
+					$check->get_error_code(),
+					sprintf(
+						/* translators: 1: username. 2: the reason. */
+						__( 'Sharing Posts\' permissions again would give %1$s access back, which you may not do: %2$s', 'blt-toolkit' ),
+						$change['login'],
+						$check->get_error_message()
+					),
+					$check->get_error_data()
+				);
+			}
+		}
+
+		return true;
 	}
 
 	/**
@@ -1865,96 +1557,7 @@ class BLT_Toolkit_Isolation {
 		return $out;
 	}
 
-	// ---------- RS-33: verification ----------
-
-	/**
-	 * At `init` priority `PHP_INT_MAX`: check that every isolated, registered
-	 * type has `cap->edit_posts === "edit_{plural}"` (RS-33). Returns at once
-	 * when nothing is isolated. No query: the result is kept for this
-	 * request, and stored for Site Health only on admin, cron and WP-CLI
-	 * requests, only when it changed.
-	 *
-	 * @return void
-	 */
-	public static function verify() {
-		$isolated = self::isolated();
-
-		if ( array() === $isolated ) {
-			self::$failed = array();
-			return;
-		}
-
-		$caps = array();
-
-		foreach ( array_keys( $isolated ) as $type ) {
-			$object = get_post_type_object( (string) $type );
-
-			$caps[ (string) $type ] = $object instanceof WP_Post_Type ? (array) $object->cap : null;
-		}
-
-		self::$failed = self::check( $isolated, $caps );
-
-		if ( is_admin() || wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
-			self::store_failures( self::$failed );
-		}
-	}
-
-	/**
-	 * RS-33 failures this request: type => array( 'expected', 'found' ).
-	 * Runs verify() first when it has not run (before `init` finished, only
-	 * types registered so far are checked).
-	 *
-	 * @return array<string,array{expected:string,found:string}>
-	 */
-	public static function failed() {
-		if ( null === self::$failed ) {
-			self::verify();
-		}
-
-		return is_array( self::$failed ) ? self::$failed : array();
-	}
-
-	/**
-	 * The stored RS-33 flag the Site Health test reads (Phase 7): type =>
-	 * array( 'expected', 'found', 'since' ), as last seen on an admin, cron
-	 * or WP-CLI request.
-	 *
-	 * @return array<string,array{expected:string,found:string,since:int}>
-	 */
-	public static function stored_failures() {
-		$state = self::state();
-
-		return $state['failed'];
-	}
-
-	/**
-	 * Store the failures when they differ from the stored flag (keeping each
-	 * one's first `since`).
-	 *
-	 * @param array $failed check().
-	 * @return void
-	 */
-	private static function store_failures( array $failed ) {
-		$state  = self::state();
-		$stored = $state['failed'];
-		$next   = array();
-
-		foreach ( $failed as $type => $failure ) {
-			$next[ $type ] = array(
-				'expected' => $failure['expected'],
-				'found'    => $failure['found'],
-				'since'    => isset( $stored[ $type ]['since'] ) && isset( $stored[ $type ]['found'] ) && $stored[ $type ]['found'] === $failure['found'] ? (int) $stored[ $type ]['since'] : time(),
-			);
-		}
-
-		if ( $next === $stored ) {
-			return;
-		}
-
-		$state['failed'] = $next;
-
-		self::write_state( $state );
-	}
+	// ---------- RS-33: the notice ----------
 
 	/**
 	 * RS-33's admin notice, for people who manage roles or the site, while
@@ -1974,7 +1577,7 @@ class BLT_Toolkit_Isolation {
 		?>
 		<div class="notice notice-warning blt-toolkit-notice">
 			<p><strong><?php esc_html_e( 'BLT Toolkit: separate permissions are not in effect', 'blt-toolkit' ); ?></strong></p>
-			<p><?php esc_html_e( 'These content types were given separate permissions, but they registered before BLT Toolkit loaded or another plugin changed their permissions. Until that is fixed they share Posts\' permissions, and their levels are switched off in Simple view.', 'blt-toolkit' ); ?></p>
+			<p><?php esc_html_e( 'These content types were given separate permissions, but they registered before BLT Toolkit loaded or another plugin changed their permissions. Until that is fixed they may share Posts\' permissions again or lose read-only (View) enforcement, and their levels are switched off in Simple view.', 'blt-toolkit' ); ?></p>
 			<ul class="ul-disc">
 				<?php foreach ( $failed as $type => $failure ) : ?>
 					<?php
@@ -2349,39 +1952,5 @@ class BLT_Toolkit_Isolation {
 		$names = (array) wp_roles()->role_names;
 
 		return isset( $names[ $role ] ) ? translate_user_role( (string) $names[ $role ] ) : (string) $role;
-	}
-
-	/**
-	 * The state option, with its three keys always present.
-	 *
-	 * @return array{failed:array,reverted:array,shares:array}
-	 */
-	private static function state() {
-		$state = get_option( self::STATE_OPTION, array() );
-		$state = is_array( $state ) ? $state : array();
-
-		foreach ( array( 'failed', 'reverted', 'shares' ) as $key ) {
-			$state[ $key ] = isset( $state[ $key ] ) && is_array( $state[ $key ] ) ? $state[ $key ] : array();
-		}
-
-		return $state;
-	}
-
-	/**
-	 * Write the state option (autoloaded).
-	 *
-	 * @param array $state State.
-	 * @return void
-	 */
-	private static function write_state( array $state ) {
-		update_option(
-			self::STATE_OPTION,
-			array(
-				'failed'   => isset( $state['failed'] ) ? (array) $state['failed'] : array(),
-				'reverted' => isset( $state['reverted'] ) ? (array) $state['reverted'] : array(),
-				'shares'   => isset( $state['shares'] ) ? (array) $state['shares'] : array(),
-			),
-			true
-		);
 	}
 }

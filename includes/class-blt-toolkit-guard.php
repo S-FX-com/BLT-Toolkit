@@ -162,6 +162,14 @@ class BLT_Toolkit_Guard {
 	private static $missing_cache = array();
 
 	/**
+	 * The read-only markers of registered types (restrictions()) and the
+	 * BLT_Toolkit_Readonly::markers() map they were built from.
+	 *
+	 * @var array{from:array,map:array}|null
+	 */
+	private static $restrictions = null;
+
+	/**
 	 * A user's effective capabilities after a change of roles, keyed by the
 	 * new roles and the user's own capabilities (SEC-9; see
 	 * can_change_user_roles()).
@@ -588,13 +596,88 @@ class BLT_Toolkit_Guard {
 	 * @return string[] Sorted capability names; empty when the target is a subset.
 	 */
 	public static function missing_caps( WP_User $actor, WP_User $target ) {
-		$key = self::fingerprint( $actor ) . '|' . self::fingerprint( $target );
+		$restrictions = self::restrictions();
+		$key          = self::fingerprint( $actor ) . '|' . self::fingerprint( $target );
 
 		if ( ! isset( self::$missing_cache[ $key ] ) ) {
-			self::$missing_cache[ $key ] = BLT_Toolkit_Superset::missing( self::effective_caps( $actor ), self::effective_caps( $target ) );
+			self::$missing_cache[ $key ] = BLT_Toolkit_Superset::missing( self::effective_caps( $actor ), self::effective_caps( $target ), $restrictions );
 		}
 
 		return self::$missing_cache[ $key ];
+	}
+
+	/**
+	 * The read-only markers of the registered types, for SEC-2 and SEC-3
+	 * comparisons (BLT_Toolkit_Superset::marker_strings()): marker =>
+	 * array( 'edit' => the type's `edit_posts`, 'create' => its
+	 * `create_posts` strings ). Built from BLT_Toolkit_Readonly::markers()
+	 * (no query) and rebuilt when that changes, which also drops cached
+	 * comparisons.
+	 *
+	 * @return array<string,array{edit:string,create:string[]}>
+	 */
+	public static function restrictions() {
+		$markers = class_exists( 'BLT_Toolkit_Readonly' ) ? BLT_Toolkit_Readonly::markers() : array();
+
+		if ( null !== self::$restrictions && self::$restrictions['from'] === $markers ) {
+			return self::$restrictions['map'];
+		}
+
+		$map = array();
+
+		foreach ( $markers as $type => $entry ) {
+			$marker = isset( $entry['marker'] ) ? (string) $entry['marker'] : '';
+
+			if ( '' === $marker ) {
+				continue;
+			}
+
+			if ( ! isset( $map[ $marker ] ) ) {
+				$map[ $marker ] = array(
+					'edit'   => 'edit_' . substr( $marker, strlen( BLT_Toolkit_Superset::MARKER_PREFIX ) ),
+					'create' => array(),
+				);
+			}
+
+			$create = isset( $entry['create'] ) ? (string) $entry['create'] : '';
+
+			if ( '' !== $create && ! in_array( $create, $map[ $marker ]['create'], true ) ) {
+				$map[ $marker ]['create'][] = $create;
+			}
+		}
+
+		ksort( $map, SORT_STRING );
+
+		self::$missing_cache = array();
+		self::$after_cache   = array();
+		self::$restrictions  = array(
+			'from' => $markers,
+			'map'  => $map,
+		);
+
+		return $map;
+	}
+
+	/**
+	 * What the actor lacks to take a read-only marker away (SEC-3, RS-14):
+	 * empty for a toolkit admin, otherwise
+	 * BLT_Toolkit_Superset::lift_needs(). Simple and Advanced view use it to
+	 * lock what the Guard would refuse.
+	 *
+	 * @param WP_User $actor  Who is acting.
+	 * @param string  $marker `blt_readonly_{plural}`.
+	 * @return string[]
+	 */
+	public static function lift_missing( WP_User $actor, $marker ) {
+		if ( ! $actor->exists() ) {
+			return array( (string) $marker );
+		}
+
+		if ( self::is_toolkit_admin( $actor ) ) {
+			return array();
+		}
+
+		return BLT_Toolkit_Superset::lift_needs( self::effective_caps( $actor ), (string) $marker, self::restrictions() );
 	}
 
 	/**
@@ -609,6 +692,7 @@ class BLT_Toolkit_Guard {
 		self::$after_cache   = array();
 		self::$census        = null;
 		self::$targets       = array();
+		self::$restrictions  = null;
 	}
 
 	/**
@@ -687,13 +771,14 @@ class BLT_Toolkit_Guard {
 			return array();
 		}
 
-		$actor_caps = self::effective_caps( $actor );
-		$names      = self::role_names();
+		$actor_caps   = self::effective_caps( $actor );
+		$names        = self::role_names();
+		$restrictions = self::restrictions();
 
 		foreach ( $roles as $role => $data ) {
 			$role_caps = is_array( $data ) && isset( $data['capabilities'] ) && is_array( $data['capabilities'] ) ? $data['capabilities'] : array();
 
-			if ( self::ADMIN_ROLE === (string) $role || ! BLT_Toolkit_Superset::is_subset( $actor_caps, BLT_Toolkit_Superset::normalize( $role_caps, $names ) ) ) {
+			if ( self::ADMIN_ROLE === (string) $role || ! BLT_Toolkit_Superset::is_subset( $actor_caps, BLT_Toolkit_Superset::normalize( $role_caps, $names ), $restrictions ) ) {
 				unset( $roles[ $role ] );
 			}
 		}
@@ -1414,6 +1499,7 @@ class BLT_Toolkit_Guard {
 				'grants'         => $changes['grants'],
 				'denies'         => $changes['denies'],
 				'role_names'     => self::role_names(),
+				'restrictions'   => self::restrictions(),
 			)
 		);
 
@@ -1479,6 +1565,7 @@ class BLT_Toolkit_Guard {
 				'removes'         => $changes['removes'],
 				'target_denied'   => $denied,
 				'role_names'      => self::role_names(),
+				'restrictions'    => $compare ? self::restrictions() : array(),
 			)
 		);
 
@@ -1560,6 +1647,7 @@ class BLT_Toolkit_Guard {
 				'actor_is_admin' => false,
 				'actor_caps'     => self::effective_caps( $actor ),
 				'after_caps'     => self::$after_cache[ $key ],
+				'restrictions'   => self::restrictions(),
 			)
 		);
 
@@ -1644,6 +1732,7 @@ class BLT_Toolkit_Guard {
 			'loses_edit_roles' => false,
 			'other_admin'      => false,
 			'confirmed'        => (bool) $confirmed,
+			'restrictions'     => $is_admin ? array() : self::restrictions(),
 		);
 
 		// SEC-1 for denies: only asked when a non-admin denies something, so
@@ -1998,9 +2087,15 @@ class BLT_Toolkit_Guard {
 		}
 
 		// Taking away a deny gives the capability back when a role grants it.
+		// Taking away a read-only marker the user holds lets them edit again
+		// (RS-14): a lift.
+		$lifts = array();
+
 		foreach ( $removes as $cap ) {
 			if ( isset( $denied[ $cap ] ) ) {
 				$grants[] = $cap;
+			} elseif ( BLT_Toolkit_Superset::is_marker( $cap ) ) {
+				$lifts[] = $cap;
 			}
 		}
 
@@ -2010,7 +2105,9 @@ class BLT_Toolkit_Guard {
 				'actor_caps'     => isset( $facts['actor_caps'] ) ? (array) $facts['actor_caps'] : array(),
 				'grants'         => $grants,
 				'denies'         => $denies,
+				'lifts'          => $lifts,
 				'role_names'     => isset( $facts['role_names'] ) ? (array) $facts['role_names'] : array(),
+				'restrictions'   => isset( $facts['restrictions'] ) ? (array) $facts['restrictions'] : array(),
 			)
 		);
 	}
@@ -2021,10 +2118,17 @@ class BLT_Toolkit_Guard {
 	 * be something the actor can do. The deprecated user levels are left
 	 * out, as for SEC-4's assignable roles (BLT_Toolkit_Superset::missing()).
 	 *
+	 * A read-only marker (RS-14) is not a capability to compare. Losing one
+	 * while keeping the type's `edit_posts` lets the user edit again, which
+	 * BLT_Toolkit_Superset::missing() already counts: the actor needs that
+	 * string (it is in the user's set afterwards) and, with the
+	 * restrictions, must not be held read-only on the type themselves.
+	 *
 	 * @param array $facts {
 	 *     @type bool  $actor_is_admin Whether the actor is a toolkit admin.
 	 *     @type array $actor_caps     The actor's effective capabilities (cap => true).
 	 *     @type array $after_caps     The user's effective capabilities after the change (cap => true).
+	 *     @type array $restrictions   Optional. See BLT_Toolkit_Superset::marker_strings().
 	 * }
 	 * @return array|null Null when allowed; otherwise array( 'code', 'rule', 'caps' ).
 	 */
@@ -2035,7 +2139,8 @@ class BLT_Toolkit_Guard {
 
 		$missing = BLT_Toolkit_Superset::missing(
 			isset( $facts['actor_caps'] ) ? (array) $facts['actor_caps'] : array(),
-			isset( $facts['after_caps'] ) ? (array) $facts['after_caps'] : array()
+			isset( $facts['after_caps'] ) ? (array) $facts['after_caps'] : array(),
+			isset( $facts['restrictions'] ) ? (array) $facts['restrictions'] : array()
 		);
 
 		if ( array() !== $missing ) {
@@ -2055,12 +2160,20 @@ class BLT_Toolkit_Guard {
 	 * (`level_0` to `level_10`) count here, although SEC-2 and SEC-4
 	 * comparisons leave them out (BLT_Toolkit_Superset::missing_grants()).
 	 *
+	 * Read-only markers (RS-14) work the other way round: granting one only
+	 * narrows access, so it needs nothing held, while denying one, or taking
+	 * one away (`lifts`), lets people edit the type again, so the actor must
+	 * be able to edit it themselves (BLT_Toolkit_Superset::lift_needs(),
+	 * `blt_toolkit_lift_exceeds_actor`).
+	 *
 	 * @param array $facts {
 	 *     @type bool     $actor_is_admin Whether the actor is a toolkit admin.
 	 *     @type array    $actor_caps     The actor's effective capabilities (cap => true).
 	 *     @type string[] $grants         Capabilities being granted.
 	 *     @type string[] $denies         Capabilities being set to false (optional).
+	 *     @type string[] $lifts          Read-only markers being taken away (optional).
 	 *     @type string[] $role_names     The site's role IDs.
+	 *     @type array    $restrictions   Optional. See BLT_Toolkit_Superset::marker_strings().
 	 * }
 	 * @return array|null Null when allowed; otherwise array( 'code', 'rule', 'caps' ).
 	 */
@@ -2095,6 +2208,20 @@ class BLT_Toolkit_Guard {
 
 		if ( array() !== $missing ) {
 			return self::violation( 'blt_toolkit_deny_exceeds_actor', 'SEC-3', $missing );
+		}
+
+		// RS-14: denying a marker lifts it as surely as removing it.
+		$restrictions = isset( $facts['restrictions'] ) ? (array) $facts['restrictions'] : array();
+		$need         = array();
+
+		foreach ( self::clean_list( array_merge( isset( $facts['lifts'] ) ? (array) $facts['lifts'] : array(), $denies ) ) as $cap ) {
+			if ( BLT_Toolkit_Superset::is_marker( $cap ) ) {
+				$need = array_merge( $need, BLT_Toolkit_Superset::lift_needs( $actor_caps, $cap, $restrictions ) );
+			}
+		}
+
+		if ( array() !== $need ) {
+			return self::violation( 'blt_toolkit_lift_exceeds_actor', 'SEC-3', self::clean_list( $need ) );
 		}
 
 		return null;
@@ -2156,8 +2283,11 @@ class BLT_Toolkit_Guard {
 
 			$actor_caps = isset( $facts['actor_caps'] ) ? (array) $facts['actor_caps'] : array();
 
+			$restrictions = isset( $facts['restrictions'] ) ? (array) $facts['restrictions'] : array();
+			$role_caps    = isset( $facts['role_caps'] ) ? (array) $facts['role_caps'] : array();
+
 			// SEC-2: never edit a role more powerful than yourself.
-			$missing = BLT_Toolkit_Superset::missing( $actor_caps, isset( $facts['role_caps'] ) ? (array) $facts['role_caps'] : array() );
+			$missing = BLT_Toolkit_Superset::missing( $actor_caps, $role_caps, $restrictions );
 
 			if ( array() !== $missing ) {
 				return self::violation( 'blt_toolkit_role_exceeds_actor', 'SEC-2', $missing );
@@ -2166,18 +2296,26 @@ class BLT_Toolkit_Guard {
 			$denies = isset( $facts['denies'] ) ? self::clean_list( $facts['denies'] ) : array();
 
 			// SEC-1: a deny in a role an administrator also holds overrides
-			// what `administrator` grants them.
-			if ( array() !== $denies && ! empty( $facts['admin_holds_role'] ) ) {
-				return self::violation( 'blt_toolkit_admin_holds_role', 'SEC-1', $denies );
+			// what `administrator` grants them. Denying a read-only marker
+			// takes nothing away from anyone (RS-14).
+			$taking = array_values( array_filter( $denies, array( 'BLT_Toolkit_Guard', 'takes_access' ) ) );
+
+			if ( array() !== $taking && ! empty( $facts['admin_holds_role'] ) ) {
+				return self::violation( 'blt_toolkit_admin_holds_role', 'SEC-1', $taking );
 			}
 
 			// SEC-3. Removing a capability the role denies gives it back to
 			// every holder who has it through another role: a grant.
+			// Removing a read-only marker the role grants lets its holders
+			// edit again (RS-14): a lift.
 			$denied = isset( $facts['role_denied'] ) ? array_flip( self::clean_list( $facts['role_denied'] ) ) : array();
+			$lifts  = array();
 
 			foreach ( isset( $facts['removes'] ) ? self::clean_list( $facts['removes'] ) : array() as $cap ) {
 				if ( isset( $denied[ $cap ] ) ) {
 					$grants[] = $cap;
+				} elseif ( BLT_Toolkit_Superset::is_marker( $cap ) && ! empty( $role_caps[ $cap ] ) ) {
+					$lifts[] = $cap;
 				}
 			}
 
@@ -2187,7 +2325,9 @@ class BLT_Toolkit_Guard {
 					'actor_caps'     => $actor_caps,
 					'grants'         => $grants,
 					'denies'         => $denies,
+					'lifts'          => $lifts,
 					'role_names'     => isset( $facts['role_names'] ) ? (array) $facts['role_names'] : array(),
+					'restrictions'   => $restrictions,
 				)
 			);
 
@@ -2227,6 +2367,17 @@ class BLT_Toolkit_Guard {
 	}
 
 	/**
+	 * Whether denying a capability takes access away from its holders:
+	 * every capability but a read-only marker (RS-14). Pure.
+	 *
+	 * @param string $cap Capability name.
+	 * @return bool
+	 */
+	public static function takes_access( $cap ) {
+		return ! BLT_Toolkit_Superset::is_marker( $cap );
+	}
+
+	/**
 	 * The WP_Error for a violation, with a message a person can act on.
 	 *
 	 * @param array $violation Result of one of the *_violation() methods.
@@ -2262,6 +2413,10 @@ class BLT_Toolkit_Guard {
 			case 'blt_toolkit_deny_exceeds_actor':
 				/* translators: %s: comma-separated capability names. */
 				$message = sprintf( __( 'You cannot deny capabilities you do not have yourself (%s).', 'blt-toolkit' ), $list );
+				break;
+			case 'blt_toolkit_lift_exceeds_actor':
+				/* translators: %s: comma-separated capability names. */
+				$message = sprintf( __( 'Taking away read-only (View) access lets people edit that content again, so only someone who can edit it may do that. You would need: %s.', 'blt-toolkit' ), $list );
 				break;
 			case 'blt_toolkit_own_caps':
 				$message = __( 'You cannot change your own capabilities. Ask an administrator.', 'blt-toolkit' );

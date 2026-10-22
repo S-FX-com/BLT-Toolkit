@@ -452,6 +452,7 @@
 		var reviewed = form.querySelector( '[data-blt-reviewed]' );
 		var confirmField = form.querySelector( '[data-blt-confirm]' );
 		var thenView = form.querySelector( '[data-blt-then-view]' );
+		var thenCtl = form.querySelector( '[data-blt-then-ctl]' );
 		var controls = [];
 		var submitting = false;
 		var dirty = 0;
@@ -1002,17 +1003,34 @@
 			mismatch.hidden = true;
 			review.setAttribute( 'data-needs-name', criticalGrants.length ? '1' : '' );
 			review.showModal();
+
+			// Start at the heading, so a screen reader reads what changes
+			// (the dialog is described by its intro and lines) before the
+			// name field or the raw names.
+			var heading = review.querySelector( '[data-blt-review-heading]' );
+
+			if ( heading ) {
+				heading.focus();
+			}
 		}
 
 		if ( review ) {
 			review.querySelector( '[data-blt-review-cancel]' ).addEventListener( 'click', function () {
-				thenView.value = '';
+				clearThen();
 				review.close();
 			} );
 
 			// Escape is Cancel: a "save and switch" it interrupts is dropped.
 			review.addEventListener( 'cancel', function () {
-				thenView.value = '';
+				clearThen();
+			} );
+
+			// Enter in the name field saves, as it would in a form.
+			review.querySelector( '[data-blt-review-confirm]' ).addEventListener( 'keydown', function ( event ) {
+				if ( 'Enter' === event.key && ! event.isComposing ) {
+					event.preventDefault();
+					review.querySelector( '[data-blt-review-save]' ).click();
+				}
 			} );
 
 			review.addEventListener( 'close', function () {
@@ -1099,30 +1117,50 @@
 			} );
 		}
 
+		/**
+		 * Forget a pending "save and switch".
+		 */
+		function clearThen() {
+			thenView.value = '';
+
+			if ( thenCtl ) {
+				thenCtl.value = '';
+			}
+		}
+
 		// RS-2: switching views with unsaved changes asks to save or
-		// discard them first.
-		Array.prototype.forEach.call( document.querySelectorAll( '.blt-toolkit-view-tabs a' ), function ( link ) {
+		// discard them first: the view tabs, and each control's "Edit in
+		// Advanced" link, which opens Advanced narrowed to that control
+		// (`ctl`, kept for both Discard and Save).
+		Array.prototype.forEach.call( document.querySelectorAll( '.blt-toolkit-view-tabs a, a.blt-toolkit-simple-advanced' ), function ( link ) {
 			link.addEventListener( 'click', function ( event ) {
 				if ( 0 === dirty || link.getAttribute( 'aria-current' ) || ! switcher || 'function' !== typeof switcher.showModal ) {
 					return;
 				}
 
+				var ctl = /[?&]ctl=([^&#]*)/.exec( link.href );
+
 				event.preventDefault();
 				pendingHref = link.href;
 				thenView.value = /[?&]view=advanced(&|$)/.test( link.href ) ? 'advanced' : 'simple';
+
+				if ( thenCtl ) {
+					thenCtl.value = ctl ? decodeURIComponent( ctl[ 1 ] ) : '';
+				}
+
 				switcher.showModal();
 			} );
 		} );
 
 		if ( switcher ) {
 			switcher.querySelector( '[data-blt-switch-cancel]' ).addEventListener( 'click', function () {
-				thenView.value = '';
+				clearThen();
 				switcher.close();
 			} );
 
 			// Escape cancels the switch too, so a later save stays in this view.
 			switcher.addEventListener( 'cancel', function () {
-				thenView.value = '';
+				clearThen();
 			} );
 
 			switcher.querySelector( '[data-blt-switch-discard]' ).addEventListener( 'click', function () {

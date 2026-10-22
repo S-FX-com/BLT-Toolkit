@@ -98,12 +98,13 @@ class BLT_Toolkit_Plugin {
 		//   re-registered by the filter the main file adds, whatever the
 		//   Roles module's state, so their verification at `init`
 		//   PHP_INT_MAX (RS-33), the notice and the Plugins-row warning
-		//   (RS-34) load with it.
+		//   (RS-34) load with it. Only the small core class loads on every
+		//   request; the flows load in admin when used (SEC-9).
 		// - Read-only enforcement (RS-14): one map_meta_cap closure that
 		//   returns at once outside edit_post, delete_post and publish_post.
 		//   A View-level marker granted while the module ran keeps its
 		//   meaning with the module off.
-		BLT_Toolkit_Isolation::register();
+		BLT_Toolkit_Isolation_Core::register();
 		BLT_Toolkit_Readonly::register();
 
 		// SPEC 4.2, step 3, on `init` in this order: the idempotent schema

@@ -266,7 +266,7 @@ class Test_Isolation extends TestCase {
 		add_filter(
 			'blt_toolkit_isolation_caps',
 			static function ( $args, $post_type, $info ) use ( &$seen ) {
-				$seen                                   = array( $post_type, $info );
+				$seen                                       = array( $post_type, $info );
 				$args['capabilities']['read_private_posts'] = 'read';
 
 				return $args;
@@ -685,7 +685,14 @@ class Test_Isolation extends TestCase {
 		$this->assertSame( $all, BLT_Toolkit_Isolation::cleanup_strings( $this->events_cap(), 'events', array() ) );
 		$this->assertSame(
 			array_values( array_diff( $all, array( 'edit_events', 'publish_events' ) ) ),
-			BLT_Toolkit_Isolation::cleanup_strings( $this->events_cap(), 'events', array( 'edit_events', 'publish_events' => true ) )
+			BLT_Toolkit_Isolation::cleanup_strings(
+				$this->events_cap(),
+				'events',
+				array(
+					'edit_events',
+					'publish_events' => true,
+				)
+			)
 		);
 	}
 
@@ -734,6 +741,228 @@ class Test_Isolation extends TestCase {
 		);
 	}
 
+	/**
+	 * RS-33, RS-14: `create_posts` must stay what isolation gave the type.
+	 * A plugin that re-registers it with `capability_type => event` keeps
+	 * `edit_events` but makes `create_posts` the same string, which turns
+	 * read-only enforcement off; that is a failure. A `do_not_allow` kept
+	 * from the registration is not.
+	 *
+	 * @return void
+	 */
+	public function test_rs33_create_posts_is_verified() {
+		$isolated = array(
+			'event' => array(
+				'singular' => 'event',
+				'plural'   => 'events',
+				'since'    => 1,
+			),
+		);
+		$own_type = BLT_Toolkit_Isolation::caps_from_args(
+			array(
+				'capability_type' => 'event',
+				'map_meta_cap'    => true,
+			)
+		);
+
+		$this->assertSame( 'edit_events', $own_type['edit_posts'] );
+		$this->assertSame(
+			array(
+				'event' => array(
+					'expected' => 'create_events',
+					'found'    => 'edit_events',
+				),
+			),
+			BLT_Toolkit_Isolation::check( $isolated, array( 'event' => $own_type ) )
+		);
+
+		$refused                 = $this->events_cap();
+		$refused['create_posts'] = 'do_not_allow';
+
+		$this->assertSame( array(), BLT_Toolkit_Isolation::check( $isolated, array( 'event' => $refused ) ) );
+
+		$other                       = $this->events_cap();
+		$other['read_private_posts'] = 'manage_options';
+
+		$this->assertSame(
+			array(
+				'event' => array(
+					'expected' => 'read_private_events',
+					'found'    => 'manage_options',
+				),
+			),
+			BLT_Toolkit_Isolation::check( $isolated, array( 'event' => $other ) )
+		);
+
+		// What isolation applied (blt_toolkit_isolation_caps) is the reference.
+		$filtered                       = $this->events_cap();
+		$filtered['read_private_posts'] = 'manage_options';
+
+		$this->assertSame( array(), BLT_Toolkit_Isolation::check( $isolated, array( 'event' => $other ), array( 'event' => $filtered ) ) );
+	}
+
+	/**
+	 * RS-31: a registration's `do_not_allow` overrides are kept when
+	 * isolation applies (it never gives back what the plugin took away);
+	 * other overrides of Posts' strings stop isolation from applying, and
+	 * Posts' own strings are replaced as before.
+	 *
+	 * @return void
+	 */
+	public function test_rs31_filter_keeps_restrictive_overrides() {
+		$this->isolate(
+			array(
+				'event' => array(
+					'singular' => 'event',
+					'plural'   => 'events',
+					'since'    => 1,
+				),
+			)
+		);
+
+		$out = BLT_Toolkit_Isolation::filter_args( array( 'capabilities' => array( 'create_posts' => 'do_not_allow' ) ), 'event' );
+
+		$this->assertSame( array( 'event', 'events' ), $out['capability_type'] );
+		$this->assertSame( array( 'create_posts' => 'do_not_allow' ), $out['capabilities'] );
+		$this->assertSame( 'do_not_allow', BLT_Toolkit_Isolation::caps_from_args( $out )['create_posts'] );
+
+		$args = array( 'capabilities' => array( 'read_private_posts' => 'manage_options' ) );
+
+		$this->assertSame( $args, BLT_Toolkit_Isolation::filter_args( $args, 'event' ) );
+		$this->assertSame( 'overrides', BLT_Toolkit_Isolation::overrides_error( $args, 'post' ) );
+		$this->assertSame( '', BLT_Toolkit_Isolation::overrides_error( array( 'capabilities' => array( 'edit_posts' => 'edit_posts' ) ), 'post' ) );
+		$this->assertSame( 'overrides', BLT_Toolkit_Isolation::overrides_error( array( 'capabilities' => array( 'edit_posts' => 'edit_posts' ) ), 'page' ) );
+		$this->assertSame(
+			array( 'delete_posts' => 'do_not_allow' ),
+			BLT_Toolkit_Isolation::restrictive_overrides(
+				array(
+					'capabilities' => array(
+						'delete_posts' => 'do_not_allow',
+						'edit_posts'   => 'edit_posts',
+					),
+				)
+			)
+		);
+	}
+
+	/**
+	 * RS-30, RS-31: an entry that could never have been isolated is never
+	 * applied and is left out of isolated(): a core type, invalid names, or
+	 * strings that are core's own (a plural of `pages`). A `_builtin`
+	 * registration is left alone too.
+	 *
+	 * @return void
+	 */
+	public function test_rs31_damaged_entries_are_never_applied() {
+		$entries = array(
+			'post'        => array(
+				'singular' => 'article',
+				'plural'   => 'articles',
+				'since'    => 1,
+			),
+			'testimonial' => array(
+				'singular' => 'testimonial',
+				'plural'   => 'pages',
+				'since'    => 1,
+			),
+			'person'      => array(
+				'singular' => 'user',
+				'plural'   => 'users',
+				'since'    => 1,
+			),
+			'promo'       => array(
+				'singular' => 'Promo',
+				'plural'   => 'promos',
+				'since'    => 1,
+			),
+			'event'       => array(
+				'singular' => 'event',
+				'plural'   => 'events',
+				'since'    => 1,
+			),
+		);
+
+		$this->assertSame( 'core_type', BLT_Toolkit_Isolation::entry_error( 'post', $entries['post'] ) );
+		$this->assertSame( 'reserved', BLT_Toolkit_Isolation::entry_error( 'testimonial', $entries['testimonial'] ) );
+		$this->assertSame( 'reserved', BLT_Toolkit_Isolation::entry_error( 'person', $entries['person'] ) );
+		$this->assertSame( 'singular_invalid', BLT_Toolkit_Isolation::entry_error( 'promo', $entries['promo'] ) );
+		$this->assertSame( 'invalid', BLT_Toolkit_Isolation::entry_error( 'event', 'garbage' ) );
+		$this->assertSame( '', BLT_Toolkit_Isolation::entry_error( 'event', $entries['event'] ) );
+
+		$GLOBALS['blt_test_options']['blt_toolkit_settings'] = array( 'roles' => array( 'isolated_post_types' => $entries ) );
+		BLT_Toolkit_Settings::flush();
+
+		$this->assertSame( array( 'event' ), array_keys( BLT_Toolkit_Isolation::isolated() ) );
+
+		foreach ( array( 'post', 'testimonial', 'person', 'promo' ) as $type ) {
+			$args = array( 'capability_type' => 'post' );
+
+			$this->assertSame( $args, BLT_Toolkit_Isolation::filter_args( $args, $type ), $type );
+		}
+
+		$builtin = array(
+			'capability_type' => 'post',
+			'_builtin'        => true,
+		);
+
+		$this->assertSame( $builtin, BLT_Toolkit_Isolation::filter_args( $builtin, 'event' ) );
+	}
+
+	/**
+	 * Robustness: a damaged state option never breaks a screen; only
+	 * well-formed entries are read (RS-32's cleanup reads `reverted`).
+	 *
+	 * @return void
+	 */
+	public function test_rs32_damaged_state_is_ignored() {
+		$GLOBALS['blt_test_options'][ BLT_Toolkit_Isolation::STATE_OPTION ] = array(
+			'failed'   => array(
+				'event' => 'garbage',
+				'book'  => array(
+					'expected' => 'edit_books',
+					'found'    => 'edit_posts',
+					'since'    => '5',
+				),
+			),
+			'reverted' => array(
+				'testimonial' => 'garbage',
+				'promo'       => array(
+					'singular' => 'promo',
+					'plural'   => 'promo',
+				),
+				'gig'         => array(
+					'singular' => 'gig',
+					'plural'   => 'gigs',
+					'shares'   => 'nonsense',
+				),
+			),
+			'shares'   => 'garbage',
+		);
+
+		$this->assertSame(
+			array(
+				'gig' => array(
+					'singular' => 'gig',
+					'plural'   => 'gigs',
+					'shares'   => 'post',
+					'label'    => 'gig',
+					'reverted' => 0,
+				),
+			),
+			BLT_Toolkit_Isolation::reverted()
+		);
+		$this->assertSame(
+			array(
+				'book' => array(
+					'expected' => 'edit_books',
+					'found'    => 'edit_posts',
+					'since'    => 5,
+				),
+			),
+			BLT_Toolkit_Isolation::stored_failures()
+		);
+	}
+
 	// ---------- The plan's lock token ----------
 
 	/**
@@ -778,11 +1007,11 @@ class Test_Isolation extends TestCase {
 
 		$this->assertSame( $hash, BLT_Toolkit_Isolation::plan_hash( $reordered ) );
 
-		$changed                                       = $plan;
+		$changed = $plan;
 		$changed['roles']['author']['add']['create_events'] = true;
 		$this->assertNotSame( $hash, BLT_Toolkit_Isolation::plan_hash( $changed ) );
 
-		$user_changed                  = $plan;
+		$user_changed                     = $plan;
 		$user_changed['users'][7]['hash'] = 'abd';
 		$this->assertNotSame( $hash, BLT_Toolkit_Isolation::plan_hash( $user_changed ) );
 

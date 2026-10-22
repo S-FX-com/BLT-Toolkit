@@ -264,11 +264,83 @@ class Test_Simple_Controls extends TestCase {
 
 		$taxonomies[0]['caps']['assign_terms'] = 'edit_events';
 
-		$map = BLT_Toolkit_Simple_Controls::type_map( $group, $taxonomies, array( 'edit_posts' => true, 'edit_events' => true ) );
+		$map = BLT_Toolkit_Simple_Controls::type_map(
+			$group,
+			$taxonomies,
+			array(
+				'edit_posts'  => true,
+				'edit_events' => true,
+			)
+		);
 
 		$this->assertFalse( $map['taxonomies']['genre']['assign_dedicated'] );
 		$this->assertNotContains( 'edit_events', BLT_Toolkit_Simple_Mapper::caps_for( $map, 'full' ) );
 		$this->assertNotContains( 'edit_events', BLT_Toolkit_Simple_Mapper::universe( $map ) );
+	}
+
+	/**
+	 * SPEC 10.3, 10.4, RS-15: a taxonomy whose manage, edit and delete term
+	 * capabilities are the row's own publish string (The Events Calendar's
+	 * `tribe_events_cat` uses `publish_tribe_events`) gets no Manage toggle,
+	 * so Contribute never grants publishing and a role that can publish is
+	 * never read as Contribute. The same holds when they are another
+	 * content type's or a core capability.
+	 *
+	 * @return void
+	 */
+	public function test_spec_10_3_rs15_term_caps_of_the_row_are_not_dedicated() {
+		list( $group, $taxonomies ) = $this->books_group();
+
+		$taxonomies[0]['caps'] = array(
+			'manage_terms' => 'publish_books',
+			'edit_terms'   => 'publish_books',
+			'delete_terms' => 'publish_books',
+			'assign_terms' => 'edit_books',
+		);
+
+		$map = BLT_Toolkit_Simple_Controls::type_map( $group, $taxonomies, array( 'edit_posts' => true ) );
+
+		$this->assertFalse( $map['taxonomies']['genre']['dedicated'] );
+		$this->assertSame( array(), BLT_Toolkit_Simple_Mapper::toggles( $map ) );
+		$this->assertSame(
+			array( 'create_books', 'edit_books' ),
+			BLT_Toolkit_Simple_Mapper::caps_for(
+				$map,
+				'contribute',
+				array(
+					'can_delete' => false,
+					'manage'     => array( 'genre' => true ),
+				)
+			)
+		);
+
+		$state = BLT_Toolkit_Simple_Mapper::detect( $map, array_fill_keys( array( 'read', 'create_books', 'edit_books', 'publish_books' ), true ) );
+		$this->assertSame( BLT_Toolkit_Simple_Mapper::CUSTOM, $state['level'], 'Publishing without editing published items is no level.' );
+
+		foreach ( array( 'edit_events', 'manage_categories' ) as $string ) {
+			list( $group, $taxonomies ) = $this->books_group();
+
+			$taxonomies[0]['caps']['edit_terms'] = $string;
+
+			$map = BLT_Toolkit_Simple_Controls::type_map(
+				$group,
+				$taxonomies,
+				array(
+					'manage_categories' => true,
+					'edit_events'       => true,
+				)
+			);
+
+			$this->assertFalse( $map['taxonomies']['genre']['dedicated'], $string );
+			$this->assertNotContains( $string, BLT_Toolkit_Simple_Mapper::universe( $map ), $string );
+		}
+
+		// Its own strings stay dedicated.
+		list( $group, $taxonomies ) = $this->books_group();
+
+		$map = BLT_Toolkit_Simple_Controls::type_map( $group, $taxonomies, array( 'edit_posts' => true ) );
+		$this->assertTrue( $map['taxonomies']['genre']['dedicated'] );
+		$this->assertSame( array( 'genre' ), array_keys( BLT_Toolkit_Simple_Mapper::toggles( $map ) ) );
 	}
 
 	// ---------- plan() ----------
@@ -362,7 +434,16 @@ class Test_Simple_Controls extends TestCase {
 
 		$after = $this->saved( $caps, $plan );
 
-		$this->assertSame( array_merge( $caps, array( 'delete_pages' => true, 'edit_pages' => true ) ), $after );
+		$this->assertSame(
+			array_merge(
+				$caps,
+				array(
+					'delete_pages' => true,
+					'edit_pages'   => true,
+				)
+			),
+			$after
+		);
 	}
 
 	/**
@@ -455,7 +536,15 @@ class Test_Simple_Controls extends TestCase {
 		$this->assertSame( array( 'edit_others_posts' ), $plan['controls']['posts']['remove'] );
 		$this->assertTrue( $plan['controls']['plugins']['custom'] );
 		$this->assertSame( array( 'install_plugins' ), $plan['controls']['plugins']['remove'] );
-		$this->assertTrue( BLT_Toolkit_Admin_Roles::simple_needs_review( array( 'add' => array(), 'remove' => array( 'edit_others_posts' ) ), $plan['controls'] ) );
+		$this->assertTrue(
+			BLT_Toolkit_Admin_Roles::simple_needs_review(
+				array(
+					'add'    => array(),
+					'remove' => array( 'edit_others_posts' ),
+				),
+				$plan['controls']
+			)
+		);
 	}
 
 	/**
@@ -584,9 +673,33 @@ class Test_Simple_Controls extends TestCase {
 	 * @return void
 	 */
 	public function test_rs6_review_rules() {
-		$this->assertFalse( BLT_Toolkit_Admin_Roles::simple_needs_review( array( 'add' => array( 'edit_pages' => true ), 'remove' => array() ), array() ) );
-		$this->assertTrue( BLT_Toolkit_Admin_Roles::simple_needs_review( array( 'add' => array( 'manage_options' => true ), 'remove' => array() ), array() ) );
-		$this->assertTrue( BLT_Toolkit_Admin_Roles::simple_needs_review( array( 'add' => array(), 'remove' => array( 'promote_users' ) ), array() ) );
+		$this->assertFalse(
+			BLT_Toolkit_Admin_Roles::simple_needs_review(
+				array(
+					'add'    => array( 'edit_pages' => true ),
+					'remove' => array(),
+				),
+				array()
+			)
+		);
+		$this->assertTrue(
+			BLT_Toolkit_Admin_Roles::simple_needs_review(
+				array(
+					'add'    => array( 'manage_options' => true ),
+					'remove' => array(),
+				),
+				array()
+			)
+		);
+		$this->assertTrue(
+			BLT_Toolkit_Admin_Roles::simple_needs_review(
+				array(
+					'add'    => array(),
+					'remove' => array( 'promote_users' ),
+				),
+				array()
+			)
+		);
 
 		$eleven = array();
 
@@ -594,8 +707,24 @@ class Test_Simple_Controls extends TestCase {
 			$eleven[ 'acme_' . $n ] = true;
 		}
 
-		$this->assertTrue( BLT_Toolkit_Admin_Roles::simple_needs_review( array( 'add' => $eleven, 'remove' => array() ), array() ) );
-		$this->assertFalse( BLT_Toolkit_Admin_Roles::simple_needs_review( array( 'add' => array_slice( $eleven, 0, 10, true ), 'remove' => array() ), array() ) );
+		$this->assertTrue(
+			BLT_Toolkit_Admin_Roles::simple_needs_review(
+				array(
+					'add'    => $eleven,
+					'remove' => array(),
+				),
+				array()
+			)
+		);
+		$this->assertFalse(
+			BLT_Toolkit_Admin_Roles::simple_needs_review(
+				array(
+					'add'    => array_slice( $eleven, 0, 10, true ),
+					'remove' => array(),
+				),
+				array()
+			)
+		);
 	}
 
 	/**
@@ -607,11 +736,11 @@ class Test_Simple_Controls extends TestCase {
 	public function test_rs5_clean_simple() {
 		$clean = BLT_Toolkit_Admin_Roles::clean_simple(
 			array(
-				'read'             => 'on',
-				'Upload_Files'     => 'OFF',
-				'x"><script>'      => 'on',
-				'weird'            => 'maybe',
-				'content-post'     => array(
+				'read'            => 'on',
+				'Upload_Files'    => 'OFF',
+				'x"><script>'     => 'on',
+				'weird'           => 'maybe',
+				'content-post'    => array(
 					'level'      => 'Edit_All',
 					'can_delete' => '1',
 					'manage'     => array(
@@ -620,8 +749,8 @@ class Test_Simple_Controls extends TestCase {
 					),
 					'mods_set'   => '1',
 				),
-				'content-page'     => array( 'can_delete' => '1' ),
-				'content-nolevel'  => array( 'level' => array( 'x' ) ),
+				'content-page'    => array( 'can_delete' => '1' ),
+				'content-nolevel' => array( 'level' => array( 'x' ) ),
 			)
 		);
 
@@ -663,8 +792,8 @@ class Test_Simple_Controls extends TestCase {
 	 */
 	public function test_rs4_visible_sections_only() {
 		$entries  = array(
-			'edit_posts'   => array( 'label' => 'Create and edit their own posts' ),
-			'upload_files' => array( 'label' => 'Upload files' ),
+			'edit_posts'     => array( 'label' => 'Create and edit their own posts' ),
+			'upload_files'   => array( 'label' => 'Upload files' ),
 			'install_themes' => array( 'label' => 'Install themes' ),
 		);
 		$sections = BLT_Toolkit_Admin_Roles::visible_sections(
@@ -727,4 +856,3 @@ class Test_Simple_Controls extends TestCase {
 		);
 	}
 }
-

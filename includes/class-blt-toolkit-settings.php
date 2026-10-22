@@ -823,11 +823,20 @@ class BLT_Toolkit_Settings {
 				continue;
 			}
 
-			$out[ $type ] = array(
+			$entry = array(
 				'singular' => isset( $info['singular'] ) && is_scalar( $info['singular'] ) ? sanitize_text_field( (string) $info['singular'] ) : '',
 				'plural'   => isset( $info['plural'] ) && is_scalar( $info['plural'] ) ? sanitize_text_field( (string) $info['plural'] ) : '',
 				'since'    => isset( $info['since'] ) && is_numeric( $info['since'] ) ? absint( $info['since'] ) : 0,
 			);
+
+			// RS-30, RS-31: never store an entry the filter would refuse (a
+			// core type, invalid names, or strings that are core's own), so
+			// an import cannot move Posts or a core capability.
+			if ( class_exists( 'BLT_Toolkit_Isolation_Core' ) && '' !== BLT_Toolkit_Isolation_Core::entry_error( $type, $entry ) ) {
+				continue;
+			}
+
+			$out[ $type ] = $entry;
 		}
 
 		return $out;

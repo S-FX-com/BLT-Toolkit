@@ -147,7 +147,7 @@ register_deactivation_hook( __FILE__, array( 'BLT_Toolkit_Plugin', 'deactivate' 
 // CLAUDE.md): some plugins register post types before plugins_loaded, so a
 // filter added any later would miss them. The callback returns its input at
 // once when no type is isolated and reads only the autoloaded settings.
-add_filter( 'register_post_type_args', array( 'BLT_Toolkit_Isolation', 'filter_args' ), 10, 2 );
+add_filter( 'register_post_type_args', array( 'BLT_Toolkit_Isolation_Core', 'filter_args' ), 10, 2 );
 
 // ---------- i18n ----------
 add_action(

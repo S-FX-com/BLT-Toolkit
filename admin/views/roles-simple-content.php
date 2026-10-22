@@ -14,7 +14,9 @@
  *
  * @package Blt_Toolkit
  *
- * @var array[] $rows Content rows from BLT_Toolkit_Admin_Roles::simple_level_view().
+ * @var array[] $rows         Content rows from BLT_Toolkit_Admin_Roles::simple_level_view().
+ * @var array[] $unregistered Types with separate permissions that are not registered now:
+ *                            array( 'type', 'url' ) (RS-32; `url` empty without the right to revert).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -69,7 +71,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 									<a class="button button-small" href="<?php echo esc_url( $blt_tk_link['url'] ); ?>"><?php echo esc_html( $blt_tk_link['label'] ); ?></a>
 								<?php endforeach; ?>
 								<?php if ( '' !== $blt_tk_row['revert'] ) : ?>
-									<a class="button button-small" href="<?php echo esc_url( $blt_tk_row['revert'] ); ?>"><?php esc_html_e( 'Share permissions again…', 'blt-toolkit' ); ?></a>
+									<a class="button button-small" href="<?php echo esc_url( $blt_tk_row['revert'] ); ?>">
+										<?php
+										/* translators: %s: content type names, such as Events. */
+										echo wp_kses( sprintf( __( 'Share permissions again…<span class="screen-reader-text"> (%s)</span>', 'blt-toolkit' ), esc_html( $blt_tk_row['label'] ) ), array( 'span' => array( 'class' => true ) ) );
+										?>
+									</a>
 								<?php endif; ?>
 							</span>
 						<?php endif; ?>
@@ -134,7 +141,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 											<input type="checkbox" name="<?php echo esc_attr( $blt_tk_mod['name'] ); ?>" value="1" id="<?php echo esc_attr( $blt_tk_mod['dom'] ); ?>" <?php checked( $blt_tk_mod['checked'] ); ?> <?php disabled( $blt_tk_mod['disabled'] ); ?> />
 											<span class="blt-toggle-track" aria-hidden="true"><span class="blt-toggle-thumb"></span></span>
 											<span class="blt-toggle-text">
-												<span class="blt-toggle-label"><?php echo esc_html( $blt_tk_mod['label'] ); ?></span>
+												<span class="blt-toggle-label">
+													<?php
+													/* translators: 1: a modifier such as "Can delete", 2: content type names, such as Events. */
+													echo wp_kses( sprintf( __( '%1$s<span class="screen-reader-text"> for %2$s</span>', 'blt-toolkit' ), esc_html( $blt_tk_mod['label'] ), esc_html( $blt_tk_row['label'] ) ), array( 'span' => array( 'class' => true ) ) );
+													?>
+												</span>
 												<span class="blt-toggle-desc"><?php echo esc_html( $blt_tk_mod['desc'] ); ?></span>
 											</span>
 										</label>
@@ -152,7 +164,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 							?>
 
 							<details class="blt-toolkit-simple-levels">
-								<summary><?php esc_html_e( 'What each level means', 'blt-toolkit' ); ?></summary>
+								<summary>
+									<?php
+									/* translators: %s: content type names, such as Events. */
+									echo wp_kses( sprintf( __( 'What each level means<span class="screen-reader-text"> for %s</span>', 'blt-toolkit' ), esc_html( $blt_tk_row['label'] ) ), array( 'span' => array( 'class' => true ) ) );
+									?>
+								</summary>
 								<dl>
 									<?php foreach ( $blt_tk_row['options'] as $blt_tk_level => $blt_tk_option ) : ?>
 										<dt><?php echo esc_html( $blt_tk_option['label'] ); ?></dt>
@@ -175,4 +192,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<?php endforeach; ?>
 		</tbody>
 	</table>
+<?php endif; ?>
+
+<?php if ( ! empty( $unregistered ) ) : ?>
+	<div class="blt-callout blt-toolkit-simple-unregistered">
+		<strong><?php esc_html_e( 'Separate permissions for content types that are not registered', 'blt-toolkit' ); ?></strong>
+		<span><?php esc_html_e( 'These content types have separate permissions, but nothing registers them right now (their plugin may be inactive). Their capabilities stay on roles and come back into use with the type. To remove them, share Posts\' permissions again, then clean up.', 'blt-toolkit' ); ?></span>
+		<ul class="ul-disc">
+			<?php foreach ( $unregistered as $blt_tk_missing ) : ?>
+				<li>
+					<code><?php echo esc_html( $blt_tk_missing['type'] ); ?></code>
+					<?php if ( '' !== $blt_tk_missing['url'] ) : ?>
+						<a href="<?php echo esc_url( $blt_tk_missing['url'] ); ?>">
+							<?php
+							/* translators: %s: post type key. */
+							echo wp_kses( sprintf( __( 'Share Posts\' permissions again<span class="screen-reader-text">: %s</span>', 'blt-toolkit' ), esc_html( $blt_tk_missing['type'] ) ), array( 'span' => array( 'class' => true ) ) );
+							?>
+						</a>
+					<?php endif; ?>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+	</div>
 <?php endif; ?>

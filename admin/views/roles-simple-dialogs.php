@@ -13,7 +13,9 @@
  * - The view switch (RS-2): save or discard unsaved changes first.
  *
  * Both are empty shells until the script fills and opens them; without
- * JavaScript they never show.
+ * JavaScript they never show. The review is described by its intro and
+ * its lines, opens with focus on its heading so a screen reader starts at
+ * what changes, and Enter in the name field saves, as in a form.
  *
  * @package Blt_Toolkit
  *
@@ -24,10 +26,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 ?>
-<dialog class="blt-toolkit-dialog" id="blt-tk-simple-review" aria-labelledby="blt-tk-simple-review-title" data-blt-review-dialog>
+<dialog class="blt-toolkit-dialog" id="blt-tk-simple-review" aria-labelledby="blt-tk-simple-review-title" aria-describedby="blt-tk-simple-review-intro blt-tk-simple-review-lines" data-blt-review-dialog>
 	<div class="blt-card">
 		<div class="blt-card-header">
-			<h2 id="blt-tk-simple-review-title">
+			<h2 id="blt-tk-simple-review-title" tabindex="-1" data-blt-review-heading>
 				<?php
 				printf(
 					/* translators: %s: role name. */
@@ -36,10 +38,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 				);
 				?>
 			</h2>
-			<p data-blt-review-intro></p>
+			<p id="blt-tk-simple-review-intro" data-blt-review-intro></p>
 		</div>
 		<div class="blt-card-body">
-			<ul class="blt-toolkit-review-list blt-toolkit-simple-review-lines" data-blt-review-lines></ul>
+			<ul class="blt-toolkit-review-list blt-toolkit-simple-review-lines" id="blt-tk-simple-review-lines" data-blt-review-lines></ul>
 
 			<div class="blt-callout" data-blt-review-custom hidden>
 				<strong><?php esc_html_e( 'Replacing a Custom setting', 'blt-toolkit' ); ?></strong>

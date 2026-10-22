@@ -1455,9 +1455,11 @@ class Test_Simple_Mapper extends TestCase {
 	public function test_rs13_marker_name() {
 		$this->assertSame( 'blt_readonly_events', BLT_Toolkit_Simple_Mapper::marker_name( 'events' ) );
 		$this->assertSame( BLT_Toolkit_Capability_Catalog::MARKER_PREFIX, BLT_Toolkit_Simple_Mapper::MARKER_PREFIX );
-		// Read-only enforcement and isolation spell it out too, so neither
-		// loads the catalog on a request (SEC-9); all four must agree.
+		// Read-only enforcement, isolation and the Guard's comparisons
+		// (Superset) spell it out too, so none of them loads the catalog on
+		// a request (SEC-9); all five must agree.
 		$this->assertSame( BLT_Toolkit_Simple_Mapper::MARKER_PREFIX, BLT_Toolkit_Readonly::MARKER_PREFIX );
 		$this->assertSame( BLT_Toolkit_Simple_Mapper::MARKER_PREFIX, BLT_Toolkit_Isolation::MARKER_PREFIX );
+		$this->assertSame( BLT_Toolkit_Simple_Mapper::MARKER_PREFIX, BLT_Toolkit_Superset::MARKER_PREFIX );
 	}
 }

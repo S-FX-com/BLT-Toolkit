@@ -690,10 +690,11 @@ class BLT_Toolkit_Simple_Controls {
 	 * @param array $group      A content group (BLT_Toolkit_Capability_Catalog::content_groups()).
 	 * @param array $taxonomies Taxonomy groups (taxonomy_groups()).
 	 * @param array $core       Capability names (name => anything) a taxonomy's
-	 *                          `assign_terms` is never dedicated to: core's, and
-	 *                          every content type's (content_controls()), so a
-	 *                          level change on one row never grants another
-	 *                          type's capability.
+	 *                          term capabilities are never dedicated to: core's,
+	 *                          and every content type's (content_controls()),
+	 *                          so a level change or a Manage toggle on one row
+	 *                          never grants another type's capability, or a
+	 *                          capability of a higher level of its own.
 	 * @return array
 	 */
 	public static function type_map( array $group, array $taxonomies, array $core = array() ) {
@@ -726,17 +727,31 @@ class BLT_Toolkit_Simple_Controls {
 				continue;
 			}
 
-			$tax_caps = (array) $tax_group['caps'];
-			$assign   = isset( $tax_caps['assign_terms'] ) ? (string) $tax_caps['assign_terms'] : '';
-			$key      = isset( $tax_group['primary'] ) ? (string) $tax_group['primary'] : (string) $tax_group['id'];
+			$tax_caps  = (array) $tax_group['caps'];
+			$assign    = isset( $tax_caps['assign_terms'] ) ? (string) $tax_caps['assign_terms'] : '';
+			$key       = isset( $tax_group['primary'] ) ? (string) $tax_group['primary'] : (string) $tax_group['id'];
+			$dedicated = ! empty( $tax_group['dedicated'] );
+			$terms     = array();
+
+			foreach ( array( 'manage_terms', 'edit_terms', 'delete_terms' ) as $term_key ) {
+				$terms[ $term_key ] = isset( $tax_caps[ $term_key ] ) ? (string) $tax_caps[ $term_key ] : '';
+
+				// SPEC 10.3: Manage {taxonomy} only for term capabilities of
+				// the taxonomy's own. One that is a core capability, one of
+				// the row's own strings (publish_tribe_events) or any content
+				// type's would make the toggle grant more than its level.
+				if ( '' === $terms[ $term_key ] || isset( $core[ $terms[ $term_key ] ] ) || isset( $own[ $terms[ $term_key ] ] ) ) {
+					$dedicated = false;
+				}
+			}
 
 			$out['taxonomies'][ $key ] = array(
 				'label'            => isset( $tax_group['label'] ) ? (string) $tax_group['label'] : $key,
-				'manage_terms'     => isset( $tax_caps['manage_terms'] ) ? (string) $tax_caps['manage_terms'] : '',
-				'edit_terms'       => isset( $tax_caps['edit_terms'] ) ? (string) $tax_caps['edit_terms'] : '',
-				'delete_terms'     => isset( $tax_caps['delete_terms'] ) ? (string) $tax_caps['delete_terms'] : '',
+				'manage_terms'     => $terms['manage_terms'],
+				'edit_terms'       => $terms['edit_terms'],
+				'delete_terms'     => $terms['delete_terms'],
 				'assign_terms'     => $assign,
-				'dedicated'        => ! empty( $tax_group['dedicated'] ),
+				'dedicated'        => $dedicated,
 				// A core capability (edit_posts) or one of the row's own
 				// strings is not the taxonomy's to grant separately.
 				'assign_dedicated' => '' !== $assign && ! isset( $core[ $assign ] ) && ! isset( $own[ $assign ] ),
@@ -814,8 +829,12 @@ class BLT_Toolkit_Simple_Controls {
 				$readonly = self::READONLY_ISOLATION;
 			}
 
-			foreach ( $map['taxonomies'] as $tax => $entry ) {
-				$labels[ $tax ] = $entry['label'];
+			// Only taxonomies with a Manage toggle (dedicated term
+			// capabilities, SPEC 10.3): the script compares the toggles it
+			// finds with these, so a name without a toggle would read as a
+			// change nobody made.
+			foreach ( BLT_Toolkit_Simple_Mapper::toggles( $map ) as $tax => $unused ) {
+				$labels[ $tax ] = isset( $map['taxonomies'][ $tax ]['label'] ) ? (string) $map['taxonomies'][ $tax ]['label'] : (string) $tax;
 			}
 
 			$also = array();
@@ -1325,7 +1344,8 @@ class BLT_Toolkit_Simple_Controls {
 					continue;
 				}
 
-				$min         = self::LEVEL === $other['kind'] ? ( $other['create_distinct'] ? 'view' : 'contribute' ) : 'view';
+				// View needs the dashboard only where it is enforced there (RS-13).
+				$min         = self::LEVEL === $other['kind'] ? ( '' !== BLT_Toolkit_Simple_Mapper::marker( isset( $other['map'] ) ? (array) $other['map'] : array() ) ? 'view' : 'contribute' ) : 'view';
 				$when[ $id ] = $min;
 				$active      = $active || self::is_on( $other, $min );
 			}

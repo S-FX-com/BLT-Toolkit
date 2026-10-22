@@ -62,6 +62,7 @@ $blt_tk_editable = ! $simple['read_only'];
 		<input type="hidden" name="<?php echo esc_attr( BLT_Toolkit_Admin_Roles::REVIEWED_FIELD ); ?>" value="0" data-blt-reviewed />
 		<input type="hidden" name="<?php echo esc_attr( BLT_Toolkit_Admin_Roles::CONFIRM_FIELD ); ?>" value="" data-blt-confirm />
 		<input type="hidden" name="then_view" value="" data-blt-then-view />
+		<input type="hidden" name="then_ctl" value="" data-blt-then-ctl />
 
 		<?php foreach ( $simple['sections'] as $blt_tk_section ) : ?>
 			<?php $blt_tk_heading = 'blt-tk-section-' . $blt_tk_section['id'] . '-title'; ?>
@@ -78,7 +79,8 @@ $blt_tk_editable = ! $simple['read_only'];
 						BLT_Toolkit_Admin_Roles::partial(
 							'roles-simple-content',
 							array(
-								'rows' => $blt_tk_section['controls'],
+								'rows'         => $blt_tk_section['controls'],
+								'unregistered' => isset( $simple['unregistered'] ) ? $simple['unregistered'] : array(),
 							)
 						);
 					} else {

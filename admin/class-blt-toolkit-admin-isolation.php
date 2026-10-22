@@ -81,7 +81,7 @@ class BLT_Toolkit_Admin_Isolation {
 	// ---------- Wiring ----------
 
 	/**
-	 * Called by BLT_Toolkit_Isolation::register() on admin requests. On
+	 * Called by BLT_Toolkit_Isolation_Core::register() on admin requests. On
 	 * admin-post.php it routes this flow's actions; elsewhere it hooks the
 	 * pre-output permission check onto the Roles screen once the menu
 	 * exists.

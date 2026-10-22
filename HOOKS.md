@@ -126,7 +126,7 @@ Fires after the Guard has approved a computed change set (and the SEC-10 review 
 | Argument | Type | Description |
 | --- | --- | --- |
 | `$changes` | array | Role ID => `array( 'add' => array<string,bool>, 'remove' => string[], 'created' => bool, 'deleted' => bool, 'name' => null or array( 'from' => string, 'to' => string ) )`. `add` holds the new value of each capability added or flipped (`true` grants, `false` denies); `remove` the capabilities taken out of the role. A created role lists all its capabilities in `add`, a deleted one all of them in `remove`. |
-| `$context` | string | Where the save came from: `advanced` (the Advanced matrix, and adding or deleting a capability there; the default for a one-role save), `simple` (Simple view; needs `blt_edit_roles`, while `advanced` needs `blt_edit_capabilities` too), `self_service` (Settings > Usernames, UN-20), `support_agent` (SW-21), `lifecycle` (add, rename, move to a new role, delete and merge, RO-30 to RO-42), `activation` and `sync` (the administrator grant), `recovery` (SEC-14), and later phases' own (`isolation`, `import`, `restore`, `reset`). A `transaction()` without one passes `roles`. |
+| `$context` | string | Where the save came from: `advanced` (the Advanced matrix, and adding or deleting a capability there; the default for a one-role save), `simple` (Simple view; needs `blt_edit_roles`, while `advanced` needs `blt_edit_capabilities` too), `self_service` (Settings > Usernames, UN-20), `support_agent` (SW-21), `lifecycle` (add, rename, move to a new role, delete and merge, RO-30 to RO-42), `activation` and `sync` (the administrator grant), `recovery` (SEC-14), `isolation` (separate permissions for a post type and their cleanup, RS-30, RS-32), and later phases' own (`import`, `restore`, `reset`). A `transaction()` without one passes `roles`. |
 
 Requirement RO-4. Status: Available.
 
@@ -508,7 +508,7 @@ The `register_post_type_args` changes applied to each isolated post type (RS-31)
 | `$post_type` | string | | The post type. |
 | `$isolation` | array | | Its stored entry: `singular`, `plural`, `since` (`since` is 0 while a dry run computes the new capabilities). |
 
-The dry run, the collision check and the cleanup build the new capability strings through the same filter, so a change made here is what the preview shows. Return an array; anything else is ignored.
+The dry run, the collision check, the cleanup and the RS-33 verification build the new capability strings through the same filter, so a change made here is what the preview shows and what verification expects. Return an array; anything else is ignored. A `do_not_allow` value in the type's own `capabilities` registration is kept over these arguments; any other override of Posts' (or Pages') strings stops the type from being isolated, and RS-33 reports it.
 
 Requirement RS-31. Status: Available.
 
