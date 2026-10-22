@@ -377,3 +377,28 @@ if ( ! function_exists( 'wp_salt' ) ) {
 		return $GLOBALS['blt_test_salt'] . '|' . $scheme;
 	}
 }
+
+if ( ! function_exists( 'wp_parse_args' ) ) {
+	/**
+	 * WP shim: core's wp_parse_args() (arrays, objects and query strings).
+	 *
+	 * @param array|object|string $args     Arguments.
+	 * @param array               $defaults Defaults.
+	 * @return array
+	 */
+	function wp_parse_args( $args, $defaults = array() ) {
+		if ( is_object( $args ) ) {
+			$parsed_args = get_object_vars( $args );
+		} elseif ( is_array( $args ) ) {
+			$parsed_args =& $args;
+		} else {
+			parse_str( (string) $args, $parsed_args );
+		}
+
+		if ( is_array( $defaults ) && $defaults ) {
+			return array_merge( $defaults, $parsed_args );
+		}
+
+		return $parsed_args;
+	}
+}

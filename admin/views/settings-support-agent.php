@@ -97,17 +97,21 @@ $cancel_url  = BLT_Toolkit_Admin::page_url( 'settings', array( 'tab' => 'switchi
 						<ul class="ul-disc blt-toolkit-support-agent-blocked">
 							<?php foreach ( $preview['blocked'] as $blocked ) : ?>
 								<li>
-									<strong><?php echo esc_html( $blocked['name'] ); ?></strong>:
 									<?php
+									$role_name = '<strong>' . esc_html( $blocked['name'] ) . '</strong>';
+
 									if ( 'SEC-1' === $blocked['rule'] ) {
-										esc_html_e( 'administrators can never be switched into by anyone who is not an administrator.', 'blt-toolkit' );
+										printf(
+											/* translators: %s: role name, such as Administrator. */
+											esc_html__( '%s: administrators can never be switched into by anyone who is not an administrator.', 'blt-toolkit' ),
+											$role_name // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above.
+										);
 									} else {
-										echo esc_html(
-											sprintf(
-												/* translators: %s: number of capabilities. */
-												_n( 'holds %s capability a Support Agent does not, so it is out of reach.', 'holds %s capabilities a Support Agent does not, so it is out of reach.', (int) $blocked['missing'], 'blt-toolkit' ),
-												number_format_i18n( (int) $blocked['missing'] )
-											)
+										printf(
+											/* translators: 1: role name, such as Editor; 2: number of capabilities. */
+											esc_html( _n( '%1$s: holds %2$s capability a Support Agent does not, so it is out of reach.', '%1$s: holds %2$s capabilities a Support Agent does not, so it is out of reach.', (int) $blocked['missing'], 'blt-toolkit' ) ),
+											$role_name, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above.
+											esc_html( number_format_i18n( (int) $blocked['missing'] ) )
 										);
 									}
 									?>
@@ -128,7 +132,7 @@ $cancel_url  = BLT_Toolkit_Admin::page_url( 'settings', array( 'tab' => 'switchi
 			<div class="blt-card-body">
 				<div class="blt-callout">
 					<strong><?php esc_html_e( 'Critical capability', 'blt-toolkit' ); ?></strong>
-					<span><?php esc_html_e( '"Switch to other users" lets a Support Agent sign in as another person and act with that person\'s access until they switch back. Everything done while switched is logged under the Support Agent\'s own name.', 'blt-toolkit' ); ?></span>
+					<span><?php esc_html_e( '"Switch to users" lets a Support Agent sign in as another person and act with that person\'s access until they switch back. Each switch, and any change made with BLT Toolkit while switched, is logged under the Support Agent\'s own name.', 'blt-toolkit' ); ?></span>
 				</div>
 				<div class="blt-field">
 					<div class="blt-field-label">

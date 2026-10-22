@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: BLT Toolkit 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/S-FX-com/BLT-Toolkit/issues\n"
-"POT-Creation-Date: 2026-10-22 03:46+0000\n"
+"POT-Creation-Date: 2026-10-22 05:08+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -26,7 +26,7 @@ msgstr ""
 #: includes/class-blt-toolkit-jobs.php:863
 #: includes/class-blt-toolkit-jobs.php:871
 #: includes/class-blt-toolkit-jobs.php:875
-#: includes/class-blt-toolkit-plugin.php:321
+#: includes/class-blt-toolkit-plugin.php:367
 msgid "BLT Toolkit"
 msgstr ""
 
@@ -472,7 +472,7 @@ msgstr ""
 #: admin/class-blt-toolkit-admin.php:294
 #: admin/class-blt-toolkit-admin.php:295
 #: admin/views/overview.php:108
-#: includes/class-blt-toolkit-plugin.php:170
+#: includes/class-blt-toolkit-plugin.php:216
 msgid "Roles"
 msgstr ""
 
@@ -591,7 +591,7 @@ msgstr ""
 
 #: admin/class-blt-toolkit-admin-settings.php:82
 #: admin/class-blt-toolkit-admin.php:172
-#: includes/class-blt-toolkit-plugin.php:166
+#: includes/class-blt-toolkit-plugin.php:212
 msgid "Usernames"
 msgstr ""
 
@@ -618,7 +618,7 @@ msgid "See the list of users"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-settings.php:401
-msgid "Switch to other users"
+msgid "Switch to users"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-settings.php:466
@@ -1452,51 +1452,52 @@ msgstr ""
 msgid "Still prevented"
 msgstr ""
 
-#: admin/views/settings-support-agent.php:103
-msgid "administrators can never be switched into by anyone who is not an administrator."
+#. translators: %s: role name, such as Administrator.
+#: admin/views/settings-support-agent.php:106
+msgid "%s: administrators can never be switched into by anyone who is not an administrator."
 msgstr ""
 
-#. translators: %s: number of capabilities.
-#: admin/views/settings-support-agent.php:108
-msgid "holds %s capability a Support Agent does not, so it is out of reach."
-msgid_plural "holds %s capabilities a Support Agent does not, so it is out of reach."
+#. translators: 1: role name, such as Editor; 2: number of capabilities.
+#: admin/views/settings-support-agent.php:112
+msgid "%1$s: holds %2$s capability a Support Agent does not, so it is out of reach."
+msgid_plural "%1$s: holds %2$s capabilities a Support Agent does not, so it is out of reach."
 msgstr[0] ""
 msgstr[1] ""
 
-#: admin/views/settings-support-agent.php:116
+#: admin/views/settings-support-agent.php:120
 msgid "Anyone given a capability of their own that a Support Agent lacks, whatever their role."
 msgstr ""
 
-#: admin/views/settings-support-agent.php:117
+#: admin/views/settings-support-agent.php:121
 msgid "Editing users, changing roles or settings: the role has only the three capabilities above."
 msgstr ""
 
-#: admin/views/settings-support-agent.php:126
+#: admin/views/settings-support-agent.php:130
 msgid "Confirm"
 msgstr ""
 
-#: admin/views/settings-support-agent.php:130
+#: admin/views/settings-support-agent.php:134
 msgid "Critical capability"
 msgstr ""
 
-#: admin/views/settings-support-agent.php:131
-msgid "\"Switch to other users\" lets a Support Agent sign in as another person and act with that person's access until they switch back. Everything done while switched is logged under the Support Agent's own name."
+#: admin/views/settings-support-agent.php:135
+msgid "\"Switch to users\" lets a Support Agent sign in as another person and act with that person's access until they switch back. Each switch, and any change made with BLT Toolkit while switched, is logged under the Support Agent's own name."
 msgstr ""
 
-#: admin/views/settings-support-agent.php:135
+#: admin/views/settings-support-agent.php:139
 msgid "Type the role name to confirm"
 msgstr ""
 
 #. translators: %s: role name, such as Support Agent.
-#: admin/views/settings-support-agent.php:143
+#: admin/views/settings-support-agent.php:147
 msgid "Type %s exactly as shown."
 msgstr ""
 
-#: admin/views/settings-support-agent.php:154
+#: admin/views/settings-support-agent.php:158
 msgid "Create Support Agent role"
 msgstr ""
 
-#: admin/views/settings-support-agent.php:155
+#: admin/views/settings-support-agent.php:159
 #: includes/class-blt-toolkit-jobs.php:1056
 msgid "Cancel"
 msgstr ""
@@ -1542,7 +1543,7 @@ msgid "WooCommerce"
 msgstr ""
 
 #: admin/views/settings-switching.php:56
-msgid "Adds \"Switch to customer\" on orders and \"Switch back\" in My Account, and starts a fresh cart session on each switch. Applies only while WooCommerce is active."
+msgid "Adds \"Switch to customer\" on orders and \"Switch back\" in My Account, and keeps each user's cart and WooCommerce session separate when you switch. Applies only while WooCommerce is active."
 msgstr ""
 
 #: admin/views/settings-switching.php:65
@@ -2134,35 +2135,35 @@ msgid_plural "Removed %1$s activity log entries older than %2$s."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/class-blt-toolkit-plugin.php:162
+#: includes/class-blt-toolkit-plugin.php:208
 msgid "Switch"
 msgstr ""
 
-#: includes/class-blt-toolkit-plugin.php:163
+#: includes/class-blt-toolkit-plugin.php:209
 msgid "Switch to another user's account and back."
 msgstr ""
 
-#: includes/class-blt-toolkit-plugin.php:167
+#: includes/class-blt-toolkit-plugin.php:213
 msgid "Change a user's username, with old author links redirected."
 msgstr ""
 
-#: includes/class-blt-toolkit-plugin.php:171
+#: includes/class-blt-toolkit-plugin.php:217
 msgid "Create and edit roles and capabilities in a Simple or Advanced view."
 msgstr ""
 
-#: includes/class-blt-toolkit-plugin.php:291
+#: includes/class-blt-toolkit-plugin.php:337
 msgid "BLT Toolkit supports single-site installs only in this version, so it cannot be activated on a multisite network, either for the whole network or for one site."
 msgstr ""
 
-#: includes/class-blt-toolkit-plugin.php:295
+#: includes/class-blt-toolkit-plugin.php:341
 msgid "BLT Toolkit could not create its database tables, so it was not activated and your roles were not changed. Check that the database user may create tables, then activate it again."
 msgstr ""
 
-#: includes/class-blt-toolkit-plugin.php:301
+#: includes/class-blt-toolkit-plugin.php:347
 msgid "BLT Toolkit could not save a copy of your roles before changing them, so it was not activated and your roles were not changed. Activate it again; if this keeps happening, the PHP error log says why."
 msgstr ""
 
-#: includes/class-blt-toolkit-plugin.php:383
+#: includes/class-blt-toolkit-plugin.php:429
 msgid "BLT Toolkit supports single-site installs only in this version, so it is not running on this network. Deactivate it from the Plugins screen."
 msgstr ""
 
@@ -2264,76 +2265,76 @@ msgstr ""
 #. translators: %s: the user's display name.
 #. translators: %s: the author's display name.
 #. translators: %s: a user's display name.
-#: includes/class-blt-toolkit-switch-ui.php:216
-#: includes/class-blt-toolkit-switch-ui.php:259
-#: includes/class-blt-toolkit-switch-ui.php:445
-#: includes/class-blt-toolkit-switch-ui.php:900
+#: includes/class-blt-toolkit-switch-ui.php:220
+#: includes/class-blt-toolkit-switch-ui.php:263
+#: includes/class-blt-toolkit-switch-ui.php:463
+#: includes/class-blt-toolkit-switch-ui.php:958
 msgid "Switch to %s"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch-ui.php:217
-#: includes/class-blt-toolkit-switch-ui.php:260
+#: includes/class-blt-toolkit-switch-ui.php:221
+#: includes/class-blt-toolkit-switch-ui.php:264
 msgid "Switch&nbsp;To"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch-ui.php:252
+#: includes/class-blt-toolkit-switch-ui.php:256
 msgid "Switch user"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch-ui.php:263
-msgid "See the site as this user. Everything you do while switched is logged under your own name."
+#: includes/class-blt-toolkit-switch-ui.php:267
+msgid "See the site as this user. Each switch, and any change you make with BLT Toolkit while switched, is logged under your own name."
 msgstr ""
 
 #. translators: "Switch Off" means signing out for a moment, with a way back.
-#: includes/class-blt-toolkit-switch-ui.php:293
-#: includes/class-blt-toolkit-switch-ui.php:361
-#: includes/class-blt-toolkit-switch-ui.php:891
+#: includes/class-blt-toolkit-switch-ui.php:297
+#: includes/class-blt-toolkit-switch-ui.php:379
+#: includes/class-blt-toolkit-switch-ui.php:949
 msgid "Switch Off"
 msgstr ""
 
 #. translators: %s: display name of the user being viewed as.
-#: includes/class-blt-toolkit-switch-ui.php:324
+#: includes/class-blt-toolkit-switch-ui.php:335
 msgid "Viewing as %s"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch-ui.php:384
+#: includes/class-blt-toolkit-switch-ui.php:402
 msgid "Switch to…"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch-ui.php:399
+#: includes/class-blt-toolkit-switch-ui.php:417
 msgid "Find a user to switch to"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch-ui.php:400
+#: includes/class-blt-toolkit-switch-ui.php:418
 msgid "Name, username or email"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch-ui.php:527
+#: includes/class-blt-toolkit-switch-ui.php:545
 msgid "Users you can switch to"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch-ui.php:528
+#: includes/class-blt-toolkit-switch-ui.php:546
 msgid "Type at least 2 characters."
 msgstr ""
 
-#: includes/class-blt-toolkit-switch-ui.php:529
+#: includes/class-blt-toolkit-switch-ui.php:547
 msgid "Searching…"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch-ui.php:530
+#: includes/class-blt-toolkit-switch-ui.php:548
 msgid "No user you can switch to matches."
 msgstr ""
 
 #. translators: %s: number of users found.
-#: includes/class-blt-toolkit-switch-ui.php:532
+#: includes/class-blt-toolkit-switch-ui.php:550
 msgid "Users found: %s. Use the up and down arrow keys to choose one, then press Enter."
 msgstr ""
 
-#: includes/class-blt-toolkit-switch-ui.php:533
+#: includes/class-blt-toolkit-switch-ui.php:551
 msgid "The search did not work. Try again, or reload the page."
 msgstr ""
 
-#: includes/class-blt-toolkit-switch-ui.php:901
+#: includes/class-blt-toolkit-switch-ui.php:959
 msgid "Switch to"
 msgstr ""
 
@@ -2343,60 +2344,60 @@ msgid "Switch to customer<span class=\"screen-reader-text\">: %s</span>"
 msgstr ""
 
 #. translators: %s: display name of the user switched to.
-#: includes/class-blt-toolkit-switch.php:465
-#: includes/class-blt-toolkit-switch.php:719
+#: includes/class-blt-toolkit-switch.php:795
+#: includes/class-blt-toolkit-switch.php:1066
 msgid "Switched to %s."
 msgstr ""
 
 #. translators: %s: display name of the user to switch back to.
-#: includes/class-blt-toolkit-switch.php:484
+#: includes/class-blt-toolkit-switch.php:814
 msgid "Switch back to %s"
 msgstr ""
 
 #. translators: %s: display name of the user switched back to.
-#: includes/class-blt-toolkit-switch.php:503
-#: includes/class-blt-toolkit-switch.php:827
+#: includes/class-blt-toolkit-switch.php:837
+#: includes/class-blt-toolkit-switch.php:1188
 msgid "Switched back to %s."
 msgstr ""
 
-#: includes/class-blt-toolkit-switch.php:591
-#: includes/class-blt-toolkit-switch.php:599
-#: includes/class-blt-toolkit-switch.php:635
-#: includes/class-blt-toolkit-switch.php:642
+#: includes/class-blt-toolkit-switch.php:925
+#: includes/class-blt-toolkit-switch.php:933
+#: includes/class-blt-toolkit-switch.php:966
+#: includes/class-blt-toolkit-switch.php:973
 msgid "Could not switch users."
 msgstr ""
 
-#: includes/class-blt-toolkit-switch.php:605
-msgid "You have switched too many times in a row. Switch back first."
-msgstr ""
-
 #. translators: "switch off" means signing out for a moment, with a way back.
-#: includes/class-blt-toolkit-switch.php:675
+#: includes/class-blt-toolkit-switch.php:1006
 msgid "Could not switch off."
 msgstr ""
 
-#: includes/class-blt-toolkit-switch.php:893
+#: includes/class-blt-toolkit-switch.php:1033
+msgid "You have switched too many times in a row. Switch back first."
+msgstr ""
+
+#: includes/class-blt-toolkit-switch.php:1257
 msgid "Switched off."
 msgstr ""
 
 #. translators: 1: name of the user who is switched in, 2: name of the user to switch to, 3: how long ago, such as "5 mins".
-#: includes/class-blt-toolkit-switch.php:966
+#: includes/class-blt-toolkit-switch.php:1331
 msgid "%1$s is currently switched to %2$s. They switched %3$s ago. Continue?"
 msgstr ""
 
 #. translators: %s: name of the user to switch to.
-#: includes/class-blt-toolkit-switch.php:973
+#: includes/class-blt-toolkit-switch.php:1338
 msgid "Yes, switch to %s"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch.php:987
+#: includes/class-blt-toolkit-switch.php:1352
 msgid "No, go back"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch.php:989
+#: includes/class-blt-toolkit-switch.php:1354
 msgid "Someone is already switched in"
 msgstr ""
 
-#: includes/class-blt-toolkit-switch.php:1083
-msgid "When a user with permission switches to another user's account, BLT Toolkit sets cookies that let them switch back. Like the cookies WordPress sets when you log in, they contain the username of the user who switched, an expiration time and a secure hash. They expire after two days, or as soon as that user logs in or out."
+#: includes/class-blt-toolkit-switch.php:1520
+msgid "When a user with permission switches to another user's account, BLT Toolkit sets cookies that let them switch back. Like the cookies WordPress sets when you log in, they contain the username of the user who switched, an expiration time and a secure hash. They expire after two days at most, when the browser is closed unless that user chose \"Remember Me\" when logging in, and as soon as anyone logs in or out in that browser."
 msgstr ""

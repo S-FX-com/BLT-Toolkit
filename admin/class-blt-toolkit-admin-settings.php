@@ -398,7 +398,7 @@ class BLT_Toolkit_Admin_Settings {
 		$labels = array(
 			'read'             => __( 'Sign in to the dashboard and edit their own profile', 'blt-toolkit' ),
 			'list_users'       => __( 'See the list of users', 'blt-toolkit' ),
-			'blt_switch_users' => __( 'Switch to other users', 'blt-toolkit' ),
+			'blt_switch_users' => __( 'Switch to users', 'blt-toolkit' ),
 		);
 
 		foreach ( array_keys( $caps ) as $cap ) {

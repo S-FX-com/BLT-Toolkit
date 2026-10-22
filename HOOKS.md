@@ -284,7 +284,7 @@ Requirement SW-9. Status: Available.
 
 ### `blt_toolkit_switch_show_footer_link`
 
-Whether to print the fixed "Switch back to {Name}" link on the site (SW-17). Whatever this returns, the link is printed only while switched with the toolbar hidden, or after a Switch Off, and not on a page where the Meta widget already printed it (as User Switching does). Its stylesheet, `assets/css/blt-toolkit-front.css`, loads only when the link is printed. Applied at most once per request, and never for a visitor without a switch cookie.
+Whether to print the fixed "Switch back to {Name}" link on the site (SW-17). Whatever this returns, the link is printed only while switched with the toolbar hidden, or after a Switch Off, and not on a page where the Meta widget already printed it (as User Switching does). Its stylesheet, `assets/css/blt-toolkit-front.css`, loads only when the link is printed, and a page that prints it for someone who is signed out (after a Switch Off) is sent with no-cache headers and `DONOTCACHEPAGE` (SW-25). Applied at most once per request, and never for a visitor without a switch cookie.
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -520,7 +520,7 @@ These are action names only. BLT Toolkit never declares the functions `switch_to
 current_user_switched(): WP_User|false
 ```
 
-Returns the user who switched into the current session (the most recent originating user), or `false` when the current user is not switched or nobody is signed in. Code written for User Switching can call it unchanged.
+Returns the user who switched into the current session (the most recent originating user), or `false` when the current user is not switched or nobody is signed in. Code written for User Switching can call it unchanged. Like User Switching's, it reads the old-user cookie, which is sent on the site's front end and REST requests too; unlike it, the cookie counts only for the session that switch created (`blt_switched_from_id` and `blt_switched_from_session` on the current session), so switch cookies left behind by someone else in the same browser never make a signed-in user look switched.
 
 - Defined only when **Work with tools made for User Switching** (`switch.compat_hooks`) is on and no function of that name exists yet (SW-19, D2). It is the plugin's only global symbol without the `blt_toolkit_` prefix.
 - Guard calls with `function_exists( 'current_user_switched' )`, as with User Switching.

@@ -165,7 +165,7 @@ class BLT_Toolkit_Switch_Woocommerce {
 			return $items;
 		}
 
-		$original = BLT_Toolkit_Switch::original_user();
+		$original = BLT_Toolkit_Switch::old_user();
 
 		if ( ! $original instanceof WP_User || get_current_user_id() === (int) $original->ID ) {
 			return $items;
@@ -222,7 +222,7 @@ class BLT_Toolkit_Switch_Woocommerce {
 			return $url;
 		}
 
-		$original = BLT_Toolkit_Switch::original_user();
+		$original = BLT_Toolkit_Switch::old_user();
 
 		if ( ! $original instanceof WP_User ) {
 			return $url;
@@ -266,7 +266,7 @@ class BLT_Toolkit_Switch_Woocommerce {
 	 * @return void
 	 */
 	public static function login_form_link() {
-		$original = BLT_Toolkit_Switch::original_user();
+		$original = BLT_Toolkit_Switch::old_user();
 
 		if ( ! $original instanceof WP_User ) {
 			return;

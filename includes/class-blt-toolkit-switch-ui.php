@@ -30,7 +30,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *   pages, including `admin_page_access_denied` (SW-16).
  * - The fixed "Switch back" link on the site when the toolbar is not showing
  *   (SW-17, X-5), styled by assets/css/blt-toolkit-front.css, which loads
- *   only when the link is printed.
+ *   only when the link is printed. A signed-out page that carries it is
+ *   marked uncacheable (SW-25).
  * - The login screen (SW-18) and the Meta widget (Appendix B).
  * - Command palette commands when `wp-commands` is enqueued (SW-26).
  *
@@ -123,7 +124,8 @@ class BLT_Toolkit_Switch_Ui {
 		add_filter( 'wp_die_handler', array( __CLASS__, 'wrap_wp_die_handler' ), PHP_INT_MAX );
 		add_filter( 'removable_query_args', array( __CLASS__, 'removable_query_args' ) );
 
-		// SW-17, SW-18, Appendix B (Meta widget).
+		// SW-17, SW-18, Appendix B (Meta widget), SW-25.
+		add_action( 'template_redirect', array( __CLASS__, 'nocache_footer_page' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_front' ) );
 		add_action( 'wp_footer', array( __CLASS__, 'footer_link' ) );
 		add_filter( 'login_message', array( __CLASS__, 'login_message' ), 1 );
@@ -150,15 +152,17 @@ class BLT_Toolkit_Switch_Ui {
 	// ---------- Who switched ----------
 
 	/**
-	 * The validated originating user (old-user cookie and newest stack entry
-	 * both valid), whether or not anyone is signed in now.
-	 * BLT_Toolkit_Switch::original_user() caches it per request and reads no
-	 * database when the browser sent no old-user cookie.
+	 * The user who switched in (BLT_Toolkit_Switch::old_user(): the old-user
+	 * cookie, bound to the current session while someone is signed in),
+	 * whether or not anyone is signed in now. It is cached per request and
+	 * reads no database when the browser sent no old-user cookie. The links
+	 * shown go through the login URL, where switching back also checks the
+	 * stack (SW-5).
 	 *
 	 * @return WP_User|false
 	 */
 	public static function original() {
-		$user = BLT_Toolkit_Switch::original_user();
+		$user = BLT_Toolkit_Switch::old_user();
 
 		return ( $user instanceof WP_User && $user->exists() ) ? $user : false;
 	}
@@ -260,7 +264,7 @@ class BLT_Toolkit_Switch_Ui {
 					esc_html__( 'Switch&nbsp;To', 'blt-toolkit' )
 				);
 				?>
-				<p class="description"><?php esc_html_e( 'See the site as this user. Everything you do while switched is logged under your own name.', 'blt-toolkit' ); ?></p>
+				<p class="description"><?php esc_html_e( 'See the site as this user. Each switch, and any change you make with BLT Toolkit while switched, is logged under your own name.', 'blt-toolkit' ); ?></p>
 			</td>
 		</tr>
 		<?php
@@ -308,6 +312,13 @@ class BLT_Toolkit_Switch_Ui {
 	/**
 	 * "Viewing as {Name}" and its children (SW-14).
 	 *
+	 * The top-level node is not the switch-back action: a click, or a screen
+	 * reader's activation, would change identity under a name that does not
+	 * say so (WCAG 2.4.4). Like core's account menu it links to the viewed
+	 * user's profile (or, for a user who cannot `read`, is a focusable item
+	 * with no link), and switching back is its child "Switch back to
+	 * {Original}".
+	 *
 	 * @param WP_Admin_Bar $bar      The toolbar.
 	 * @param WP_User      $original Who switched.
 	 * @param string       $off_url  Switch Off URL, or '' when not offered.
@@ -328,17 +339,24 @@ class BLT_Toolkit_Switch_Ui {
 			restore_previous_locale();
 		}
 
+		$meta = array(
+			'class' => 'blt-tk-switched',
+			'lang'  => $lang,
+		);
+
+		$profile = current_user_can( 'read' ) ? get_edit_profile_url( (int) $user->ID ) : '';
+
+		if ( '' === $profile ) {
+			$meta['tabindex'] = 0;
+		}
+
 		$bar->add_node(
 			array(
 				'parent' => 'top-secondary',
 				'id'     => self::NODE_SWITCHED,
 				'title'  => '<span class="ab-icon" aria-hidden="true"></span><span class="ab-label">' . esc_html( $viewing ) . '</span>',
-				'href'   => $back_url,
-				'meta'   => array(
-					'class' => 'blt-tk-switched',
-					'lang'  => $lang,
-					'title' => $back,
-				),
+				'href'   => '' !== $profile ? $profile : false,
+				'meta'   => $meta,
 			)
 		);
 
@@ -564,7 +582,9 @@ class BLT_Toolkit_Switch_Ui {
 			if ( $just_switched ) {
 				$message = BLT_Toolkit_Switch::switched_to_message( $user );
 			} elseif ( $switched_back ) {
-				$message = BLT_Toolkit_Switch::switched_back_message( $user );
+				// A nested switch back: the person reading is still the one who
+				// switched in, so the message is in their language (SW-11).
+				$message = BLT_Toolkit_Switch::switched_back_message( $user, $original );
 			}
 
 			$url  = BLT_Toolkit_Switch::switch_back_url( $original, self::here() );
@@ -634,15 +654,8 @@ class BLT_Toolkit_Switch_Ui {
 			return array( $message, $title, $args );
 		}
 
-		// Normalize the integer shorthands the way _wp_die_process_input() reads them.
-		if ( is_int( $args ) ) {
-			$args = array( 'response' => $args );
-		} elseif ( is_int( $title ) ) {
-			$args  = array( 'response' => $title );
-			$title = '';
-		}
+		list( $title, $args ) = self::die_args( $title, $args );
 
-		$args = is_array( $args ) ? $args : array();
 		$url  = BLT_Toolkit_Switch::switch_back_url( $original, self::die_redirect() );
 		$text = BLT_Toolkit_Switch::switch_back_message( $original );
 
@@ -659,6 +672,28 @@ class BLT_Toolkit_Switch_Ui {
 		}
 
 		return array( $message, $title, $args );
+	}
+
+	/**
+	 * The `wp_die()` title and arguments as an array, read the way core's
+	 * _wp_die_process_input() reads them: an integer `$args`, or an integer
+	 * `$title`, is the response code, and anything else goes through
+	 * wp_parse_args(), so a query string such as `response=403` keeps its
+	 * values.
+	 *
+	 * @param mixed $title Title, or an HTTP status.
+	 * @param mixed $args  Arguments: array, object, query string or HTTP status.
+	 * @return array{0:mixed,1:array}
+	 */
+	public static function die_args( $title, $args ) {
+		if ( is_int( $args ) ) {
+			$args = array( 'response' => $args );
+		} elseif ( is_int( $title ) ) {
+			$args  = array( 'response' => $title );
+			$title = '';
+		}
+
+		return array( $title, wp_parse_args( $args ) );
 	}
 
 	/**
@@ -698,6 +733,29 @@ class BLT_Toolkit_Switch_Ui {
 	}
 
 	// ---------- Site footer, login screen, Meta widget (SW-17, SW-18) ----------
+
+	/**
+	 * Keep page caches from storing a page that shows the footer link to
+	 * someone who is signed out (after a Switch Off, SW-17, SW-25): a cache
+	 * that only bypasses signed-in visitors would otherwise serve
+	 * "Switch back to {Name}" to everyone. Sends core's no-cache headers and
+	 * defines `DONOTCACHEPAGE`, which caching plugins honor.
+	 * `template_redirect` callback, before any output; returns at once,
+	 * without a query, for a visitor with no switch cookie.
+	 *
+	 * @return void
+	 */
+	public static function nocache_footer_page() {
+		if ( is_user_logged_in() || ! self::shows_footer_link() ) {
+			return;
+		}
+
+		nocache_headers();
+
+		if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+			define( 'DONOTCACHEPAGE', true ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- The page caches' own constant.
+		}
+	}
 
 	/**
 	 * Front-end assets: the footer link's stylesheet, only when the link

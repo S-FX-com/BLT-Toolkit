@@ -78,6 +78,24 @@
 	max-width: 100%;
 }
 
+/* A text field never runs past its card (`regular-text` is 25em wide, more
+   than a card at 420px; the card's overflow would clip its edge and focus
+   ring). The field's grid cells may shrink below their content's width, so
+   `max-width: 100%` has a width to hold to. */
+.blt-toolkit .blt-field > * {
+	min-width: 0;
+}
+
+.blt-toolkit .blt-field input[type="text"],
+.blt-toolkit .blt-field input[type="password"],
+.blt-toolkit .blt-field input[type="email"],
+.blt-toolkit .blt-field input[type="url"],
+.blt-toolkit .blt-field input[type="search"],
+.blt-toolkit .blt-field input[type="number"] {
+	box-sizing: border-box;
+	max-width: 100%;
+}
+
 /* Field labels that carry a badge under the text (Settings > Advanced). */
 .blt-toolkit .blt-field-label .blt-badge {
 	margin-top: 6px;

@@ -101,9 +101,55 @@ class BLT_Toolkit_Plugin {
 			self::$modules[ $key ] = $module;
 		}
 
+		// SW-10 holds with the Switch module off too (setting, constant or
+		// GEN-1 conflict): protection never depends on a module (SPEC 4.1).
+		// Switch cookies left in a browser from before the module went off are
+		// ended by the next sign-in or sign-out, so nobody who later signs in
+		// on that browser is offered the original user's account once the
+		// module is back. Only these hooks are added; the cookie class loads
+		// only when such a cookie is present.
+		if ( ! isset( self::$modules['switch'] ) ) {
+			add_action( 'wp_login', array( __CLASS__, 'end_switch' ), 10, 0 );
+			add_action( 'wp_logout', array( __CLASS__, 'end_switch' ), 10, 0 );
+			add_action( 'blt_m365_sso_user_authenticated', array( __CLASS__, 'end_switch' ), 10, 0 );
+		}
+
 		// Menu, screens and the PRG router (admin/class-blt-toolkit-admin.php).
 		if ( is_admin() && class_exists( 'BLT_Toolkit_Admin' ) ) {
 			BLT_Toolkit_Admin::instance()->init();
+		}
+	}
+
+	/**
+	 * End switching in this browser while the Switch module is off (SW-10):
+	 * destroy the sessions the switch cookies could return to and clear
+	 * them, as the module does when it runs. Hooked on `wp_login`,
+	 * `wp_logout` and BLT M365 WP SSO's sign-in only when the module did not
+	 * boot. Costs one scan of the cookie names when no switch cookie is
+	 * present.
+	 *
+	 * @return void
+	 */
+	public static function end_switch() {
+		$names = array();
+
+		foreach ( array( 'BLT_TOOLKIT_SWITCH_COOKIE', 'BLT_TOOLKIT_SWITCH_SECURE_COOKIE', 'BLT_TOOLKIT_SWITCH_OLDUSER_COOKIE' ) as $constant ) {
+			if ( defined( $constant ) && is_string( constant( $constant ) ) ) {
+				$names[] = constant( $constant );
+			}
+		}
+
+		$found = false;
+
+		foreach ( array_keys( $_COOKIE ) as $name ) {
+			if ( 0 === strpos( (string) $name, 'wordpress_blt_sw_' ) || in_array( (string) $name, $names, true ) ) {
+				$found = true;
+				break;
+			}
+		}
+
+		if ( $found && class_exists( 'BLT_Toolkit_Switch_Cookies' ) ) {
+			BLT_Toolkit_Switch_Cookies::end_sessions();
 		}
 	}
 

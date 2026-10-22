@@ -100,4 +100,4 @@ Thank you to their authors.
 == Changelog ==
 
 = 0.1.0 =
-* In development. Phase 0: plugin scaffold (no user-facing features yet).
+* In development. Phases 0 to 2: scaffold; protection, activity log and role snapshots; switching to another user and back.
