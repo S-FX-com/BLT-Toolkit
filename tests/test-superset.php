@@ -183,9 +183,9 @@ class Test_Superset extends TestCase {
 	}
 
 	/**
-	 * SEC-8: roles compare the same way as users. The legacy `level_*`
-	 * capabilities count like any other: a custom role without `level_0`
-	 * does not cover Subscriber.
+	 * SEC-8: roles compare the same way as users, leaving out the deprecated
+	 * `level_*` capabilities: a custom role without `level_0` covers
+	 * Subscriber, and Author's missing `level_7` is not reported.
 	 *
 	 * @return void
 	 */
@@ -219,9 +219,9 @@ class Test_Superset extends TestCase {
 
 		$this->assertTrue( BLT_Toolkit_Superset::is_subset( $editor_n, $author_n ) );
 		$this->assertFalse( BLT_Toolkit_Superset::is_subset( $author_n, $editor_n ) );
-		$this->assertSame( array( 'edit_others_posts', 'level_7', 'manage_categories', 'moderate_comments' ), BLT_Toolkit_Superset::missing( $author_n, $editor_n ) );
+		$this->assertSame( array( 'edit_others_posts', 'manage_categories', 'moderate_comments' ), BLT_Toolkit_Superset::missing( $author_n, $editor_n ) );
 		$this->assertSame(
-			array( 'level_0' ),
+			array(),
 			BLT_Toolkit_Superset::missing(
 				$custom_n,
 				BLT_Toolkit_Superset::normalize(
@@ -232,6 +232,74 @@ class Test_Superset extends TestCase {
 				)
 			)
 		);
+	}
+
+	/**
+	 * SEC-8, Phase 2 (SPEC 17): the SW-21 Support Agent role (`read`,
+	 * `list_users`, `blt_switch_users`) covers Subscriber (`read`,
+	 * `level_0`) but neither Editor nor Administrator, and every level from
+	 * `level_0` to `level_10` is left out of the comparison.
+	 *
+	 * @return void
+	 */
+	public function test_sec8_levels_are_left_out_of_comparisons() {
+		$agent      = BLT_Toolkit_Superset::normalize( array_fill_keys( array( 'read', 'list_users', 'blt_switch_users' ), true ), $this->roles );
+		$subscriber = BLT_Toolkit_Superset::normalize( array_fill_keys( array( 'read', 'level_0' ), true ), $this->roles );
+		$editor     = BLT_Toolkit_Superset::normalize( array_fill_keys( array( 'read', 'edit_posts', 'edit_others_posts', 'level_7', 'level_0' ), true ), $this->roles );
+		$levels     = array();
+
+		for ( $i = 0; $i <= 10; $i++ ) {
+			$levels[ 'level_' . $i ] = true;
+		}
+
+		$this->assertTrue( BLT_Toolkit_Superset::is_subset( $agent, $subscriber ) );
+		$this->assertSame( array(), BLT_Toolkit_Superset::missing( $agent, $subscriber ) );
+		$this->assertFalse( BLT_Toolkit_Superset::is_subset( $agent, $editor ) );
+		$this->assertSame( array( 'edit_others_posts', 'edit_posts' ), BLT_Toolkit_Superset::missing( $agent, $editor ) );
+		$this->assertTrue( BLT_Toolkit_Superset::is_subset( array(), $levels ) );
+		$this->assertSame( array(), BLT_Toolkit_Superset::missing( array(), $levels ) );
+
+		// normalize() still keeps them: they are held, and grants count them.
+		$this->assertSame(
+			array(
+				'level_0' => true,
+				'read'    => true,
+			),
+			$subscriber
+		);
+	}
+
+	/**
+	 * Only `level_0` to `level_10` are levels; look-alikes are ordinary
+	 * capabilities and are compared.
+	 *
+	 * @return void
+	 */
+	public function test_sec8_is_level() {
+		foreach ( array( 'level_0', 'level_1', 'level_9', 'level_10' ) as $cap ) {
+			$this->assertTrue( BLT_Toolkit_Superset::is_level( $cap ), $cap );
+		}
+
+		foreach ( array( 'level_11', 'level_', 'level_01', 'level_1a', 'Level_1', 'my_level_1', 'level_-1', '', 'read' ) as $cap ) {
+			$this->assertFalse( BLT_Toolkit_Superset::is_level( $cap ), $cap );
+		}
+
+		$this->assertFalse( BLT_Toolkit_Superset::is_level( array( 'level_0' ) ) );
+		$this->assertSame( array( 'level_11' ), BLT_Toolkit_Superset::missing( array(), array( 'level_11' => true ) ) );
+	}
+
+	/**
+	 * SEC-3: levels still count for grants and denies. An actor holding
+	 * `level_0` may grant it; one without `level_10` may not grant it.
+	 *
+	 * @return void
+	 */
+	public function test_sec3_missing_grants_counts_levels() {
+		$actor = BLT_Toolkit_Superset::normalize( array_fill_keys( array( 'read', 'level_0', 'list_users' ), true ), $this->roles );
+
+		$this->assertSame( array(), BLT_Toolkit_Superset::missing_grants( $actor, array_fill_keys( array( 'read', 'level_0' ), true ) ) );
+		$this->assertSame( array( 'level_10', 'manage_options' ), BLT_Toolkit_Superset::missing_grants( $actor, array_fill_keys( array( 'level_10', 'manage_options', 'read' ), true ) ) );
+		$this->assertSame( array(), BLT_Toolkit_Superset::missing_grants( $actor, array( 'do_not_allow' => true, 'level_10' => false ) ) );
 	}
 
 	/**

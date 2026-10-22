@@ -1,0 +1,210 @@
+/**
+ * BLT Toolkit: toolbar styles (SPEC 7.3, SW-14 and SW-20).
+ *
+ * Loaded, after core's `admin-bar` stylesheet, only while the toolbar shows
+ * and the person is switched (the "Viewing as" node) or may search for a
+ * user to switch to. The toolbar renders outside `.blt-ui` and outside the
+ * design system, so colors read the BLT tokens with their literal fallback,
+ * `var(--blt-primary, #2271b1)` and so on (SW-14).
+ *
+ * Every selector starts at `#wpadminbar`: core resets everything inside the
+ * toolbar with `#wpadminbar *`, and nothing here reaches the page.
+ *
+ * @package Blt_Toolkit
+ */
+
+/* --- "Viewing as {Name}" (SW-14) ------------------------------------------ */
+
+#wpadminbar #wp-admin-bar-blt-toolkit-switched > .ab-item,
+#wpadminbar:not(.mobile) .ab-top-menu > li#wp-admin-bar-blt-toolkit-switched > .ab-item:focus,
+#wpadminbar:not(.mobile) .ab-top-menu > li#wp-admin-bar-blt-toolkit-switched:hover > .ab-item,
+#wpadminbar .ab-top-menu > li#wp-admin-bar-blt-toolkit-switched.hover > .ab-item {
+	background: var(--blt-primary, #2271b1);
+	color: var(--blt-surface, #fff);
+}
+
+#wpadminbar:not(.mobile) .ab-top-menu > li#wp-admin-bar-blt-toolkit-switched > .ab-item:focus,
+#wpadminbar:not(.mobile) .ab-top-menu > li#wp-admin-bar-blt-toolkit-switched:hover > .ab-item,
+#wpadminbar .ab-top-menu > li#wp-admin-bar-blt-toolkit-switched.hover > .ab-item {
+	background: var(--blt-primary-hover, #135e96);
+}
+
+#wpadminbar > #wp-toolbar li#wp-admin-bar-blt-toolkit-switched > .ab-item span.ab-label,
+#wpadminbar:not(.mobile) > #wp-toolbar li#wp-admin-bar-blt-toolkit-switched:hover > .ab-item span.ab-label,
+#wpadminbar > #wp-toolbar li#wp-admin-bar-blt-toolkit-switched.hover > .ab-item span.ab-label,
+#wpadminbar #wp-admin-bar-blt-toolkit-switched > .ab-item .ab-icon:before,
+#wpadminbar li#wp-admin-bar-blt-toolkit-switched:hover > .ab-item .ab-icon:before,
+#wpadminbar li#wp-admin-bar-blt-toolkit-switched.hover > .ab-item .ab-icon:before {
+	color: var(--blt-surface, #fff);
+}
+
+#wpadminbar #wp-admin-bar-blt-toolkit-switched > .ab-item .ab-icon:before {
+	content: "\f177"; /* dashicons-visibility */
+	top: 2px;
+}
+
+/* --- "Switch to…" search (SW-20) ------------------------------------------ */
+
+#wpadminbar #wp-admin-bar-blt-toolkit-switch-to > .ab-item .ab-icon:before {
+	content: "\f110"; /* dashicons-admin-users */
+	top: 2px;
+}
+
+#wpadminbar #wp-admin-bar-blt-toolkit-switch-to-search > .ab-item {
+	height: auto;
+	padding: 8px 10px 10px;
+	cursor: default;
+}
+
+#wpadminbar .blt-tk-switch-search {
+	display: block;
+	width: 18em;
+	max-width: calc(100vw - 40px);
+}
+
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-input {
+	display: block;
+	box-sizing: border-box;
+	width: 100%;
+	height: 30px;
+	padding: 0 8px;
+	border: 1px solid var(--blt-border, #dcdcde);
+	border-radius: var(--blt-radius-sm, 4px);
+	background: var(--blt-surface, #fff);
+	color: var(--blt-fg, #1e1e1e);
+	font-size: 13px;
+	line-height: 28px;
+}
+
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-input:focus {
+	border-color: var(--blt-primary, #2271b1);
+	outline: 2px solid var(--blt-primary, #2271b1);
+	outline-offset: 0;
+}
+
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-input::placeholder {
+	color: var(--blt-muted-fg, #646970);
+}
+
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-results {
+	display: block;
+	max-height: 18em;
+	margin-top: 6px;
+	overflow-y: auto;
+}
+
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-results[hidden] {
+	display: none;
+}
+
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-option {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 6px;
+	border-radius: var(--blt-radius-sm, 4px);
+	color: rgba(240, 246, 252, 0.85);
+	cursor: pointer;
+}
+
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-option:hover,
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-option.is-active {
+	background: var(--blt-primary, #2271b1);
+	color: var(--blt-surface, #fff);
+}
+
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-avatar {
+	flex: none;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+}
+
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-name,
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-meta {
+	overflow: hidden;
+	color: inherit;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-name {
+	font-weight: 600;
+	line-height: 18px;
+}
+
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-meta {
+	font-size: 12px;
+	line-height: 16px;
+	opacity: 0.85;
+}
+
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-status {
+	display: block;
+	margin-top: 4px;
+	color: rgba(240, 246, 252, 0.7);
+	font-size: 12px;
+	line-height: 18px;
+	white-space: normal;
+}
+
+#wpadminbar .blt-tk-switch-search .blt-tk-switch-search-status:empty {
+	display: none;
+}
+
+/* --- Small screens: core hides every top-level node it does not know, so
+   "Viewing as" stays visible as an icon (the way back, X-5). The search is
+   left hidden, like core's own search. --------------------------------- */
+
+@media screen and (max-width: 782px) {
+	#wpadminbar li#wp-admin-bar-blt-toolkit-switched {
+		display: block;
+		position: static;
+	}
+
+	#wpadminbar #wp-admin-bar-blt-toolkit-switched > .ab-item {
+		width: 52px;
+		padding: 0;
+		overflow: hidden;
+		text-align: center;
+		white-space: nowrap;
+	}
+
+	#wpadminbar #wp-admin-bar-blt-toolkit-switched > .ab-item .ab-icon {
+		float: none;
+		display: inline-block;
+		width: 52px;
+		height: 46px;
+		margin: 0;
+		padding: 0;
+		text-align: center;
+	}
+
+	#wpadminbar #wp-admin-bar-blt-toolkit-switched > .ab-item .ab-icon:before {
+		top: 7px;
+		font: normal 32px/1 dashicons;
+	}
+
+	/* The name stays available to screen readers. */
+	#wpadminbar #wp-admin-bar-blt-toolkit-switched > .ab-item .ab-label {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		margin: -1px;
+		padding: 0;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		border: 0;
+		white-space: nowrap;
+	}
+
+	#wpadminbar #wp-admin-bar-blt-toolkit-switched .ab-sub-wrapper .ab-item {
+		white-space: normal;
+	}
+}

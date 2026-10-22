@@ -32,6 +32,15 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Roles compare the same way: normalize a role's `capabilities` array, then
  * compare it with an actor's normalized `allcaps`.
+ *
+ * The deprecated user levels (`level_0` to `level_10`) are left out when one
+ * set is compared with another (is_subset() and missing()). Core gives every
+ * default role its levels (Subscriber holds `read` and `level_0`), so a role
+ * built from named capabilities alone, such as the SW-21 Support Agent
+ * (`read`, `list_users`, `blt_switch_users`), would otherwise never cover a
+ * Subscriber, and SPEC 17 (Phase 2) requires it to. normalize() keeps the
+ * levels, because they are still held: granting or denying one is a grant
+ * like any other (SEC-3), checked with missing_grants(), which counts them.
  */
 class BLT_Toolkit_Superset {
 
@@ -39,6 +48,17 @@ class BLT_Toolkit_Superset {
 	 * The capability WordPress uses to refuse outright; never "held".
 	 */
 	const DO_NOT_ALLOW = 'do_not_allow';
+
+	/**
+	 * Whether a capability is one of the deprecated user levels, `level_0`
+	 * to `level_10` (SEC-8 comparisons leave them out). Pure.
+	 *
+	 * @param mixed $cap Capability name.
+	 * @return bool
+	 */
+	public static function is_level( $cap ) {
+		return is_scalar( $cap ) && 1 === preg_match( '/^level_(?:[0-9]|10)$/', (string) $cap );
+	}
 
 	/**
 	 * Effective capabilities from an `allcaps`-style array.
@@ -74,7 +94,8 @@ class BLT_Toolkit_Superset {
 	}
 
 	/**
-	 * Whether the actor holds every capability the target holds.
+	 * Whether the actor holds every capability the target holds (SEC-2,
+	 * SEC-4), leaving out the target's user levels (see the class notes).
 	 *
 	 * Both arguments should come from normalize(). Values are still read by
 	 * whether they grant, and `do_not_allow` is still ignored, so a raw array
@@ -87,7 +108,7 @@ class BLT_Toolkit_Superset {
 	 */
 	public static function is_subset( array $actor_caps, array $target_caps ) {
 		foreach ( $target_caps as $cap => $value ) {
-			if ( empty( $value ) || self::DO_NOT_ALLOW === (string) $cap ) {
+			if ( empty( $value ) || self::DO_NOT_ALLOW === (string) $cap || self::is_level( $cap ) ) {
 				continue;
 			}
 
@@ -100,19 +121,45 @@ class BLT_Toolkit_Superset {
 	}
 
 	/**
-	 * The target's capabilities that the actor does not hold.
+	 * The target's capabilities that the actor does not hold, leaving out the
+	 * target's user levels (SEC-2, SEC-8).
 	 *
 	 * @param array $actor_caps  The actor's capabilities (cap => true), from normalize().
 	 * @param array $target_caps The target's capabilities (cap => true), from normalize().
 	 * @return string[] Capability names, sorted; empty when is_subset() is true.
 	 */
 	public static function missing( array $actor_caps, array $target_caps ) {
+		return self::not_held( $actor_caps, $target_caps, false );
+	}
+
+	/**
+	 * Capabilities being granted (or denied) that the actor does not hold
+	 * (SEC-3). Unlike missing(), user levels count: a non-admin may grant or
+	 * deny `level_0` only while holding it, and never `level_10` without it.
+	 *
+	 * @param array $actor_caps The actor's capabilities (cap => true), from normalize().
+	 * @param array $caps       Capabilities being granted or denied (cap => true).
+	 * @return string[] Capability names, sorted; empty when every one is held.
+	 */
+	public static function missing_grants( array $actor_caps, array $caps ) {
+		return self::not_held( $actor_caps, $caps, true );
+	}
+
+	/**
+	 * The capabilities of `$caps` that grant and are missing from the actor.
+	 *
+	 * @param array $actor_caps   The actor's capabilities (cap => true).
+	 * @param array $caps         Capabilities to look for (cap => value).
+	 * @param bool  $count_levels Whether `level_0` to `level_10` count.
+	 * @return string[] Capability names, sorted.
+	 */
+	private static function not_held( array $actor_caps, array $caps, $count_levels ) {
 		$out = array();
 
-		foreach ( $target_caps as $cap => $value ) {
+		foreach ( $caps as $cap => $value ) {
 			$cap = (string) $cap;
 
-			if ( empty( $value ) || self::DO_NOT_ALLOW === $cap ) {
+			if ( empty( $value ) || self::DO_NOT_ALLOW === $cap || ( ! $count_levels && self::is_level( $cap ) ) ) {
 				continue;
 			}
 

@@ -417,7 +417,34 @@ class Test_Guard extends TestCase {
 		);
 
 		$this->assertSame( 'blt_toolkit_role_exceeds_actor', $violation['code'] );
-		$this->assertSame( array( 'edit_others_posts', 'level_7' ), $violation['caps'] );
+		$this->assertSame( array( 'edit_others_posts' ), $violation['caps'], 'SEC-8: levels are left out of the comparison.' );
+	}
+
+	/**
+	 * SEC-3 counts the deprecated levels even though SEC-2 comparisons leave
+	 * them out: a non-admin cannot grant `level_10` without holding it.
+	 *
+	 * @return void
+	 */
+	public function test_sec3_levels_still_count_for_grants() {
+		$facts = array(
+			'actor_is_admin' => false,
+			'actor_caps'     => array_fill_keys( array( 'read', 'level_0', 'list_users' ), true ),
+			'grants'         => array( 'level_10' ),
+			'role_names'     => array( 'administrator', 'subscriber' ),
+		);
+
+		$violation = BLT_Toolkit_Guard::grant_violation( $facts );
+
+		$this->assertSame( 'blt_toolkit_grant_exceeds_actor', $violation['code'] );
+		$this->assertSame( array( 'level_10' ), $violation['caps'] );
+
+		$facts['grants'] = array( 'level_0' );
+		$this->assertNull( BLT_Toolkit_Guard::grant_violation( $facts ) );
+
+		$facts['grants'] = array();
+		$facts['denies'] = array( 'level_7' );
+		$this->assertSame( 'blt_toolkit_deny_exceeds_actor', BLT_Toolkit_Guard::grant_violation( $facts )['code'] );
 	}
 
 	/**

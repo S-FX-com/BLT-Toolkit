@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: BLT Toolkit 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/S-FX-com/BLT-Toolkit/issues\n"
-"POT-Creation-Date: 2026-10-22 02:53+0000\n"
+"POT-Creation-Date: 2026-10-22 03:46+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -17,11 +17,11 @@ msgstr ""
 #. Plugin Name of the plugin
 #: blt-toolkit.php
 #: admin/class-blt-toolkit-admin-activity.php:577
-#: admin/class-blt-toolkit-admin.php:256
-#: admin/class-blt-toolkit-admin.php:257
-#: admin/class-blt-toolkit-admin.php:370
-#: admin/class-blt-toolkit-admin.php:704
-#: admin/class-blt-toolkit-admin.php:715
+#: admin/class-blt-toolkit-admin.php:262
+#: admin/class-blt-toolkit-admin.php:263
+#: admin/class-blt-toolkit-admin.php:376
+#: admin/class-blt-toolkit-admin.php:710
+#: admin/class-blt-toolkit-admin.php:721
 #: admin/views/header.php:23
 #: includes/class-blt-toolkit-jobs.php:863
 #: includes/class-blt-toolkit-jobs.php:871
@@ -334,7 +334,7 @@ msgid "Role: %1$s (%2$s)"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:675
-#: admin/class-blt-toolkit-admin-settings.php:60
+#: admin/class-blt-toolkit-admin-settings.php:84
 #: admin/views/activity.php:37
 #: admin/views/settings-log.php:21
 msgid "Activity log"
@@ -467,10 +467,10 @@ msgid "How much changed"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin-activity.php:935
-#: admin/class-blt-toolkit-admin-settings.php:59
+#: admin/class-blt-toolkit-admin-settings.php:83
 #: admin/class-blt-toolkit-admin.php:170
-#: admin/class-blt-toolkit-admin.php:288
-#: admin/class-blt-toolkit-admin.php:289
+#: admin/class-blt-toolkit-admin.php:294
+#: admin/class-blt-toolkit-admin.php:295
 #: admin/views/overview.php:108
 #: includes/class-blt-toolkit-plugin.php:170
 msgid "Roles"
@@ -580,32 +580,70 @@ msgstr ""
 msgid "This screen will list every role with how many people hold it, and edit what each role can do in two views of the same data: Simple, with one plain-English access level per content type, and Advanced, with every capability. Each save will be reviewed first and snapshotted so it can be restored. Until then, BLT Toolkit changes no roles, apart from giving the Administrator role BLT Toolkit's own capabilities when it was activated."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:56
+#: admin/class-blt-toolkit-admin-settings.php:80
 msgid "General"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:57
-#: admin/views/settings-switching.php:21
+#: admin/class-blt-toolkit-admin-settings.php:81
+#: admin/views/settings-switching.php:22
 msgid "Switching"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:58
+#: admin/class-blt-toolkit-admin-settings.php:82
 #: admin/class-blt-toolkit-admin.php:172
 #: includes/class-blt-toolkit-plugin.php:166
 msgid "Usernames"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:61
+#: admin/class-blt-toolkit-admin-settings.php:85
 #: admin/views/settings-roles.php:24
 msgid "Advanced"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:98
+#: admin/class-blt-toolkit-admin-settings.php:122
 #: admin/views/settings-advanced.php:137
 msgid "Check for Updates"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin-settings.php:308
+#: admin/class-blt-toolkit-admin-settings.php:339
+msgid "Support Agent"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:399
+msgid "Sign in to the dashboard and edit their own profile"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:400
+msgid "See the list of users"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:401
+msgid "Switch to other users"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:466
+msgid "The Support Agent role already exists."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:471
+msgid "This site's roles are defined in code, so a role cannot be added here."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:484
+#: includes/class-blt-toolkit-caps.php:114
+msgid "A copy of the roles could not be saved first, so no role was changed."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:492
+msgid "The Support Agent role could not be created."
+msgstr ""
+
+#. translators: %s: role name, such as Support Agent.
+#: admin/class-blt-toolkit-admin-settings.php:503
+msgid "Created the %s role: it can sign in, see the list of users and switch to users who have no more access than itself."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:623
 #: admin/views/placeholder.php:46
 msgid "Coming soon"
 msgstr ""
@@ -760,162 +798,188 @@ msgid "Tools"
 msgstr ""
 
 #: admin/class-blt-toolkit-admin.php:178
-#: admin/class-blt-toolkit-admin.php:344
+#: admin/class-blt-toolkit-admin.php:350
 #: admin/views/overview.php:23
+#: admin/views/settings-support-agent.php:31
 #: admin/views/settings.php:26
 msgid "Settings"
 msgstr ""
 
 #. translators: %s: screen name, such as Roles or Settings.
-#: admin/class-blt-toolkit-admin.php:271
+#: admin/class-blt-toolkit-admin.php:277
 msgid "BLT Toolkit %s"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:369
+#: admin/class-blt-toolkit-admin.php:375
 msgid "Sorry, you are not allowed to access this page."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:554
+#: admin/class-blt-toolkit-admin.php:560
 msgid "On"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:556
+#: admin/class-blt-toolkit-admin.php:562
 msgid "Conflict"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:558
+#: admin/class-blt-toolkit-admin.php:564
 msgid "Disabled in wp-config.php"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:561
+#: admin/class-blt-toolkit-admin.php:567
 msgid "Off"
 msgstr ""
 
 #. translators: 1: other plugin's name, such as User Switching, 2: module name.
-#: admin/class-blt-toolkit-admin.php:577
+#: admin/class-blt-toolkit-admin.php:583
 msgid "%1$s is active, so the %2$s module is not running. Deactivate %1$s to use it."
 msgstr ""
 
 #. translators: %s: constant name.
-#: admin/class-blt-toolkit-admin.php:587
+#: admin/class-blt-toolkit-admin.php:593
 msgid "It is also switched off by %s in wp-config.php; remove it from that constant too."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:601
+#: admin/class-blt-toolkit-admin.php:607
 msgid "Go to Plugins"
 msgstr ""
 
 #. translators: 1: module name, 2: constant name.
-#: admin/class-blt-toolkit-admin.php:610
+#: admin/class-blt-toolkit-admin.php:616
 msgid "The %1$s module is switched off by %2$s in wp-config.php, whatever its setting says. Remove it from that constant to use the module again."
 msgstr ""
 
 #. translators: %s: module name.
-#: admin/class-blt-toolkit-admin.php:619
+#: admin/class-blt-toolkit-admin.php:625
 msgid "The %s module is switched off, so its features are not available."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:624
+#: admin/class-blt-toolkit-admin.php:630
 msgid "Turn it on in Settings"
 msgstr ""
 
 #. translators: %s: module name, such as Roles.
-#: admin/class-blt-toolkit-admin.php:670
+#: admin/class-blt-toolkit-admin.php:676
 msgid "The %s module is not running"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:703
+#: admin/class-blt-toolkit-admin.php:709
 #: includes/class-blt-toolkit-jobs.php:863
 msgid "This action needs a form submission."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:714
-#: includes/class-blt-toolkit-guard.php:1721
+#: admin/class-blt-toolkit-admin.php:720
+#: includes/class-blt-toolkit-guard.php:1723
 #: includes/class-blt-toolkit-jobs.php:875
-#: includes/class-blt-toolkit-rest.php:152
+#: includes/class-blt-toolkit-rest.php:188
+#: includes/class-blt-toolkit-rest.php:302
 msgid "You do not have permission to do that."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:838
+#: admin/class-blt-toolkit-admin.php:844
 msgid "Settings saved."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:841
+#: admin/class-blt-toolkit-admin.php:847
 msgid "Settings saved. A number was outside its allowed range or not a number, so the nearest allowed value, or the previous value, was saved instead. Check the values below."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:844
+#: admin/class-blt-toolkit-admin.php:850
 msgid "Modules saved. A module that is switched off loads no code; protection for administrators and the activity log keep running."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:847
+#: admin/class-blt-toolkit-admin.php:853
 msgid "Settings saved. The GitHub token is stored encrypted. Use Test connection to check it."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:850
+#: admin/class-blt-toolkit-admin.php:856
 msgid "Settings saved, but the token was not: it does not look like a GitHub token. Paste it exactly as GitHub showed it."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:853
+#: admin/class-blt-toolkit-admin.php:859
 msgid "Settings saved, but the token was not: this server has neither libsodium nor OpenSSL AES-GCM, so it cannot be stored encrypted. Define BLT_TOOLKIT_GITHUB_TOKEN in wp-config.php instead."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:856
+#: admin/class-blt-toolkit-admin.php:862
 msgid "Settings saved, but the token could not be encrypted, so it was not stored. Try again."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:859
+#: admin/class-blt-toolkit-admin.php:865
 msgid "The stored GitHub token was removed. A token in wp-config.php or in the shared BLT settings, if there is one, still applies."
 msgstr ""
 
 #. translators: %s: error code from the HTTP library, such as http_request_failed.
-#: admin/class-blt-toolkit-admin.php:869
+#: admin/class-blt-toolkit-admin.php:875
 msgid "GitHub could not be reached from this server (%s). Check that the host allows outgoing HTTPS requests to api.github.com."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:875
+#: admin/class-blt-toolkit-admin.php:881
+msgid "The Support Agent role was created. Give it to someone from their profile or from the Users screen."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:884
+msgid "The Support Agent role already exists, so nothing was changed."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:887
+msgid "Nothing was changed: type the role name exactly as shown to confirm."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:890
+msgid "Nothing was changed: a copy of the roles could not be saved first. Try again; if this keeps happening, the PHP error log says why."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:893
+msgid "Nothing was changed: creating this role needs the \"Create roles\" permission and every capability the role would have."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:896
+msgid "The Support Agent role could not be created. Try again."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:899
 msgid "Nothing was changed: the request could not be completed. Try again."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:891
+#: admin/class-blt-toolkit-admin.php:915
 msgid "with the token from wp-config.php"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:894
+#: admin/class-blt-toolkit-admin.php:918
 msgid "with the token stored here"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:897
+#: admin/class-blt-toolkit-admin.php:921
 msgid "with the token from the shared BLT settings"
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:900
+#: admin/class-blt-toolkit-admin.php:924
 msgid "without a token"
 msgstr ""
 
 #. translators: 1: GitHub repository such as S-FX-com/BLT-Toolkit, 2: how the request was made, such as "with the token stored here".
-#: admin/class-blt-toolkit-admin.php:910
+#: admin/class-blt-toolkit-admin.php:934
 msgid "Connected. GitHub answered HTTP 200 for %1$s %2$s, so update checks will work."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:919
+#: admin/class-blt-toolkit-admin.php:943
 msgid "GitHub rejected the token. It may have expired or been revoked; create a new one and save it here."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:923
+#: admin/class-blt-toolkit-admin.php:947
 msgid "GitHub refused the request. The token may lack access to the repository, or this server reached GitHub's hourly limit for requests; try again later."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:926
+#: admin/class-blt-toolkit-admin.php:950
 msgid "GitHub did not find the repository. For a private repository this means the token cannot see it: use a fine-grained token with read-only Contents access to it."
 msgstr ""
 
-#: admin/class-blt-toolkit-admin.php:929
+#: admin/class-blt-toolkit-admin.php:953
 msgid "GitHub may be having trouble. Try again in a few minutes."
 msgstr ""
 
 #. translators: 1: HTTP status code, 2: GitHub repository, 3: how the request was made, 4: advice.
-#: admin/class-blt-toolkit-admin.php:936
+#: admin/class-blt-toolkit-admin.php:960
 msgid "GitHub answered HTTP %1$d for %2$s %3$s. %4$s"
 msgstr ""
 
@@ -1337,52 +1401,176 @@ msgstr ""
 msgid "Roles every new user receives on top of the default role, and a description and hidden toolbar per role, set from the Roles screen."
 msgstr ""
 
-#: admin/views/settings-switching.php:22
+#: admin/views/settings-support-agent.php:23
+msgid "Critical"
+msgstr ""
+
+#: admin/views/settings-support-agent.php:24
+msgid "Elevated"
+msgstr ""
+
+#: admin/views/settings-support-agent.php:25
+msgid "Standard"
+msgstr ""
+
+#: admin/views/settings-support-agent.php:33
+#: admin/views/settings.php:28
+msgid "Settings sections"
+msgstr ""
+
+#: admin/views/settings-support-agent.php:40
+msgid "Create the Support Agent role"
+msgstr ""
+
+#. translators: 1: role name, 2: role ID.
+#: admin/views/settings-support-agent.php:45
+msgid "Adds a role named %1$s (%2$s) with the three capabilities below. Nobody has the role until you give it to them."
+msgstr ""
+
+#: admin/views/settings-support-agent.php:70
+msgid "Whom a Support Agent can switch into"
+msgstr ""
+
+#: admin/views/settings-support-agent.php:71
+msgid "Switching is allowed only into people who have no capability the Support Agent lacks, counting every role they hold and any capability given to them alone. Administrators are always out of reach."
+msgstr ""
+
+#: admin/views/settings-support-agent.php:75
+msgid "Can switch into"
+msgstr ""
+
+#: admin/views/settings-support-agent.php:78
+msgid "No role on this site is limited enough today, so a Support Agent could switch only into other Support Agents."
+msgstr ""
+
+#. translators: %s: comma-separated role names, such as "Subscriber, Customer".
+#: admin/views/settings-support-agent.php:85
+msgid "People whose roles are only: %s, and other Support Agents."
+msgstr ""
+
+#: admin/views/settings-support-agent.php:95
+msgid "Still prevented"
+msgstr ""
+
+#: admin/views/settings-support-agent.php:103
+msgid "administrators can never be switched into by anyone who is not an administrator."
+msgstr ""
+
+#. translators: %s: number of capabilities.
+#: admin/views/settings-support-agent.php:108
+msgid "holds %s capability a Support Agent does not, so it is out of reach."
+msgid_plural "holds %s capabilities a Support Agent does not, so it is out of reach."
+msgstr[0] ""
+msgstr[1] ""
+
+#: admin/views/settings-support-agent.php:116
+msgid "Anyone given a capability of their own that a Support Agent lacks, whatever their role."
+msgstr ""
+
+#: admin/views/settings-support-agent.php:117
+msgid "Editing users, changing roles or settings: the role has only the three capabilities above."
+msgstr ""
+
+#: admin/views/settings-support-agent.php:126
+msgid "Confirm"
+msgstr ""
+
+#: admin/views/settings-support-agent.php:130
+msgid "Critical capability"
+msgstr ""
+
+#: admin/views/settings-support-agent.php:131
+msgid "\"Switch to other users\" lets a Support Agent sign in as another person and act with that person's access until they switch back. Everything done while switched is logged under the Support Agent's own name."
+msgstr ""
+
+#: admin/views/settings-support-agent.php:135
+msgid "Type the role name to confirm"
+msgstr ""
+
+#. translators: %s: role name, such as Support Agent.
+#: admin/views/settings-support-agent.php:143
+msgid "Type %s exactly as shown."
+msgstr ""
+
+#: admin/views/settings-support-agent.php:154
+msgid "Create Support Agent role"
+msgstr ""
+
+#: admin/views/settings-support-agent.php:155
+#: includes/class-blt-toolkit-jobs.php:1056
+msgid "Cancel"
+msgstr ""
+
+#: admin/views/settings-switching.php:23
 msgid "How switching to another user's account looks and behaves. Who may switch is decided by the \"Switch to users\" capability, and only administrators can ever switch into an administrator."
 msgstr ""
 
-#: admin/views/settings-switching.php:30
+#: admin/views/settings-switching.php:31
 msgid "Show a \"Switch back\" link on the site"
 msgstr ""
 
-#: admin/views/settings-switching.php:31
+#: admin/views/settings-switching.php:32
 msgid "While you are switched and the toolbar is hidden, a small fixed link on the site takes you back to your own account."
 msgstr ""
 
-#: admin/views/settings-switching.php:36
+#: admin/views/settings-switching.php:37
 msgid "Offer \"Switch Off\" in the toolbar"
 msgstr ""
 
-#: admin/views/settings-switching.php:37
+#: admin/views/settings-switching.php:38
 msgid "Signs you out for a moment to see the site as a visitor. The login screen and the site then offer to switch back to you."
 msgstr ""
 
-#: admin/views/settings-switching.php:42
+#: admin/views/settings-switching.php:43
 msgid "Search for a user to switch to from the toolbar"
 msgstr ""
 
-#: admin/views/settings-switching.php:43
+#: admin/views/settings-switching.php:44
 msgid "A \"Switch to…\" item in the toolbar finds people by name. It lists only users you are allowed to switch to."
 msgstr ""
 
-#: admin/views/settings-switching.php:48
+#: admin/views/settings-switching.php:49
 msgid "Work with tools made for User Switching"
 msgstr ""
 
-#: admin/views/settings-switching.php:49
+#: admin/views/settings-switching.php:50
 msgid "Also announces each switch the way User Switching does, so activity logs and debugging tools that support User Switching keep working without changes."
 msgstr ""
 
-#: admin/views/settings-switching.php:54
+#: admin/views/settings-switching.php:55
 msgid "WooCommerce"
 msgstr ""
 
-#: admin/views/settings-switching.php:55
+#: admin/views/settings-switching.php:56
 msgid "Adds \"Switch to customer\" on orders and \"Switch back\" in My Account, and starts a fresh cart session on each switch. Applies only while WooCommerce is active."
 msgstr ""
 
-#: admin/views/settings-switching.php:60
-msgid "A one-click Support Agent role that can switch only into people with less access than itself, created after a preview."
+#: admin/views/settings-switching.php:65
+msgid "Support Agent role"
+msgstr ""
+
+#: admin/views/settings-switching.php:66
+msgid "A ready-made role for people who help others with their accounts: it can sign in, see the list of users and switch to users who have no more access than itself. Administrators stay out of its reach."
+msgstr ""
+
+#: admin/views/settings-switching.php:69
+msgid "Created"
+msgstr ""
+
+#: admin/views/settings-switching.php:75
+msgid "The role exists. Give it to someone from their profile or from the Users screen."
+msgstr ""
+
+#: admin/views/settings-switching.php:77
+msgid "Nothing changes until you confirm: the next page shows exactly what the role can do and whom it can switch into."
+msgstr ""
+
+#: admin/views/settings-switching.php:79
+msgid "Create Support Agent role…"
+msgstr ""
+
+#: admin/views/settings-switching.php:82
+msgid "Creating roles needs the \"Create roles\" permission, which your account does not have."
 msgstr ""
 
 #: admin/views/settings-usernames.php:19
@@ -1537,16 +1725,8 @@ msgstr ""
 msgid "Choose which roles may change their own username. It will be a capability on each role, so the Roles screen shows it too."
 msgstr ""
 
-#: admin/views/settings.php:28
-msgid "Settings sections"
-msgstr ""
-
 #: admin/views/settings.php:37
 msgid "Save changes"
-msgstr ""
-
-#: includes/class-blt-toolkit-caps.php:114
-msgid "A copy of the roles could not be saved first, so no role was changed."
 msgstr ""
 
 #. translators: %s: number of capabilities.
@@ -1585,110 +1765,111 @@ msgstr ""
 msgid "New users would get the role %s, which has capabilities you do not have, so you cannot create this user. Ask an administrator."
 msgstr ""
 
-#: includes/class-blt-toolkit-guard.php:1671
+#: includes/class-blt-toolkit-guard.php:1673
 msgid "That user does not exist."
 msgstr ""
 
-#: includes/class-blt-toolkit-guard.php:1674
-#: includes/class-blt-toolkit-rest.php:138
+#: includes/class-blt-toolkit-guard.php:1676
+#: includes/class-blt-toolkit-rest.php:174
+#: includes/class-blt-toolkit-rest.php:298
 msgid "You need to be signed in to do that."
 msgstr ""
 
-#: includes/class-blt-toolkit-guard.php:1677
+#: includes/class-blt-toolkit-guard.php:1679
 msgid "Only an administrator can do that to an administrator."
 msgstr ""
 
 #. translators: %s: comma-separated capability names.
-#: includes/class-blt-toolkit-guard.php:1681
+#: includes/class-blt-toolkit-guard.php:1683
 msgid "This user has capabilities you do not have (%s), so you cannot do that to them."
 msgstr ""
 
 #. translators: %s: comma-separated role IDs.
-#: includes/class-blt-toolkit-guard.php:1685
+#: includes/class-blt-toolkit-guard.php:1687
 msgid "These are roles, not capabilities, so they cannot be granted, denied or removed here (%s). Change a user's roles with the role controls instead."
 msgstr ""
 
 #. translators: %s: comma-separated capability names.
-#: includes/class-blt-toolkit-guard.php:1689
+#: includes/class-blt-toolkit-guard.php:1691
 msgid "You cannot grant capabilities you do not have yourself (%s)."
 msgstr ""
 
 #. translators: %s: comma-separated capability names.
-#: includes/class-blt-toolkit-guard.php:1693
+#: includes/class-blt-toolkit-guard.php:1695
 msgid "You cannot deny capabilities you do not have yourself (%s)."
 msgstr ""
 
-#: includes/class-blt-toolkit-guard.php:1696
+#: includes/class-blt-toolkit-guard.php:1698
 msgid "You cannot change your own capabilities. Ask an administrator."
 msgstr ""
 
-#: includes/class-blt-toolkit-guard.php:1699
+#: includes/class-blt-toolkit-guard.php:1701
 msgid "An administrator also holds this role, so only an administrator can deny capabilities in it."
 msgstr ""
 
 #. translators: %s: comma-separated capability names.
-#: includes/class-blt-toolkit-guard.php:1703
+#: includes/class-blt-toolkit-guard.php:1705
 msgid "The Administrator role must keep these capabilities, or nobody could manage the site: %s."
 msgstr ""
 
-#: includes/class-blt-toolkit-guard.php:1706
+#: includes/class-blt-toolkit-guard.php:1708
 msgid "Only an administrator can change the Administrator role."
 msgstr ""
 
-#: includes/class-blt-toolkit-guard.php:1709
+#: includes/class-blt-toolkit-guard.php:1711
 msgid "You cannot change a role you hold yourself. Ask an administrator."
 msgstr ""
 
 #. translators: %s: comma-separated capability names.
-#: includes/class-blt-toolkit-guard.php:1713
+#: includes/class-blt-toolkit-guard.php:1715
 msgid "This role has capabilities you do not have (%s), so you cannot change it."
 msgstr ""
 
-#: includes/class-blt-toolkit-guard.php:1717
+#: includes/class-blt-toolkit-guard.php:1719
 msgid "This change would take away your own ability to edit roles, and there is no other administrator to give it back."
 msgstr ""
 
-#: includes/class-blt-toolkit-guard.php:1718
+#: includes/class-blt-toolkit-guard.php:1720
 msgid "This change would take away your own ability to edit roles. Another administrator could give it back. Confirm to continue."
 msgstr ""
 
 #. translators: 1: comma-separated capability names, 2: how many more there are.
-#: includes/class-blt-toolkit-guard.php:1754
+#: includes/class-blt-toolkit-guard.php:1756
 msgid "%1$s and %2$s more"
 msgid_plural "%1$s and %2$s more"
 msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of capabilities.
-#: includes/class-blt-toolkit-guard.php:1971
+#: includes/class-blt-toolkit-guard.php:1973
 msgid "Recovery mode gave the Administrator role back %s capability for each request only: this site defines its roles in code, so nothing could be saved."
 msgid_plural "Recovery mode gave the Administrator role back %s capabilities for each request only: this site defines its roles in code, so nothing could be saved."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/class-blt-toolkit-guard.php:2006
+#: includes/class-blt-toolkit-guard.php:2008
 msgid "Recovery mode created the Administrator role again with the capabilities it needs to manage the site."
 msgstr ""
 
 #. translators: %s: number of capabilities.
-#: includes/class-blt-toolkit-guard.php:2009
+#: includes/class-blt-toolkit-guard.php:2011
 msgid "Recovery mode gave the Administrator role back %s capability."
 msgid_plural "Recovery mode gave the Administrator role back %s capabilities."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/class-blt-toolkit-guard.php:2076
-#: includes/class-blt-toolkit-guard.php:2090
+#: includes/class-blt-toolkit-guard.php:2078
+#: includes/class-blt-toolkit-guard.php:2092
 msgid "BLT Toolkit recovery mode is on."
 msgstr ""
 
 #. translators: 1: the PHP global that holds the roles, in code formatting, 2: the wp-config.php line, in code formatting.
-#: includes/class-blt-toolkit-guard.php:2079
+#: includes/class-blt-toolkit-guard.php:2081
 msgid "This site defines its roles in code (%1$s), so recovery cannot save anything: the Administrator role has what it needs only while recovery mode is on. Fix the Administrator role in that code, then remove %2$s from wp-config.php."
 msgstr ""
 
 #. translators: %s: the wp-config.php line, in code formatting.
-#: includes/class-blt-toolkit-guard.php:2093
+#: includes/class-blt-toolkit-guard.php:2095
 msgid "The Administrator role has the capabilities it needs to manage the site and every BLT Toolkit capability. Remove %s from wp-config.php now; it is meant for emergencies only."
 msgstr ""
 
@@ -1711,8 +1892,8 @@ msgstr ""
 
 #: includes/class-blt-toolkit-jobs.php:871
 #: includes/class-blt-toolkit-jobs.php:2501
-#: includes/class-blt-toolkit-rest.php:144
-#: includes/class-blt-toolkit-rest.php:232
+#: includes/class-blt-toolkit-rest.php:180
+#: includes/class-blt-toolkit-rest.php:503
 msgid "That job no longer exists."
 msgstr ""
 
@@ -1768,10 +1949,6 @@ msgstr ""
 
 #: includes/class-blt-toolkit-jobs.php:997
 msgid "Cancel this job? Items that already finished stay finished."
-msgstr ""
-
-#: includes/class-blt-toolkit-jobs.php:1056
-msgid "Cancel"
 msgstr ""
 
 #: includes/class-blt-toolkit-jobs.php:1057
@@ -1989,12 +2166,25 @@ msgstr ""
 msgid "BLT Toolkit supports single-site installs only in this version, so it is not running on this network. Deactivate it from the Plugins screen."
 msgstr ""
 
-#: includes/class-blt-toolkit-rest.php:78
+#: includes/class-blt-toolkit-rest.php:114
 msgid "Job ID."
 msgstr ""
 
-#: includes/class-blt-toolkit-rest.php:148
+#: includes/class-blt-toolkit-rest.php:184
 msgid "This job belongs to a module that is not running, so it cannot be shown or continued."
+msgstr ""
+
+#: includes/class-blt-toolkit-rest.php:265
+msgid "Part of a name, username or email address: at least 2 characters."
+msgstr ""
+
+#: includes/class-blt-toolkit-rest.php:281
+msgid "The URL that switches to this user, or null when the current user may not switch to them."
+msgstr ""
+
+#. translators: 1: shortest length, 2: longest length.
+#: includes/class-blt-toolkit-rest.php:339
+msgid "Search for between %1$d and %2$d characters."
 msgstr ""
 
 #: includes/class-blt-toolkit-settings.php:418
@@ -2069,4 +2259,144 @@ msgstr ""
 #. translators: 1: snapshot number, 2: date and time it was taken.
 #: includes/class-blt-toolkit-snapshots.php:728
 msgid "Could not restore the roles saved in snapshot %1$d (%2$s); the roles were not changed."
+msgstr ""
+
+#. translators: %s: the user's display name.
+#. translators: %s: the author's display name.
+#. translators: %s: a user's display name.
+#: includes/class-blt-toolkit-switch-ui.php:216
+#: includes/class-blt-toolkit-switch-ui.php:259
+#: includes/class-blt-toolkit-switch-ui.php:445
+#: includes/class-blt-toolkit-switch-ui.php:900
+msgid "Switch to %s"
+msgstr ""
+
+#: includes/class-blt-toolkit-switch-ui.php:217
+#: includes/class-blt-toolkit-switch-ui.php:260
+msgid "Switch&nbsp;To"
+msgstr ""
+
+#: includes/class-blt-toolkit-switch-ui.php:252
+msgid "Switch user"
+msgstr ""
+
+#: includes/class-blt-toolkit-switch-ui.php:263
+msgid "See the site as this user. Everything you do while switched is logged under your own name."
+msgstr ""
+
+#. translators: "Switch Off" means signing out for a moment, with a way back.
+#: includes/class-blt-toolkit-switch-ui.php:293
+#: includes/class-blt-toolkit-switch-ui.php:361
+#: includes/class-blt-toolkit-switch-ui.php:891
+msgid "Switch Off"
+msgstr ""
+
+#. translators: %s: display name of the user being viewed as.
+#: includes/class-blt-toolkit-switch-ui.php:324
+msgid "Viewing as %s"
+msgstr ""
+
+#: includes/class-blt-toolkit-switch-ui.php:384
+msgid "Switch to…"
+msgstr ""
+
+#: includes/class-blt-toolkit-switch-ui.php:399
+msgid "Find a user to switch to"
+msgstr ""
+
+#: includes/class-blt-toolkit-switch-ui.php:400
+msgid "Name, username or email"
+msgstr ""
+
+#: includes/class-blt-toolkit-switch-ui.php:527
+msgid "Users you can switch to"
+msgstr ""
+
+#: includes/class-blt-toolkit-switch-ui.php:528
+msgid "Type at least 2 characters."
+msgstr ""
+
+#: includes/class-blt-toolkit-switch-ui.php:529
+msgid "Searching…"
+msgstr ""
+
+#: includes/class-blt-toolkit-switch-ui.php:530
+msgid "No user you can switch to matches."
+msgstr ""
+
+#. translators: %s: number of users found.
+#: includes/class-blt-toolkit-switch-ui.php:532
+msgid "Users found: %s. Use the up and down arrow keys to choose one, then press Enter."
+msgstr ""
+
+#: includes/class-blt-toolkit-switch-ui.php:533
+msgid "The search did not work. Try again, or reload the page."
+msgstr ""
+
+#: includes/class-blt-toolkit-switch-ui.php:901
+msgid "Switch to"
+msgstr ""
+
+#. translators: %s: the customer's display name, read out by screen readers only. Keep the span.
+#: includes/class-blt-toolkit-switch-woocommerce.php:143
+msgid "Switch to customer<span class=\"screen-reader-text\">: %s</span>"
+msgstr ""
+
+#. translators: %s: display name of the user switched to.
+#: includes/class-blt-toolkit-switch.php:465
+#: includes/class-blt-toolkit-switch.php:719
+msgid "Switched to %s."
+msgstr ""
+
+#. translators: %s: display name of the user to switch back to.
+#: includes/class-blt-toolkit-switch.php:484
+msgid "Switch back to %s"
+msgstr ""
+
+#. translators: %s: display name of the user switched back to.
+#: includes/class-blt-toolkit-switch.php:503
+#: includes/class-blt-toolkit-switch.php:827
+msgid "Switched back to %s."
+msgstr ""
+
+#: includes/class-blt-toolkit-switch.php:591
+#: includes/class-blt-toolkit-switch.php:599
+#: includes/class-blt-toolkit-switch.php:635
+#: includes/class-blt-toolkit-switch.php:642
+msgid "Could not switch users."
+msgstr ""
+
+#: includes/class-blt-toolkit-switch.php:605
+msgid "You have switched too many times in a row. Switch back first."
+msgstr ""
+
+#. translators: "switch off" means signing out for a moment, with a way back.
+#: includes/class-blt-toolkit-switch.php:675
+msgid "Could not switch off."
+msgstr ""
+
+#: includes/class-blt-toolkit-switch.php:893
+msgid "Switched off."
+msgstr ""
+
+#. translators: 1: name of the user who is switched in, 2: name of the user to switch to, 3: how long ago, such as "5 mins".
+#: includes/class-blt-toolkit-switch.php:966
+msgid "%1$s is currently switched to %2$s. They switched %3$s ago. Continue?"
+msgstr ""
+
+#. translators: %s: name of the user to switch to.
+#: includes/class-blt-toolkit-switch.php:973
+msgid "Yes, switch to %s"
+msgstr ""
+
+#: includes/class-blt-toolkit-switch.php:987
+msgid "No, go back"
+msgstr ""
+
+#: includes/class-blt-toolkit-switch.php:989
+msgid "Someone is already switched in"
+msgstr ""
+
+#: includes/class-blt-toolkit-switch.php:1083
+msgid "When a user with permission switches to another user's account, BLT Toolkit sets cookies that let them switch back. Like the cookies WordPress sets when you log in, they contain the username of the user who switched, an expiration time and a secure hash. They expire after two days, or as soon as that user logs in or out."
 msgstr ""

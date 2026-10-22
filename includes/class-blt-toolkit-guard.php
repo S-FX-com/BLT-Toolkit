@@ -1482,7 +1482,9 @@ class BLT_Toolkit_Guard {
 	 * A non-admin may set only capabilities they hold, to either value:
 	 * granting one they lack gives power they do not have, and denying one
 	 * they lack takes it from people who have more than they do. A key named
-	 * like a role is refused whatever its value.
+	 * like a role is refused whatever its value. The deprecated user levels
+	 * (`level_0` to `level_10`) count here, although SEC-2 and SEC-4
+	 * comparisons leave them out (BLT_Toolkit_Superset::missing_grants()).
 	 *
 	 * @param array $facts {
 	 *     @type bool     $actor_is_admin Whether the actor is a toolkit admin.
@@ -1514,13 +1516,13 @@ class BLT_Toolkit_Guard {
 			return self::violation( 'blt_toolkit_role_name_cap', 'SEC-3', $named );
 		}
 
-		$missing = BLT_Toolkit_Superset::missing( $actor_caps, array_fill_keys( $grants, true ) );
+		$missing = BLT_Toolkit_Superset::missing_grants( $actor_caps, array_fill_keys( $grants, true ) );
 
 		if ( array() !== $missing ) {
 			return self::violation( 'blt_toolkit_grant_exceeds_actor', 'SEC-3', $missing );
 		}
 
-		$missing = BLT_Toolkit_Superset::missing( $actor_caps, array_fill_keys( $denies, true ) );
+		$missing = BLT_Toolkit_Superset::missing_grants( $actor_caps, array_fill_keys( $denies, true ) );
 
 		if ( array() !== $missing ) {
 			return self::violation( 'blt_toolkit_deny_exceeds_actor', 'SEC-3', $missing );

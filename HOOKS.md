@@ -8,9 +8,9 @@ Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) se
 
 | Hook | Type | Requirement | Status | Purpose |
 | --- | --- | --- | --- | --- |
-| [`blt_toolkit_switched_to`](#blt_toolkit_switched_to) | action | SW-4 | Planned (Phase 2) | After switching to a user |
-| [`blt_toolkit_switched_back`](#blt_toolkit_switched_back) | action | SW-5 | Planned (Phase 2) | After switching back |
-| [`blt_toolkit_switched_off`](#blt_toolkit_switched_off) | action | SW-6 | Planned (Phase 2) | After switching off |
+| [`blt_toolkit_switched_to`](#blt_toolkit_switched_to) | action | SW-4 | Available | After switching to a user |
+| [`blt_toolkit_switched_back`](#blt_toolkit_switched_back) | action | SW-5 | Available | After switching back |
+| [`blt_toolkit_switched_off`](#blt_toolkit_switched_off) | action | SW-6 | Available | After switching off |
 | [`blt_toolkit_before_username_change`](#blt_toolkit_before_username_change) | action | UN-10 | Planned (Phase 3) | Before a username is written |
 | [`blt_toolkit_after_username_change`](#blt_toolkit_after_username_change) | action | UN-10 | Planned (Phase 3) | After a username changed |
 | [`blt_toolkit_before_roles_save`](#blt_toolkit_before_roles_save) | action | RO-4 | Planned (Phase 4) | Before role capabilities are written |
@@ -23,15 +23,15 @@ Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) se
 | [`blt_toolkit_before_job`](#blt_toolkit_before_job) | action | JOB-1 to JOB-5 | Available | A background job starts |
 | [`blt_toolkit_after_job`](#blt_toolkit_after_job) | action | JOB-1 to JOB-5 | Available | A background job ends |
 | [`blt_toolkit_logged`](#blt_toolkit_logged) | action | LOG-6 | Available | After a log row is written |
-| [`switch_to_user`](#user-switching-compatibility) | action | SW-19 | Planned (Phase 2) | User Switching compatibility |
-| [`switch_back_user`](#user-switching-compatibility) | action | SW-19 | Planned (Phase 2) | User Switching compatibility |
-| [`switch_off_user`](#user-switching-compatibility) | action | SW-19 | Planned (Phase 2) | User Switching compatibility |
+| [`switch_to_user`](#user-switching-compatibility) | action | SW-19 | Available | User Switching compatibility |
+| [`switch_back_user`](#user-switching-compatibility) | action | SW-19 | Available | User Switching compatibility |
+| [`switch_off_user`](#user-switching-compatibility) | action | SW-19 | Available | User Switching compatibility |
 | [`blt_toolkit_modules`](#blt_toolkit_modules) | filter | SPEC 4.1 | Available | The module registry |
 | [`blt_toolkit_is_toolkit_admin`](#blt_toolkit_is_toolkit_admin) | filter | SPEC 5.2 | Available | Who counts as an administrator |
-| [`blt_toolkit_switch_redirect`](#blt_toolkit_switch_redirect) | filter | SW-9 | Planned (Phase 2) | Where a switch lands |
-| [`blt_toolkit_switch_show_footer_link`](#blt_toolkit_switch_show_footer_link) | filter | SW-17 | Planned (Phase 2) | The fixed "Switch back" link on the site |
-| [`blt_toolkit_switch_send_cookies`](#blt_toolkit_switch_send_cookies) | filter | SW-3 | Planned (Phase 2) | Whether switch cookies are sent |
-| [`blt_toolkit_switch_search_limit`](#blt_toolkit_switch_search_limit) | filter | SW-20 | Planned (Phase 2) | Toolbar search result cap |
+| [`blt_toolkit_switch_redirect`](#blt_toolkit_switch_redirect) | filter | SW-9 | Available | Where a switch lands |
+| [`blt_toolkit_switch_show_footer_link`](#blt_toolkit_switch_show_footer_link) | filter | SW-17 | Available | The fixed "Switch back" link on the site |
+| [`blt_toolkit_switch_send_cookies`](#blt_toolkit_switch_send_cookies) | filter | SW-3 | Available | Whether switch cookies are sent |
+| [`blt_toolkit_switch_search_limit`](#blt_toolkit_switch_search_limit) | filter | SW-20 | Available | Toolbar search result cap |
 | [`blt_toolkit_validate_username`](#blt_toolkit_validate_username) | filter | UN-9 | Planned (Phase 3) | Add or remove username errors |
 | [`blt_toolkit_username_min_length`](#blt_toolkit_username_min_length) | filter | UN-2 | Planned (Phase 3) | Minimum username length |
 | [`blt_toolkit_disallowed_usernames`](#blt_toolkit_disallowed_usernames) | filter | UN-4 | Planned (Phase 3) | Disallowed usernames |
@@ -48,7 +48,7 @@ Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) se
 | [`blt_toolkit_snapshot_retention`](#blt_toolkit_snapshot_retention) | filter | SNAP-3 | Available | Snapshots kept besides the baseline |
 | [`blt_toolkit_log_retention_days`](#blt_toolkit_log_retention_days) | filter | LOG-4 | Available | Days log rows are kept |
 | [`blt_toolkit_tick_budget`](#blt_toolkit_tick_budget) | filter | JOB-2 | Available | Seconds one job tick may run |
-| [`current_user_switched()`](#current_user_switched) | function | SW-19 | Planned (Phase 2) | User Switching compatibility shim |
+| [`current_user_switched()`](#current_user_switched) | function | SW-19 | Available | User Switching compatibility shim |
 
 ---
 
@@ -56,7 +56,7 @@ Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) se
 
 ### `blt_toolkit_switched_to`
 
-Fires after the current user has switched to another user: the auth cookies are set and the current user is the target, before the redirect (SW-4 step 6). The switch is logged at the same point.
+Fires after the current user has switched to another user: the auth cookies are set and the current user is the target, before the redirect (SW-4 step 6). The log row is written just before the identity changes, so its `acting_as_id` is the user switched from (`0` when that is the person who signed in) and its `switch_chain` ends with them (LOG-2).
 
 | Argument | Type | Description |
 | --- | --- | --- |
@@ -65,31 +65,31 @@ Fires after the current user has switched to another user: the auth cookies are 
 | `$new_token` | string | Session token of the session created for the target. |
 | `$old_token` | string | Session token of the actor's session, which switching back returns to. |
 
-Requirement SW-4. Status: Planned (Phase 2).
+Requirement SW-4. Status: Available.
 
 ### `blt_toolkit_switched_back`
 
-Fires after a user has switched back to the account they came from (SW-5): the stack is popped, the original session restored and the target's switched session destroyed.
+Fires after a user has switched back to the account they came from (SW-5): the stack is popped and the original session restored. The session that was made for the target is destroyed right after this action, as User Switching does, so a callback can still read it. The log row is written before the identity changes.
 
 | Argument | Type | Description |
 | --- | --- | --- |
 | `$user_id` | int | The user switched back to. |
 | `$from_id` | int\|false | The user switched back from, or `false` when switching back after a Switch Off (nobody was signed in). |
 | `$new_token` | string | Session token of the restored session. |
-| `$old_token` | string | Session token of the session being left. |
+| `$old_token` | string | Session token of the session being left (`''` after a Switch Off). |
 
-Requirement SW-5. Status: Planned (Phase 2).
+Requirement SW-5. Status: Available.
 
 ### `blt_toolkit_switched_off`
 
-Fires after a user has switched off (SW-6): they are pushed onto the switch stack and signed out, and the login screen and site footer then offer to switch back.
+Fires after a user has switched off (SW-6): they are pushed onto the switch stack and signed out, and the login screen and site footer then offer to switch back. Their session is kept, so switching back returns to it. The log row is written before they are signed out.
 
 | Argument | Type | Description |
 | --- | --- | --- |
 | `$user_id` | int | The user who switched off. |
 | `$token` | string | Session token of the session they switched off from. |
 
-Requirement SW-6. Status: Planned (Phase 2).
+Requirement SW-6. Status: Available.
 
 ### `blt_toolkit_before_username_change`
 
@@ -271,26 +271,26 @@ Requirement SPEC 5.2. Status: Available.
 
 ### `blt_toolkit_switch_redirect`
 
-Where a switch, switch back or switch off lands, applied after core's `login_redirect` or `logout_redirect` (SW-9). Return a non-empty URL to override; it still goes through `wp_safe_redirect()`.
+Where a switch, switch back or switch off lands, applied after core's `login_redirect` (switch to, switch back) or `logout_redirect` (switch off) (SW-9). Return a non-empty URL to override; it still goes through `wp_safe_redirect()`, so another host needs `allowed_redirect_hosts`. The flag `blt_switched`, `blt_switched_back` or `blt_switched_off` is added to the URL afterwards.
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$redirect_to` | string | `''` | `''` keeps the URL resolved per SW-9 (`redirect_to`, or the public URL of `redirect_to_post`, `redirect_to_term`, `redirect_to_user` or `redirect_to_comment`, otherwise the dashboard for switch to and `users.php` for switch back). |
-| `$requested` | string | | *Proposed.* The URL resolved per SW-9. |
-| `$user` | WP_User\|null | | *Proposed.* The user now signed in, or `null` after a switch off. |
-| `$action` | string | | *Proposed.* `blt_switch_to_user`, `blt_switch_back` or `blt_switch_off`. |
+| `$redirect_to` | string | `''` | `''` keeps `$requested`. |
+| `$requested` | string | | The URL resolved per SW-9, default included: `redirect_to`, or the public URL of `redirect_to_post`, `redirect_to_term`, `redirect_to_user` or `redirect_to_comment` (only when publicly viewable), then core's filter, otherwise the default for the action (the dashboard for switch to when the user may `read`, else the home page; `users.php` for switch back; the home page for switch off). |
+| `$user` | WP_User\|null | | The user now signed in, or `null` after a switch off. |
+| `$action` | string | | `blt_switch_to_user`, `blt_switch_back` or `blt_switch_off`. |
 
-Requirement SW-9. Status: Planned (Phase 2).
+Requirement SW-9. Status: Available.
 
 ### `blt_toolkit_switch_show_footer_link`
 
-Whether to print the fixed "Switch back to {Name}" link on the site (SW-17). Whatever this returns, the link is printed only while switched with the toolbar hidden, or after a Switch Off.
+Whether to print the fixed "Switch back to {Name}" link on the site (SW-17). Whatever this returns, the link is printed only while switched with the toolbar hidden, or after a Switch Off, and not on a page where the Meta widget already printed it (as User Switching does). Its stylesheet, `assets/css/blt-toolkit-front.css`, loads only when the link is printed. Applied at most once per request, and never for a visitor without a switch cookie.
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
 | `$show` | bool | The Settings > Switching toggle **Show a "Switch back" link on the site** (`switch.footer_link`, default `true`) | Return `false` to hide it. |
 
-Requirement SW-17. Status: Planned (Phase 2).
+Requirement SW-17. Status: Available.
 
 ### `blt_toolkit_switch_send_cookies`
 
@@ -300,7 +300,7 @@ Whether the switch cookies are sent with `setcookie()` (SW-3). Turn it off for t
 | --- | --- | --- | --- |
 | `$send` | bool | `true` | Return `false` to suppress sending. |
 
-Requirement SW-3. Status: Planned (Phase 2).
+Requirement SW-3. Status: Available.
 
 ### `blt_toolkit_switch_search_limit`
 
@@ -308,9 +308,9 @@ The most results the toolbar "Switch to…" search returns (`GET blt-toolkit/v1/
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$limit` | int | `20` | Results. |
+| `$limit` | int | `20` | Results; clamped to 1 to 100. Only users the current user may switch to are returned, and at most 500 candidates are read per search. |
 
-Requirement SW-20. Status: Planned (Phase 2).
+Requirement SW-20. Status: Available.
 
 ### `blt_toolkit_validate_username`
 
@@ -504,11 +504,11 @@ Requirement JOB-2. Status: Available.
 
 ## User Switching compatibility
 
-When the Settings > Switching toggle **Work with tools made for User Switching** (`switch.compat_hooks`, the "Compatibility hooks" setting of SW-19) is on (the default, D2), BLT Toolkit also fires User Switching's action names with User Switching 1.12.2's signatures, so activity loggers and debugging tools that integrate with User Switching keep working (SW-19). They fire right after the matching `blt_toolkit_*` action. Requirement SW-19. Status: Planned (Phase 2).
+When the Settings > Switching toggle **Work with tools made for User Switching** (`switch.compat_hooks`, the "Compatibility hooks" setting of SW-19) is on (the default, D2), BLT Toolkit also fires User Switching's action names with User Switching 1.12.2's signatures, so activity loggers and debugging tools that integrate with User Switching keep working (SW-19). They fire right after the matching `blt_toolkit_*` action. Requirement SW-19. Status: Available.
 
 | Action | Arguments |
 | --- | --- |
-| `switch_to_user` | `int $user_id` (switched to), `int $old_user_id` (switched from), `string $new_token`, `string $old_token` |
+| `switch_to_user` | `int $user_id` (switched to), `int $old_user_id` (switched from), `string $new_token`, `string $old_token`. Unlike User Switching, which passes `''`, `$new_token` is the token of the session just made for the target. |
 | `switch_back_user` | `int $user_id` (switched back to), `int\|false $old_user_id` (switched back from, or `false` after a Switch Off), `string $new_token`, `string $old_token` |
 | `switch_off_user` | `int $old_user_id` (the user switching off), `string $old_token` |
 
@@ -525,4 +525,4 @@ Returns the user who switched into the current session (the most recent originat
 - Defined only when **Work with tools made for User Switching** (`switch.compat_hooks`) is on and no function of that name exists yet (SW-19, D2). It is the plugin's only global symbol without the `blt_toolkit_` prefix.
 - Guard calls with `function_exists( 'current_user_switched' )`, as with User Switching.
 
-Requirement SW-19. Status: Planned (Phase 2).
+Requirement SW-19. Status: Available.

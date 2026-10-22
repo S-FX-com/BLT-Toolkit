@@ -6,8 +6,9 @@
  *
  * @package Blt_Toolkit
  *
- * @var array  $settings BLT_Toolkit_Settings::all().
- * @var string $field    Name of the settings field array.
+ * @var array  $settings      BLT_Toolkit_Settings::all().
+ * @var string $field         Name of the settings field array.
+ * @var array  $support_agent BLT_Toolkit_Admin_Settings::support_agent_state().
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -52,10 +53,33 @@ $switch = $settings['switch'];
 				$field . '[woocommerce]',
 				$switch['woocommerce'],
 				__( 'WooCommerce', 'blt-toolkit' ),
-				__( 'Adds "Switch to customer" on orders and "Switch back" in My Account, and starts a fresh cart session on each switch. Applies only while WooCommerce is active.', 'blt-toolkit' )
+				__( 'Adds "Switch to customer" on orders and "Switch back" in My Account, and keeps each user's cart and WooCommerce session separate when you switch. Applies only while WooCommerce is active.', 'blt-toolkit' )
 			);
 			?>
 		</div>
 	</div>
-	<?php BLT_Toolkit_Admin_Settings::later( __( 'A one-click Support Agent role that can switch only into people with less access than itself, created after a preview.', 'blt-toolkit' ) ); ?>
+</div>
+
+<div class="blt-card blt-toolkit-support-agent">
+	<div class="blt-card-header">
+		<h2><?php esc_html_e( 'Support Agent role', 'blt-toolkit' ); ?></h2>
+		<p><?php esc_html_e( 'A ready-made role for people who help others with their accounts: it can sign in, see the list of users and switch to users who have no more access than itself. Administrators stay out of its reach.', 'blt-toolkit' ); ?></p>
+		<?php if ( ! empty( $support_agent['exists'] ) ) : ?>
+			<div class="blt-card-header-badges">
+				<?php echo BLT_Toolkit_Admin::badge( 'on', __( 'Created', 'blt-toolkit' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in badge(). ?>
+			</div>
+		<?php endif; ?>
+	</div>
+	<div class="blt-card-body">
+		<?php if ( ! empty( $support_agent['exists'] ) ) : ?>
+			<p class="blt-field-desc"><?php esc_html_e( 'The role exists. Give it to someone from their profile or from the Users screen.', 'blt-toolkit' ); ?></p>
+		<?php elseif ( ! empty( $support_agent['can_create'] ) ) : ?>
+			<p class="blt-field-desc"><?php esc_html_e( 'Nothing changes until you confirm: the next page shows exactly what the role can do and whom it can switch into.', 'blt-toolkit' ); ?></p>
+			<p class="blt-stack-top">
+				<a class="button" href="<?php echo esc_url( $support_agent['preview_url'] ); ?>"><?php esc_html_e( 'Create Support Agent role…', 'blt-toolkit' ); ?></a>
+			</p>
+		<?php else : ?>
+			<p class="blt-field-desc"><?php esc_html_e( 'Creating roles needs the "Create roles" permission, which your account does not have.', 'blt-toolkit' ); ?></p>
+		<?php endif; ?>
+	</div>
 </div>

@@ -192,28 +192,34 @@ class BLT_Toolkit_Admin {
 	 */
 	public static function post_actions() {
 		return array(
-			'blt_toolkit_save_modules'    => array(
+			'blt_toolkit_save_modules'         => array(
 				'screen' => 'overview',
 				'method' => 'handle_save_modules',
 				'cap'    => 'manage_options',
 			),
-			'blt_toolkit_save_settings'   => array(
+			'blt_toolkit_save_settings'        => array(
 				'screen' => 'settings',
 				'method' => 'handle_save',
 				'cap'    => 'manage_options',
 			),
-			'blt_toolkit_remove_token'    => array(
+			'blt_toolkit_remove_token'         => array(
 				'screen' => 'settings',
 				'method' => 'handle_remove_token',
 				'cap'    => 'manage_options',
 			),
-			'blt_toolkit_test_connection' => array(
+			'blt_toolkit_test_connection'      => array(
 				'screen' => 'settings',
 				'method' => 'handle_test_connection',
 				'cap'    => 'manage_options',
 			),
+			// SW-21. The handler also requires blt_create_roles.
+			'blt_toolkit_create_support_agent' => array(
+				'screen' => 'settings',
+				'method' => 'handle_create_support_agent',
+				'cap'    => 'manage_options',
+			),
 			// Streams the CSV and exits instead of redirecting (SPEC 13.2).
-			'blt_toolkit_export_log'      => array(
+			'blt_toolkit_export_log'           => array(
 				'screen' => 'activity',
 				'method' => 'handle_export',
 				'cap'    => 'blt_view_toolkit_log',
@@ -870,6 +876,24 @@ class BLT_Toolkit_Admin {
 						'' !== $err ? $err : 'unknown'
 					)
 				);
+
+			case 'support_agent_created':
+				return self::make_notice( 'success', __( 'The Support Agent role was created. Give it to someone from their profile or from the Users screen.', 'blt-toolkit' ) );
+
+			case 'support_agent_exists':
+				return self::make_notice( 'warning', __( 'The Support Agent role already exists, so nothing was changed.', 'blt-toolkit' ) );
+
+			case 'support_agent_confirm':
+				return self::make_notice( 'error', __( 'Nothing was changed: type the role name exactly as shown to confirm.', 'blt-toolkit' ) );
+
+			case 'support_agent_snapshot':
+				return self::make_notice( 'error', __( 'Nothing was changed: a copy of the roles could not be saved first. Try again; if this keeps happening, the PHP error log says why.', 'blt-toolkit' ) );
+
+			case 'support_agent_denied':
+				return self::make_notice( 'error', __( 'Nothing was changed: creating this role needs the "Create roles" permission and every capability the role would have.', 'blt-toolkit' ) );
+
+			case 'support_agent_failed':
+				return self::make_notice( 'error', __( 'The Support Agent role could not be created. Try again.', 'blt-toolkit' ) );
 
 			case 'failed':
 				return self::make_notice( 'error', __( 'Nothing was changed: the request could not be completed. Try again.', 'blt-toolkit' ) );

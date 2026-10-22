@@ -1,0 +1,96 @@
+/**
+ * BLT Toolkit: front-end styles (SPEC 13.3).
+ *
+ * The fixed "Switch back to {Name}" link (SW-17). Loaded only on a request
+ * where that link is printed: someone switched, or switched off, and the
+ * toolbar is not showing. Visitors who are not switched never load it.
+ *
+ * Rules:
+ * - Every selector is a `.blt-tk-*` class; nothing styles an element, the
+ *   page or the theme (no resets), so it sits cleanly inside a Bricks page.
+ * - Colors and sizes come from `--blt-tk-*` custom properties, read with a
+ *   fallback and never declared here, so a theme can set any of them on
+ *   `:root`, `body` or a wrapper. Each falls back to the BLT design token
+ *   (`--blt-primary`, and so on) and then to its literal value.
+ * - No JavaScript.
+ *
+ * Tokens (all optional):
+ *   --blt-tk-accent        Link background            (#2271b1)
+ *   --blt-tk-accent-hover  Background on hover/focus  (#135e96)
+ *   --blt-tk-on-accent     Link text                  (#ffffff)
+ *   --blt-tk-focus         Focus ring                 (#1e1e1e)
+ *   --blt-tk-radius        Corner radius              (4px)
+ *   --blt-tk-font-size     Text size                  (13px)
+ *   --blt-tk-offset        Distance from the corner   (16px)
+ *   --blt-tk-z             Stacking order             (99999)
+ *   --blt-tk-shadow        Shadow                     (0 2px 8px rgba(0, 0, 0, 0.25))
+ *
+ * @package Blt_Toolkit
+ */
+
+.blt-tk-switch-back {
+	position: fixed;
+	bottom: calc(var(--blt-tk-offset, 16px) + env(safe-area-inset-bottom, 0px));
+	left: var(--blt-tk-offset, 16px);
+	z-index: var(--blt-tk-z, 99999);
+	box-sizing: border-box;
+	max-width: calc(100vw - (2 * var(--blt-tk-offset, 16px)));
+	margin: 0;
+	padding: 0;
+	font-size: var(--blt-tk-font-size, 13px);
+	line-height: 1.4;
+	text-align: left;
+}
+
+/* Right-to-left pages: the same corner on the reading side. */
+[dir="rtl"] .blt-tk-switch-back {
+	right: var(--blt-tk-offset, 16px);
+	left: auto;
+	text-align: right;
+}
+
+.blt-tk-switch-back .blt-tk-switch-back-link,
+.blt-tk-switch-back .blt-tk-switch-back-link:visited {
+	display: inline-block;
+	box-sizing: border-box;
+	max-width: 100%;
+	margin: 0;
+	padding: 9px 14px;
+	border: 0;
+	border-radius: var(--blt-tk-radius, var(--blt-radius-sm, 4px));
+	background: var(--blt-tk-accent, var(--blt-primary, #2271b1));
+	box-shadow: var(--blt-tk-shadow, 0 2px 8px rgba(0, 0, 0, 0.25));
+	color: var(--blt-tk-on-accent, var(--blt-surface, #fff));
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	font-size: inherit;
+	font-style: normal;
+	font-weight: 600;
+	letter-spacing: normal;
+	line-height: inherit;
+	text-decoration: none;
+	text-transform: none;
+	overflow-wrap: break-word;
+	white-space: normal;
+}
+
+.blt-tk-switch-back .blt-tk-switch-back-link:hover,
+.blt-tk-switch-back .blt-tk-switch-back-link:focus {
+	background: var(--blt-tk-accent-hover, var(--blt-primary-hover, #135e96));
+	color: var(--blt-tk-on-accent, var(--blt-surface, #fff));
+	text-decoration: underline;
+}
+
+.blt-tk-switch-back .blt-tk-switch-back-link:focus {
+	outline: 2px solid var(--blt-tk-focus, var(--blt-fg, #1e1e1e));
+	outline-offset: 2px;
+}
+
+.blt-tk-switch-back .blt-tk-switch-back-link:focus:not(:focus-visible) {
+	outline: none;
+}
+
+@media print {
+	.blt-tk-switch-back {
+		display: none;
+	}
+}
