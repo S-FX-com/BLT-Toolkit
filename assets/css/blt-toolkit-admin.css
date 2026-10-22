@@ -1,0 +1,89 @@
+/**
+ * BLT Toolkit — admin styles.
+ *
+ * Layered on top of assets/css/blt-design-system.css (enqueued as a
+ * dependency, on BLT Toolkit screens only), which supplies the page shell,
+ * cards, field rows, toggles, badges, tabs, stat tiles, callouts, code blocks
+ * and empty states. Only layout the catalog does not cover lives here, and
+ * every color comes from the design system's tokens.
+ *
+ * Page-specific classes carry the `blt-toolkit-` prefix so they never
+ * collide with a shared component name (DESIGN 2, naming gotcha).
+ */
+
+/* --- Notices from the last redirect sit between the header and the content --- */
+
+.blt-toolkit .blt-toolkit-notice {
+	margin: 12px 0 16px;
+}
+
+/* --- Overview: module cards ------------------------------------------------
+   Selectable-card styling, but each card holds a toggle switch: the toggle is
+   the control and the highlight shows whether the module runs right now, so
+   the card itself is not a click target. */
+
+.blt-toolkit .blt-toolkit-module-card {
+	gap: 8px;
+	cursor: default;
+}
+
+.blt-toolkit .blt-toolkit-module-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px 8px;
+}
+
+/* The catalog leaves room for a radio mark these cards do not have. */
+.blt-toolkit .blt-toolkit-module-head .blt-select-card-name {
+	padding-right: 0;
+}
+
+.blt-toolkit .blt-toolkit-module-toggle {
+	margin-top: auto;
+	padding-top: 8px;
+}
+
+.blt-toolkit .blt-toolkit-module-note {
+	display: block;
+	line-height: 1.5;
+}
+
+/* --- Settings: "Coming soon" line at the foot of a card -------------------- */
+
+.blt-toolkit .blt-toolkit-later {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 10px;
+	padding-top: 14px;
+	padding-bottom: 14px;
+	font-size: 13px;
+	background: var(--blt-surface-muted);
+}
+
+/* --- Settings: controls the catalog does not size -------------------------- */
+
+.blt-toolkit .blt-field textarea.regular-text {
+	width: 25em;
+	max-width: 100%;
+}
+
+.blt-toolkit .blt-field textarea.large-text {
+	max-width: 40em;
+}
+
+.blt-toolkit .blt-field select {
+	max-width: 100%;
+}
+
+/* Field labels that carry a badge under the text (Settings > Advanced). */
+.blt-toolkit .blt-field-label .blt-badge {
+	margin-top: 6px;
+}
+
+/* Several buttons on one line wrap cleanly on narrow screens. */
+.blt-toolkit .blt-stack-top .button {
+	margin: 0 6px 6px 0;
+}

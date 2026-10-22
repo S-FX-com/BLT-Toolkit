@@ -1,0 +1,1003 @@
+# Copyright (C) 2026 S-FX.com
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: BLT Toolkit 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/S-FX-com/BLT-Toolkit/issues\n"
+"POT-Creation-Date: 2026-10-22 00:00+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"X-Generator: bin/make-pot.js\n"
+"X-Domain: blt-toolkit\n"
+
+#. Plugin Name of the plugin
+#: blt-toolkit.php
+#: admin/class-blt-toolkit-admin.php:250
+#: admin/class-blt-toolkit-admin.php:251
+#: admin/class-blt-toolkit-admin.php:364
+#: admin/class-blt-toolkit-admin.php:698
+#: admin/class-blt-toolkit-admin.php:709
+#: admin/views/header.php:23
+#: includes/class-blt-toolkit-plugin.php:308
+msgid "BLT Toolkit"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: blt-toolkit.php
+msgid "https://github.com/S-FX-com/BLT-Toolkit"
+msgstr ""
+
+#. Description of the plugin
+#: blt-toolkit.php
+msgid "Switch to another user and back, change usernames, and edit roles and capabilities in a Simple or Advanced view, under one security model and one activity log."
+msgstr ""
+
+#. Author of the plugin
+#: blt-toolkit.php
+msgid "S-FX.com"
+msgstr ""
+
+#. Author URI of the plugin
+#: blt-toolkit.php
+msgid "https://www.s-fx.com"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-activity.php:39
+msgid "Log settings"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-activity.php:46
+#: admin/class-blt-toolkit-admin-settings.php:60
+#: admin/views/settings-log.php:21
+msgid "Activity log"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-activity.php:47
+msgid "Every switch, username change and role change, with who did it."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-activity.php:48
+msgid "No activity recorded yet"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-activity.php:49
+msgid "Entries will be listed here with who made each change and when, who they were acting as if they had switched to another user, and what changed. You will be able to filter by module, action, person and date, and export the list as a CSV file."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-roles.php:39
+#: admin/views/settings-roles.php:29
+msgid "Role editor"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-roles.php:40
+msgid "Create roles and decide what each one can do."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-roles.php:41
+msgid "The role editor is not here yet"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-roles.php:42
+msgid "This screen will list every role with how many people hold it, and edit what each role can do in two views of the same data: Simple, with one plain-English access level per content type, and Advanced, with every capability. Each save will be reviewed first and snapshotted so it can be restored. Until then, BLT Toolkit changes no roles, apart from giving the Administrator role BLT Toolkit's own capabilities when it was activated."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:56
+msgid "General"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:57
+#: admin/views/settings-switching.php:21
+msgid "Switching"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:58
+#: admin/class-blt-toolkit-admin.php:172
+#: includes/class-blt-toolkit-plugin.php:151
+msgid "Usernames"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:59
+#: admin/class-blt-toolkit-admin.php:170
+#: admin/class-blt-toolkit-admin.php:282
+#: admin/class-blt-toolkit-admin.php:283
+#: admin/views/overview.php:108
+#: includes/class-blt-toolkit-plugin.php:155
+msgid "Roles"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:61
+#: admin/views/settings-roles.php:24
+msgid "Advanced"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:98
+#: admin/views/settings-advanced.php:137
+msgid "Check for Updates"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-settings.php:308
+#: admin/views/placeholder.php:46
+#: admin/views/settings-advanced.php:166
+msgid "Coming soon"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:31
+#: admin/views/settings-roles.php:88
+msgid "Snapshots"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:32
+msgid "Export and import"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:33
+msgid "Reset"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:34
+#: admin/class-blt-toolkit-admin-tools.php:104
+msgid "Sync administrator"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:38
+#: admin/class-blt-toolkit-admin-tools.php:112
+msgid "Import from legacy plugins"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:72
+msgid "Tools sections"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:88
+msgid "Export and import roles"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:89
+msgid "Reuse a set of roles on another site."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:90
+msgid "Export and import are not here yet"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:91
+msgid "You will be able to export selected roles as a file and import them on another site, choosing for each role whether to create, merge, replace or skip it after a preview of what would change."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:96
+msgid "Reset roles"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:97
+msgid "Go back to WordPress's default roles."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:98
+msgid "Reset is not here yet"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:99
+msgid "You will be able to reset the built-in roles to their default capabilities and keep custom roles, or reset every role as on a fresh install. Both show a preview first, take a snapshot, and ask you to type RESET to confirm."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:105
+msgid "Give the Administrator role every capability registered on this site."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:106
+msgid "Sync is not here yet"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:107
+msgid "You will see which registered capabilities the Administrator role is missing and grant them in one step. BLT Toolkit never changes a role just because a screen was opened."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:113
+msgid "Bring settings over from Username Changer and User Role Editor."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:114
+msgid "Imports are not here yet"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:115
+msgid "You will be able to import Username Changer's settings and audit log, and User Role Editor's extra default roles, hidden toolbars and role backup, each after a preview. The other plugin's data is never changed or deleted. User Switching keeps nothing on the server, so there is nothing to import from it."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:120
+msgid "Role snapshots"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:121
+msgid "A copy of every role is kept before each change."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:122
+msgid "Snapshots are not listed here yet"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-tools.php:123
+msgid "BLT Toolkit keeps a baseline copy of your roles from when it was first activated, and a copy before every change it makes. This tab will list them, show what differs from your roles today, and restore any of them after a preview."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-usernames.php:41
+msgid "Username settings"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-usernames.php:48
+msgid "Bulk rename from CSV"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-usernames.php:49
+msgid "Change many usernames in one pass."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-usernames.php:50
+msgid "Bulk renaming is not here yet"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-usernames.php:51
+msgid "You will be able to download a template of every user, upload a CSV of new usernames, check a dry run that flags every problem row, and then run the renames in the background with a progress bar. Single usernames will be changed from each user's profile."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-usernames.php:54
+msgid "Recent changes"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-usernames.php:55
+msgid "Username changes from the activity log."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-usernames.php:56
+msgid "No username changes recorded yet"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin-usernames.php:57
+msgid "Each change will be listed here with the old and new username, who made it and when."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:168
+#: admin/views/overview.php:20
+msgid "Overview"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:174
+msgid "Activity"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:176
+msgid "Tools"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:178
+#: admin/class-blt-toolkit-admin.php:338
+#: admin/views/overview.php:23
+#: admin/views/settings.php:26
+msgid "Settings"
+msgstr ""
+
+#. translators: %s: screen name, such as Roles or Settings.
+#: admin/class-blt-toolkit-admin.php:265
+msgid "BLT Toolkit %s"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:363
+msgid "Sorry, you are not allowed to access this page."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:548
+msgid "On"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:550
+msgid "Conflict"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:552
+msgid "Disabled in wp-config.php"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:555
+msgid "Off"
+msgstr ""
+
+#. translators: 1: other plugin's name, such as User Switching, 2: module name.
+#: admin/class-blt-toolkit-admin.php:571
+msgid "%1$s is active, so the %2$s module is not running. Deactivate %1$s to use it."
+msgstr ""
+
+#. translators: %s: constant name.
+#: admin/class-blt-toolkit-admin.php:581
+msgid "It is also switched off by %s in wp-config.php; remove it from that constant too."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:595
+msgid "Go to Plugins"
+msgstr ""
+
+#. translators: 1: module name, 2: constant name.
+#: admin/class-blt-toolkit-admin.php:604
+msgid "The %1$s module is switched off by %2$s in wp-config.php, whatever its setting says. Remove it from that constant to use the module again."
+msgstr ""
+
+#. translators: %s: module name.
+#: admin/class-blt-toolkit-admin.php:613
+msgid "The %s module is switched off, so its features are not available."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:618
+msgid "Turn it on in Settings"
+msgstr ""
+
+#. translators: %s: module name, such as Roles.
+#: admin/class-blt-toolkit-admin.php:664
+msgid "The %s module is not running"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:697
+msgid "This action needs a form submission."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:708
+msgid "You do not have permission to do that."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:832
+msgid "Settings saved."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:835
+msgid "Settings saved. A number was outside its allowed range or not a number, so the nearest allowed value, or the previous value, was saved instead. Check the values below."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:838
+msgid "Modules saved. A module that is switched off loads no code."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:841
+msgid "Settings saved. The GitHub token is stored encrypted. Use Test connection to check it."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:844
+msgid "Settings saved, but the token was not: it does not look like a GitHub token. Paste it exactly as GitHub showed it."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:847
+msgid "Settings saved, but the token was not: this server has neither libsodium nor OpenSSL AES-GCM, so it cannot be stored encrypted. Define BLT_TOOLKIT_GITHUB_TOKEN in wp-config.php instead."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:850
+msgid "Settings saved, but the token could not be encrypted, so it was not stored. Try again."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:853
+msgid "The stored GitHub token was removed. A token in wp-config.php or in the shared BLT settings, if there is one, still applies."
+msgstr ""
+
+#. translators: %s: error code from the HTTP library, such as http_request_failed.
+#: admin/class-blt-toolkit-admin.php:863
+msgid "GitHub could not be reached from this server (%s). Check that the host allows outgoing HTTPS requests to api.github.com."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:869
+msgid "Nothing was changed: the request could not be completed. Try again."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:885
+msgid "with the token from wp-config.php"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:888
+msgid "with the token stored here"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:891
+msgid "with the token from the shared BLT settings"
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:894
+msgid "without a token"
+msgstr ""
+
+#. translators: 1: GitHub repository such as S-FX-com/BLT-Toolkit, 2: how the request was made, such as "with the token stored here".
+#: admin/class-blt-toolkit-admin.php:904
+msgid "Connected. GitHub answered HTTP 200 for %1$s %2$s, so update checks will work."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:913
+msgid "GitHub rejected the token. It may have expired or been revoked; create a new one and save it here."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:917
+msgid "GitHub refused the request. The token may lack access to the repository, or this server reached GitHub's hourly limit for requests; try again later."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:920
+msgid "GitHub did not find the repository. For a private repository this means the token cannot see it: use a fine-grained token with read-only Contents access to it."
+msgstr ""
+
+#: admin/class-blt-toolkit-admin.php:923
+msgid "GitHub may be having trouble. Try again in a few minutes."
+msgstr ""
+
+#. translators: 1: HTTP status code, 2: GitHub repository, 3: how the request was made, 4: advice.
+#: admin/class-blt-toolkit-admin.php:930
+msgid "GitHub answered HTTP %1$d for %2$s %3$s. %4$s"
+msgstr ""
+
+#: admin/views/overview.php:32
+msgid "Recovery mode is on"
+msgstr ""
+
+#. translators: %s: constant name.
+#: admin/views/overview.php:37
+msgid "%s is set in wp-config.php. Remove that line as soon as administrators can manage roles again; it is meant for emergencies only."
+msgstr ""
+
+#: admin/views/overview.php:50
+#: admin/views/settings-general.php:19
+msgid "Modules"
+msgstr ""
+
+#: admin/views/overview.php:51
+#: admin/views/settings-general.php:20
+msgid "Switch off what this site does not need. A module that is off loads no code. Protection for administrators and the activity log are still to come; once they arrive, they run whatever is switched off here."
+msgstr ""
+
+#. translators: 1: modules running, 2: modules in total.
+#: admin/views/overview.php:58
+msgid "%1$d of %2$d running"
+msgstr ""
+
+#. translators: %s: module name, such as Switch.
+#: admin/views/overview.php:86
+#: admin/views/settings-general.php:32
+msgid "%s module"
+msgstr ""
+
+#: admin/views/overview.php:97
+msgid "Save modules"
+msgstr ""
+
+#: admin/views/overview.php:103
+msgid "At a glance"
+msgstr ""
+
+#: admin/views/overview.php:110
+msgid "defined on this site"
+msgstr ""
+
+#: admin/views/overview.php:113
+msgid "Modules running"
+msgstr ""
+
+#. translators: %s: number of modules.
+#: admin/views/overview.php:119
+msgid "of %s"
+msgstr ""
+
+#: admin/views/overview.php:126
+#: admin/views/settings-advanced.php:125
+msgid "Version"
+msgstr ""
+
+#: admin/views/settings-advanced.php:29
+msgid "Set in wp-config.php"
+msgstr ""
+
+#: admin/views/settings-advanced.php:32
+msgid "Token stored"
+msgstr ""
+
+#: admin/views/settings-advanced.php:35
+msgid "Shared BLT token"
+msgstr ""
+
+#: admin/views/settings-advanced.php:38
+msgid "Needs re-entry"
+msgstr ""
+
+#: admin/views/settings-advanced.php:41
+msgid "No token"
+msgstr ""
+
+#: admin/views/settings-advanced.php:51
+msgid "Uninstall"
+msgstr ""
+
+#: admin/views/settings-advanced.php:52
+msgid "What happens when BLT Toolkit is deleted from the Plugins screen. Deactivating it never deletes anything."
+msgstr ""
+
+#: admin/views/settings-advanced.php:59
+msgid "Delete all plugin data on uninstall"
+msgstr ""
+
+#: admin/views/settings-advanced.php:60
+msgid "Off by default, so deleting and reinstalling the plugin loses nothing."
+msgstr ""
+
+#: admin/views/settings-advanced.php:64
+msgid "Warning:"
+msgstr ""
+
+#: admin/views/settings-advanced.php:65
+msgid "with this on, deleting the plugin permanently removes the activity log, every role snapshot including the baseline, the settings and the stored token, and takes every BLT Toolkit capability off every role and user. It cannot be undone. Your roles, and the changes you made to them, stay as they are."
+msgstr ""
+
+#: admin/views/settings-advanced.php:72
+msgid "Updates"
+msgstr ""
+
+#: admin/views/settings-advanced.php:73
+msgid "BLT Toolkit checks GitHub for a new version once a day, at midnight site time. A token is needed only while the repository is private."
+msgstr ""
+
+#: admin/views/settings-advanced.php:82
+#: admin/views/settings-advanced.php:84
+msgid "GitHub token"
+msgstr ""
+
+#. translators: %s: constant name.
+#: admin/views/settings-advanced.php:93
+msgid "Set by %s in wp-config.php, which takes precedence over a token saved here. Change it there."
+msgstr ""
+
+#: admin/views/settings-advanced.php:99
+msgid "Not set"
+msgstr ""
+
+#: admin/views/settings-advanced.php:99
+msgid "Saved. Leave blank to keep it"
+msgstr ""
+
+#: admin/views/settings-advanced.php:101
+msgid "The stored token can no longer be read, because the security keys in wp-config.php changed since it was saved. Enter it again."
+msgstr ""
+
+#: admin/views/settings-advanced.php:103
+msgid "Using the token from the shared BLT settings. A token saved here takes precedence over it."
+msgstr ""
+
+#: admin/views/settings-advanced.php:105
+msgid "A fine-grained personal access token with read-only Contents access to the repository is enough. It is stored encrypted with your site's security keys and never shown again. A blank field keeps the stored token."
+msgstr ""
+
+#: admin/views/settings-advanced.php:108
+msgid "Test connection"
+msgstr ""
+
+#: admin/views/settings-advanced.php:110
+msgid "Remove token"
+msgstr ""
+
+#. translators: %s: GitHub repository, such as S-FX-com/BLT-Toolkit.
+#: admin/views/settings-advanced.php:117
+msgid "Test connection asks GitHub for %s with the token update checks would use, and reports the answer. Save a new token first to test it."
+msgstr ""
+
+#. translators: %s: plugin version.
+#: admin/views/settings-advanced.php:131
+msgid "Installed version: %s"
+msgstr ""
+
+#. translators: %s: date and time of the last update check.
+#: admin/views/settings-advanced.php:144
+msgid "Last checked %s. Checking now runs at once and ends on the Plugins screen with the result."
+msgstr ""
+
+#: admin/views/settings-advanced.php:148
+msgid "Not checked yet. Checking now runs at once and ends on the Plugins screen with the result."
+msgstr ""
+
+#: admin/views/settings-advanced.php:159
+msgid "Recovery"
+msgstr ""
+
+#: admin/views/settings-advanced.php:160
+msgid "If a module misbehaves, a line in wp-config.php switches it off, even when you cannot open this screen. A line that gets administrators back in after a role change locks them out is coming soon."
+msgstr ""
+
+#: admin/views/settings-advanced.php:165
+msgid "Restore administrator access"
+msgstr ""
+
+#: admin/views/settings-advanced.php:168
+#: admin/views/settings-advanced.php:180
+msgid "Set now"
+msgstr ""
+
+#: admin/views/settings-advanced.php:173
+msgid "This line does nothing yet; it arrives with protection for administrators. Then: add it, and open any admin page as a user with the Administrator role. BLT Toolkit takes a snapshot, gives the Administrator role back the capabilities it needs to manage the site and every BLT Toolkit capability, and records it in the activity log. Nothing else changes. Remove the line afterwards; a notice reminds you while it is there."
+msgstr ""
+
+#: admin/views/settings-advanced.php:178
+msgid "Switch modules off"
+msgstr ""
+
+#. translators: 1: module key, 2: module key, 3: module key.
+#: admin/views/settings-advanced.php:189
+msgid "Turns off the named modules whatever the settings say, for example during an incident. Use any of %1$s, %2$s and %3$s, separated by commas."
+msgstr ""
+
+#. translators: %s: comma-separated module keys.
+#: admin/views/settings-advanced.php:201
+msgid "Switched off this way right now: %s"
+msgstr ""
+
+#: admin/views/settings-general.php:37
+msgid "Right now:"
+msgstr ""
+
+#: admin/views/settings-log.php:22
+msgid "Every switch, username change and role change is recorded with who made it, including who they were acting as if they had switched to another user."
+msgstr ""
+
+#: admin/views/settings-log.php:26
+msgid "Keep entries for"
+msgstr ""
+
+#: admin/views/settings-log.php:29
+#: admin/views/settings-usernames.php:150
+msgid "days"
+msgstr ""
+
+#: admin/views/settings-log.php:30
+msgid "From 1 to 3,650. Older entries are removed in the background once a day."
+msgstr ""
+
+#: admin/views/settings-log.php:34
+msgid "Privacy"
+msgstr ""
+
+#: admin/views/settings-log.php:40
+msgid "Record IP addresses"
+msgstr ""
+
+#: admin/views/settings-log.php:41
+msgid "Stores the address each change came from, for security reviews. Applies to new entries. WordPress's personal data export and erase tools cover these entries."
+msgstr ""
+
+#: admin/views/settings-roles.php:23
+msgid "Simple"
+msgstr ""
+
+#: admin/views/settings-roles.php:30
+msgid "Simple and Advanced are two views of the same roles. Simple shows one access level per content type; Advanced shows every capability."
+msgstr ""
+
+#: admin/views/settings-roles.php:34
+msgid "Opens in"
+msgstr ""
+
+#: admin/views/settings-roles.php:41
+msgid "The view the Roles screen opens in for someone who has not picked one yet. Each person's choice is remembered. People who cannot use Advanced view always see Simple."
+msgstr ""
+
+#: admin/views/settings-roles.php:45
+msgid "Advanced view"
+msgstr ""
+
+#: admin/views/settings-roles.php:51
+msgid "Readable capability names"
+msgstr ""
+
+#: admin/views/settings-roles.php:52
+msgid "Shows \"Edit others' posts\" rather than edit_others_posts. The raw name is always shown beside it."
+msgstr ""
+
+#: admin/views/settings-roles.php:57
+msgid "Show deprecated capabilities"
+msgstr ""
+
+#: admin/views/settings-roles.php:58
+msgid "Also lists capabilities WordPress no longer uses, such as level_0 to level_10."
+msgstr ""
+
+#: admin/views/settings-roles.php:68
+msgid "Protection"
+msgstr ""
+
+#: admin/views/settings-roles.php:69
+msgid "Once protection arrives, people who are not administrators can never edit, delete, rename or switch into an administrator, whatever is set here."
+msgstr ""
+
+#: admin/views/settings-roles.php:78
+msgid "Hide administrators from everyone else"
+msgstr ""
+
+#: admin/views/settings-roles.php:79
+msgid "People who are not administrators do not see administrator accounts in the Users list, its counts, or the users REST API. It keeps admin accounts out of view of delegated user managers."
+msgstr ""
+
+#: admin/views/settings-roles.php:83
+msgid "Protection for administrators, including hiding them as set here. Your choice is saved now and applies once protection arrives."
+msgstr ""
+
+#: admin/views/settings-roles.php:89
+msgid "A copy of every role is saved before each change, so any change can be undone from Tools."
+msgstr ""
+
+#: admin/views/settings-roles.php:93
+msgid "Snapshots to keep"
+msgstr ""
+
+#: admin/views/settings-roles.php:96
+msgid "From 1 to 500. The newest ones are kept, plus the baseline taken when BLT Toolkit was first activated, which is never removed."
+msgstr ""
+
+#: admin/views/settings-roles.php:100
+msgid "Roles every new user receives on top of the default role, and a description and hidden toolbar per role, set from the Roles screen."
+msgstr ""
+
+#: admin/views/settings-switching.php:22
+msgid "How switching to another user's account looks and behaves. Who may switch is decided by the \"Switch to users\" capability, and only administrators can ever switch into an administrator."
+msgstr ""
+
+#: admin/views/settings-switching.php:30
+msgid "Show a \"Switch back\" link on the site"
+msgstr ""
+
+#: admin/views/settings-switching.php:31
+msgid "While you are switched and the toolbar is hidden, a small fixed link on the site takes you back to your own account."
+msgstr ""
+
+#: admin/views/settings-switching.php:36
+msgid "Offer \"Switch Off\" in the toolbar"
+msgstr ""
+
+#: admin/views/settings-switching.php:37
+msgid "Signs you out for a moment to see the site as a visitor. The login screen and the site then offer to switch back to you."
+msgstr ""
+
+#: admin/views/settings-switching.php:42
+msgid "Search for a user to switch to from the toolbar"
+msgstr ""
+
+#: admin/views/settings-switching.php:43
+msgid "A \"Switch to…\" item in the toolbar finds people by name. It lists only users you are allowed to switch to."
+msgstr ""
+
+#: admin/views/settings-switching.php:48
+msgid "Work with tools made for User Switching"
+msgstr ""
+
+#: admin/views/settings-switching.php:49
+msgid "Also announces each switch the way User Switching does, so activity logs and debugging tools that support User Switching keep working without changes."
+msgstr ""
+
+#: admin/views/settings-switching.php:54
+msgid "WooCommerce"
+msgstr ""
+
+#: admin/views/settings-switching.php:55
+msgid "Adds \"Switch to customer\" on orders and \"Switch back\" in My Account, and starts a fresh cart session on each switch. Applies only while WooCommerce is active."
+msgstr ""
+
+#: admin/views/settings-switching.php:60
+msgid "A one-click Support Agent role that can switch only into people with less access than itself, created after a preview."
+msgstr ""
+
+#: admin/views/settings-usernames.php:19
+msgid "Change it only when it was made from the old username (recommended)"
+msgstr ""
+
+#: admin/views/settings-usernames.php:20
+msgid "Always change it to match the new username"
+msgstr ""
+
+#: admin/views/settings-usernames.php:21
+msgid "Never change it"
+msgstr ""
+
+#: admin/views/settings-usernames.php:27
+msgid "Rules for new usernames"
+msgstr ""
+
+#: admin/views/settings-usernames.php:28
+msgid "Checked every time a username is changed, by an administrator, in bulk or by the person themselves. Existing usernames are never affected."
+msgstr ""
+
+#: admin/views/settings-usernames.php:32
+msgid "Minimum length"
+msgstr ""
+
+#: admin/views/settings-usernames.php:35
+msgid "characters"
+msgstr ""
+
+#: admin/views/settings-usernames.php:36
+msgid "From 1 to 60. WordPress cannot store a username longer than 60 characters."
+msgstr ""
+
+#: admin/views/settings-usernames.php:40
+msgid "Names that cannot be used"
+msgstr ""
+
+#: admin/views/settings-usernames.php:43
+msgid "One per line. Capitals are ignored, so \"Admin\" is refused when \"admin\" is listed. Names that other plugins block are refused too."
+msgstr ""
+
+#: admin/views/settings-usernames.php:47
+msgid "The @ sign"
+msgstr ""
+
+#: admin/views/settings-usernames.php:53
+msgid "Allow @ in usernames"
+msgstr ""
+
+#: admin/views/settings-usernames.php:54
+msgid "Email-style usernames are common with single sign-on and membership sites. Either way, a username can never be another person's email address, because WordPress also accepts email addresses at login."
+msgstr ""
+
+#: admin/views/settings-usernames.php:64
+msgid "When a username changes"
+msgstr ""
+
+#: admin/views/settings-usernames.php:65
+msgid "What else changes with it."
+msgstr ""
+
+#: admin/views/settings-usernames.php:69
+msgid "Author URL"
+msgstr ""
+
+#: admin/views/settings-usernames.php:76
+msgid "The author URL is the last part of the link to someone's posts, such as /author/jsmith/. WordPress makes it from the username, unless someone changed it since."
+msgstr ""
+
+#: admin/views/settings-usernames.php:80
+msgid "Old links"
+msgstr ""
+
+#: admin/views/settings-usernames.php:86
+msgid "Redirect old author URLs"
+msgstr ""
+
+#: admin/views/settings-usernames.php:87
+msgid "A link to an old author URL goes to the new one with a permanent (301) redirect, which protects search rankings and inbound links. A current user's URL always wins over an old one."
+msgstr ""
+
+#: admin/views/settings-usernames.php:93
+msgid "Sessions"
+msgstr ""
+
+#: admin/views/settings-usernames.php:99
+msgid "Sign the person out everywhere"
+msgstr ""
+
+#: admin/views/settings-usernames.php:100
+msgid "Their sign-in stops working once their username changes anyway; this also clears the dead sessions. Someone who changes their own username stays signed in."
+msgstr ""
+
+#: admin/views/settings-usernames.php:106
+msgid "Email"
+msgstr ""
+
+#: admin/views/settings-usernames.php:112
+msgid "Email the person about the change"
+msgstr ""
+
+#: admin/views/settings-usernames.php:113
+msgid "A plain-text email, sent through the site's normal mail setup, so an SMTP plugin delivers it as usual."
+msgstr ""
+
+#: admin/views/settings-usernames.php:119
+msgid "Email subject"
+msgstr ""
+
+#: admin/views/settings-usernames.php:122
+msgid "Leave blank for the default subject, in the site's language."
+msgstr ""
+
+#: admin/views/settings-usernames.php:126
+msgid "Email message"
+msgstr ""
+
+#: admin/views/settings-usernames.php:129
+msgid "Leave blank for the default message, in the site's language. These tags are replaced when the email is sent:"
+msgstr ""
+
+#: admin/views/settings-usernames.php:142
+msgid "Self-service"
+msgstr ""
+
+#: admin/views/settings-usernames.php:143
+msgid "For people allowed to change their own username."
+msgstr ""
+
+#: admin/views/settings-usernames.php:147
+msgid "Wait between changes"
+msgstr ""
+
+#: admin/views/settings-usernames.php:151
+msgid "How long someone must wait before changing their own username again. 0 means no wait. A change made for someone else is never held back."
+msgstr ""
+
+#: admin/views/settings-usernames.php:155
+msgid "Password"
+msgstr ""
+
+#: admin/views/settings-usernames.php:161
+msgid "Ask for their current password"
+msgstr ""
+
+#: admin/views/settings-usernames.php:162
+msgid "Asked when people change their own username. People who sign in through single sign-on may not know a WordPress password, so leave this off on such sites."
+msgstr ""
+
+#: admin/views/settings-usernames.php:168
+msgid "Choose which roles may change their own username. It will be a capability on each role, so the Roles screen shows it too."
+msgstr ""
+
+#: admin/views/settings.php:28
+msgid "Settings sections"
+msgstr ""
+
+#: admin/views/settings.php:37
+msgid "Save changes"
+msgstr ""
+
+#: includes/class-blt-toolkit-crypto.php:98
+msgid "No authenticated encryption backend (libsodium or OpenSSL AES-GCM) is available on this server."
+msgstr ""
+
+#: includes/class-blt-toolkit-crypto.php:113
+msgid "This value was encrypted with libsodium, which is no longer available."
+msgstr ""
+
+#: includes/class-blt-toolkit-crypto.php:127
+msgid "This value was encrypted with OpenSSL AES-GCM, which is no longer available."
+msgstr ""
+
+#: includes/class-blt-toolkit-crypto.php:142
+msgid "Unrecognized encrypted value format."
+msgstr ""
+
+#: includes/class-blt-toolkit-crypto.php:171
+msgid "Stored value could not be decrypted. The security keys in wp-config.php may have changed."
+msgstr ""
+
+#: includes/class-blt-toolkit-plugin.php:147
+msgid "Switch"
+msgstr ""
+
+#: includes/class-blt-toolkit-plugin.php:148
+msgid "Switch to another user's account and back."
+msgstr ""
+
+#: includes/class-blt-toolkit-plugin.php:152
+msgid "Change a user's username, with old author links redirected."
+msgstr ""
+
+#: includes/class-blt-toolkit-plugin.php:156
+msgid "Create and edit roles and capabilities in a Simple or Advanced view."
+msgstr ""
+
+#: includes/class-blt-toolkit-plugin.php:276
+msgid "BLT Toolkit supports single-site installs only in this version, so it cannot be activated on a multisite network, either for the whole network or for one site."
+msgstr ""
+
+#: includes/class-blt-toolkit-plugin.php:280
+msgid "BLT Toolkit could not create its database tables, so it was not activated and your roles were not changed. Check that the database user may create tables, then activate it again."
+msgstr ""
+
+#: includes/class-blt-toolkit-plugin.php:286
+msgid "BLT Toolkit could not save a copy of your roles before changing them, so it was not activated and your roles were not changed. Activate it again; if this keeps happening, the PHP error log says why."
+msgstr ""
+
+#: includes/class-blt-toolkit-plugin.php:367
+msgid "BLT Toolkit supports single-site installs only in this version, so it is not running on this network. Deactivate it from the Plugins screen."
+msgstr ""
+
+#: includes/class-blt-toolkit-settings.php:418
+msgid "That does not look like a GitHub token. Paste it exactly as GitHub showed it."
+msgstr ""
+
+#: includes/class-blt-toolkit-settings.php:424
+msgid "The token was not saved: this server has neither libsodium nor OpenSSL AES-GCM, so it cannot be stored encrypted. Define BLT_TOOLKIT_GITHUB_TOKEN in wp-config.php instead."
+msgstr ""

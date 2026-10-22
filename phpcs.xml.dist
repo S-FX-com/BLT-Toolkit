@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<ruleset name="BLT Toolkit">
+	<description>WordPress coding standards for BLT Toolkit.</description>
+
+	<file>.</file>
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/tests/*</exclude-pattern>
+	<exclude-pattern>*/includes/lib/*</exclude-pattern>
+	<!--
+		Vendored byte-identical into every BLT plugin, so it is not ours to
+		restyle here: it uses the shared 'blt-family' text domain and
+		BLT_Family_* prefixes, neither of which this ruleset whitelists.
+	-->
+	<exclude-pattern>*/includes/blt-family/*</exclude-pattern>
+	<exclude-pattern>*/blt-family-smoke.php</exclude-pattern>
+	<exclude-pattern>*/.github/*</exclude-pattern>
+	<exclude-pattern>*/bin/*</exclude-pattern>
+	<!-- The release zip is staged here by .github/scripts/build-zip.sh; it is a copy of the tree. -->
+	<exclude-pattern>*/build/*</exclude-pattern>
+
+	<arg value="ps"/>
+	<arg name="extensions" value="php"/>
+	<arg name="parallel" value="4"/>
+
+	<!-- SPEC 3: Requires at least 6.3, Requires PHP 7.4. -->
+	<config name="minimum_wp_version" value="6.3"/>
+	<config name="testVersion" value="7.4-"/>
+
+	<rule ref="WordPress-Extra">
+		<!-- Short array syntax is fine; we target PHP 7.4+. -->
+		<exclude name="Universal.Arrays.DisallowShortArraySyntax"/>
+		<!-- Directory context already namespaces our files (includes/class-blt-toolkit-switch-cookies.php). -->
+		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+	</rule>
+
+	<!-- The floor is PHP 7.4: nothing newer may creep in. -->
+	<rule ref="PHPCompatibilityWP"/>
+
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="blt-toolkit"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!--
+		Views and templates are included from inside controller methods, so
+		their variables are local to the method, not globals. The sniff cannot
+		tell, so it is switched off for this one error code in these folders.
+	-->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound">
+		<exclude-pattern>*/admin/views/*</exclude-pattern>
+		<exclude-pattern>*/templates/*</exclude-pattern>
+	</rule>
+
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="blt_toolkit"/>
+				<element value="BLT_Toolkit"/>
+				<element value="BLT_TOOLKIT"/>
+				<!--
+					SW-19 / D2: current_user_switched() is User Switching's public
+					API. Plugins that integrate with User Switching call it by that
+					exact name, so the compatibility shim cannot carry our prefix.
+					It is the plugin's only unprefixed global symbol and is declared
+					only inside a function_exists() guard (GEN-2: never declare
+					switch_to_user(), switch_off_user() or user_switching_*()).
+					Listing the full name as a "prefix" whitelists that one function
+					wherever it lives, without excluding the rest of its file from
+					the sniff.
+				-->
+				<element value="current_user_switched"/>
+			</property>
+		</properties>
+	</rule>
+</ruleset>

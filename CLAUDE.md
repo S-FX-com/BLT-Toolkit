@@ -40,7 +40,7 @@ These are the public entry points modules build on. Keep the signatures stable; 
 
 | Class | Entry points |
 | --- | --- |
-| `BLT_Toolkit_Plugin` | `boot()`, `activate( $network_wide )`, `deactivate()`, `modules()` (key => class, filter `blt_toolkit_modules`), `module_status( $key )` returning `on`, `off`, `conflict` or `disabled` (by constant), `is_active( $key )`, `module( $key )` (booted instance or null) |
+| `BLT_Toolkit_Plugin` | `boot()`, `activate( $network_wide )`, `deactivate()`, `modules()` (key => class, filter `blt_toolkit_modules`), `labels()` (built-in module names and descriptions, so a screen never loads a module that did not boot), `module_status( $key )` returning `on`, `off`, `conflict` or `disabled` (by constant), `is_active( $key )`, `module( $key )` (booted instance or null) |
 | `BLT_Toolkit_Module` (interface) | `key()`, `label()`, `description()`, `boot()` |
 | `BLT_Toolkit_Settings` | `defaults()` (SPEC 14.1 exactly), `all()`, `get( $group, $key = null )`, `save_tab( $tab, array $raw )` (hand-sanitized, returns the sanitized group), `set( $group, $key, $value )` (internal writes such as `role_meta`, sanitized per key), `github_token()` (constant, then encrypted `blt_toolkit_secrets`, then the shared `github` group), `set_github_token( $token )` |
 | `BLT_Toolkit_Schema` | `VERSION`, `install()`, `maybe_upgrade()`, `table( 'log' or 'snapshots' )` |
@@ -77,6 +77,8 @@ bin/dev-site.sh       # disposable WordPress on SQLite for smoke tests (see the 
 ```
 
 Run `composer lint` and `composer test` before committing, `composer phpcs` before pushing.
+
+In a container that runs as root (the cloud dev container), prefix every Composer command with `COMPOSER_ALLOW_SUPERUSER=1`. Without it Composer disables plugins, so WPCS is never registered with phpcs and `composer <script>` aborts. If a fresh install was made without it, register the standards by hand: `vendor/bin/phpcs --config-set installed_paths` followed by the absolute paths of `vendor/phpcompatibility/*`, `vendor/phpcsstandards/*` and `vendor/wp-coding-standards/wpcs`, comma-separated (see `tasks/lessons.md`). CI runs as a non-root user and needs neither.
 
 ## Testing
 
