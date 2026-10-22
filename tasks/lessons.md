@@ -238,3 +238,7 @@ Gotchas found while building, and decisions recorded with their reasons (includi
 - **The duplicate-switch "Yes" link is relative (`/wp-login.php?…&force=1`); prefix the origin when following it with curl.**
 - **To test WordPress in its own directory, a `php -S` router can set `WP_HOME` and `WP_SITEURL` (`/wp`), strip `/wp` from the path and set `SCRIPT_NAME` with the prefix**; static files under `/wp/` must then be served by the router with their content type. `COOKIEHASH` changes with the siteurl, so jars from the root setup do not carry over.
 - **The Claude Code safety check refuses `rm` on a relative glob after a `cd` in the same command**; clear scratch files with `find /absolute/path -type f -delete`.
+
+## 2026-10-22: Repository location resolved
+
+- **The repository now lives at `github.com/S-FX-com/BLT-Toolkit`, where SPEC 3 and the update checker already point.** It was transferred from `sfxdotcom/BLT-Toolkit`; GitHub redirects the old URL for git, so existing clones keep working. This closes the "owner to confirm" item recorded on 2026-10-21. The repository is private, so a site needs a token to see updates: the `BLT_TOOLKIT_GITHUB_TOKEN` constant, the encrypted token on Settings > Advanced, or the shared BLT `github` group when the owner enables it. The Phase 0 criterion "a second release updates a test site through the updater" can now be exercised once a merge to `main` publishes releases there.
