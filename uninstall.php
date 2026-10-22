@@ -55,8 +55,9 @@ foreach ( array( 'blt_toolkit_log', 'blt_toolkit_snapshots' ) as $blt_toolkit_ta
 	$wpdb->query( "DROP TABLE IF EXISTS {$blt_toolkit_table}" );
 }
 
-// Options, including every job's state.
-$blt_toolkit_options = array( 'blt_toolkit_settings', 'blt_toolkit_db_version', 'blt_toolkit_secrets', 'blt_toolkit_legacy_imports', 'blt_toolkit_log_failure' );
+// Options, including every job's state. `blt_toolkit_isolation_state` holds
+// the RS-33 flag and the reverted types awaiting the RS-32 cleanup.
+$blt_toolkit_options = array( 'blt_toolkit_settings', 'blt_toolkit_db_version', 'blt_toolkit_secrets', 'blt_toolkit_legacy_imports', 'blt_toolkit_log_failure', 'blt_toolkit_isolation_state' );
 
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-off lookup during uninstall.
 $blt_toolkit_jobs = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( 'blt_toolkit_job_' ) . '%' ) );

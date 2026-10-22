@@ -224,6 +224,13 @@ class BLT_Toolkit_User_Roles {
 
 		self::$booted = true;
 
+		// US-12: the No role view reads its cached count on every Users
+		// screen; read it with BLT Toolkit's other admin options, in one query
+		// (BLT_Toolkit_Settings::prime_admin_options(), SEC-9).
+		if ( is_admin() && isset( $GLOBALS['pagenow'] ) && 'users.php' === $GLOBALS['pagenow'] ) {
+			BLT_Toolkit_Settings::prime_also( array( '_transient_' . self::COUNT_TRANSIENT, '_transient_timeout_' . self::COUNT_TRANSIENT ) );
+		}
+
 		// US-1 (Add New User) and US-2 on every request: users are created by
 		// wp-login.php, REST, WP-CLI, SSO plugins and front-end forms.
 		add_action( 'user_register', array( __CLASS__, 'on_register' ), 20, 1 );
@@ -1358,9 +1365,11 @@ class BLT_Toolkit_User_Roles {
 	 * `users_list_table_query_args` callback: in the No role view, list only
 	 * users without a role (US-12).
 	 *
-	 * The administrator exclusion SEC-6 adds is taken out here, because core
-	 * builds it as a meta clause that only users with a capabilities row
-	 * pass, which would hide users who have none; nobody without a role is an
+	 * SEC-6 leaves administrators out by ID, which this view does not
+	 * affect. When it falls back to core's `role__not_in` clause (the IDs
+	 * could not be read), that clause is taken out here, because core builds
+	 * it as a meta clause that only users with a capabilities row pass, which
+	 * would hide users who have none; nobody without a role is an
 	 * administrator, so nobody hidden appears.
 	 *
 	 * @param array $args WP_User_Query arguments.

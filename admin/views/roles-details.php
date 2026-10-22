@@ -6,7 +6,7 @@
  *
  * @package Blt_Toolkit
  *
- * @var array  $details role, description, hide_toolbar, editable, back.
+ * @var array  $details role, description, hide_toolbar, toolbar (whether the toolbar setting is on this form; Simple view has it in its Basics card), editable, back.
  * @var string $name    Role display name.
  */
 
@@ -18,16 +18,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<?php BLT_Toolkit_Admin::form_fields( 'blt_toolkit_roles_details' ); ?>
 	<input type="hidden" name="role" value="<?php echo esc_attr( $details['role'] ); ?>" />
 	<input type="hidden" name="back" value="<?php echo esc_attr( $details['back'] ); ?>" />
+	<?php if ( isset( $details['toolbar'] ) && ! $details['toolbar'] ) : ?>
+		<input type="hidden" name="keep_toolbar" value="1" />
+	<?php endif; ?>
 	<div class="blt-card">
 		<div class="blt-card-header">
 			<h2><?php esc_html_e( 'Role details', 'blt-toolkit' ); ?></h2>
 			<p>
 				<?php
-				printf(
-					/* translators: %s: role name. */
-					esc_html__( 'How %s is described in the role list, and whether its users see the toolbar on the site.', 'blt-toolkit' ),
-					esc_html( $name )
-				);
+				if ( isset( $details['toolbar'] ) && ! $details['toolbar'] ) {
+					printf(
+						/* translators: %s: role name. */
+						esc_html__( 'How %s is described in the role list.', 'blt-toolkit' ),
+						esc_html( $name )
+					);
+				} else {
+					printf(
+						/* translators: %s: role name. */
+						esc_html__( 'How %s is described in the role list, and whether its users see the toolbar on the site.', 'blt-toolkit' ),
+						esc_html( $name )
+					);
+				}
 				?>
 			</p>
 		</div>
@@ -39,6 +50,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<p class="blt-field-desc"><?php esc_html_e( 'Optional. Shown under the role\'s name in the role list.', 'blt-toolkit' ); ?></p>
 				</div>
 			</div>
+			<?php if ( ! isset( $details['toolbar'] ) || $details['toolbar'] ) : ?>
 			<div class="blt-field">
 				<div class="blt-field-label"><?php esc_html_e( 'Toolbar', 'blt-toolkit' ); ?></div>
 				<div>
@@ -52,6 +64,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 					</label>
 				</div>
 			</div>
+			<?php endif; ?>
 		</div>
 	</div>
 	<?php if ( $details['editable'] ) : ?>

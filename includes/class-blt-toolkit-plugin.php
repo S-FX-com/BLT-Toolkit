@@ -40,6 +40,22 @@ class BLT_Toolkit_Plugin {
 	private static $modules = array();
 
 	/**
+	 * Display names read through display_name(), keyed by "viewer ID|user
+	 * ID|context": `raw` (the stored value) and `name`.
+	 *
+	 * @var array<string,array{raw:string,name:string}>
+	 */
+	private static $names = array();
+
+	/**
+	 * The display name being read while the `user_display_name` filters run
+	 * on users.php: user ID, context and stored value (note_display_name_read()).
+	 *
+	 * @var array{0:int,1:string,2:string}|null
+	 */
+	private static $reading = null;
+
+	/**
 	 * Boot. Called on `plugins_loaded` priority 1.
 	 *
 	 * On multisite nothing boots (SPEC D1): activation is refused there, so
@@ -77,6 +93,18 @@ class BLT_Toolkit_Plugin {
 		BLT_Toolkit_Log::register();
 		BLT_Toolkit_Jobs::register();
 		BLT_Toolkit_Rest::register();
+
+		// - Separate permissions (RS-30 to RS-34): isolated types are
+		//   re-registered by the filter the main file adds, whatever the
+		//   Roles module's state, so their verification at `init`
+		//   PHP_INT_MAX (RS-33), the notice and the Plugins-row warning
+		//   (RS-34) load with it.
+		// - Read-only enforcement (RS-14): one map_meta_cap closure that
+		//   returns at once outside edit_post, delete_post and publish_post.
+		//   A View-level marker granted while the module ran keeps its
+		//   meaning with the module off.
+		BLT_Toolkit_Isolation::register();
+		BLT_Toolkit_Readonly::register();
 
 		// SPEC 4.2, step 3, on `init` in this order: the idempotent schema
 		// upgrade (priority 0; also covers a plugin update by file copy,
@@ -118,6 +146,64 @@ class BLT_Toolkit_Plugin {
 		if ( is_admin() && class_exists( 'BLT_Toolkit_Admin' ) ) {
 			BLT_Toolkit_Admin::instance()->init();
 		}
+
+		// The Users list row actions name each user (display_name()), and
+		// admin screens read a few options that are not autoloaded: one
+		// query for all of them, ahead of the update token on `init` 1.
+		if ( is_admin() ) {
+			add_action( 'load-users.php', array( __CLASS__, 'load_users_screen' ) );
+			add_action( 'init', array( 'BLT_Toolkit_Settings', 'prime_admin_options' ), 0 );
+		}
+	}
+
+	/**
+	 * `load-users.php` callback: note each display name core reads for the
+	 * list's rows (core names the user in its own "View posts by" link before
+	 * the row actions run), so display_name() reuses it instead of running
+	 * the display filters again for the same answer.
+	 *
+	 * @return void
+	 */
+	public static function load_users_screen() {
+		add_filter( 'user_display_name', array( __CLASS__, 'note_display_name_read' ), PHP_INT_MIN, 3 );
+		add_filter( 'user_display_name', array( __CLASS__, 'note_display_name' ), PHP_INT_MAX, 3 );
+	}
+
+	/**
+	 * `user_display_name`, first in line on users.php: the stored value a
+	 * read starts from. Returns it unchanged.
+	 *
+	 * @param mixed  $value   The stored display name.
+	 * @param int    $user_id User ID.
+	 * @param string $context Context (`display` on the list).
+	 * @return mixed
+	 */
+	public static function note_display_name_read( $value, $user_id = 0, $context = '' ) {
+		self::$reading = is_scalar( $value ) ? array( (int) $user_id, (string) $context, (string) $value ) : null;
+
+		return $value;
+	}
+
+	/**
+	 * `user_display_name`, last in line on users.php: remember the result of
+	 * the read note_display_name_read() saw start, for display_name(). Any
+	 * other filter that read a display name in between leaves nothing
+	 * remembered. Returns the value unchanged.
+	 *
+	 * @param mixed  $value   The filtered display name.
+	 * @param int    $user_id User ID.
+	 * @param string $context Context.
+	 * @return mixed
+	 */
+	public static function note_display_name( $value, $user_id = 0, $context = '' ) {
+		$reading       = self::$reading;
+		self::$reading = null;
+
+		if ( null !== $reading && is_scalar( $value ) && (int) $user_id === $reading[0] && (string) $context === $reading[1] ) {
+			self::remember_name( get_current_user_id() . '|' . (int) $user_id . '|' . (string) $context, $reading[2], (string) $value );
+		}
+
+		return $value;
 	}
 
 	/**
@@ -277,6 +363,58 @@ class BLT_Toolkit_Plugin {
 		$key = (string) $key;
 
 		return isset( self::$modules[ $key ] ) ? self::$modules[ $key ] : null;
+	}
+
+	/**
+	 * A user's display name exactly as `$user->display_name` gives it, worked
+	 * out once per request for each user (SEC-9).
+	 *
+	 * In wp-admin, core runs `sanitize_text_field()`, `wp_kses_data()` and
+	 * `_wp_specialchars()` over the name on every read from a user object in
+	 * the `display` context, which is the context of the Users list rows
+	 * (8 to 12 µs a read). The Switch To and Change username row actions both
+	 * name the user in their accessible labels, so each row paid for it
+	 * twice, and core reads it once more for its own "View posts by" link
+	 * (load_users_screen()). The answer is reused only for the same viewer,
+	 * user, context and stored name, which is everything those filters are
+	 * given.
+	 *
+	 * @param WP_User $user The user.
+	 * @return string
+	 */
+	public static function display_name( WP_User $user ) {
+		$raw = isset( $user->data->display_name ) && is_scalar( $user->data->display_name ) ? (string) $user->data->display_name : '';
+		$key = get_current_user_id() . '|' . (int) $user->ID . '|' . (string) $user->filter;
+
+		if ( isset( self::$names[ $key ] ) && self::$names[ $key ]['raw'] === $raw ) {
+			return self::$names[ $key ]['name'];
+		}
+
+		$name = (string) $user->display_name;
+
+		self::remember_name( $key, $raw, $name );
+
+		return $name;
+	}
+
+	/**
+	 * Store a display name for display_name().
+	 *
+	 * @param string $key  "viewer ID|user ID|context".
+	 * @param string $raw  The stored value it was worked out from.
+	 * @param string $name The display name.
+	 * @return void
+	 */
+	private static function remember_name( $key, $raw, $name ) {
+		// A list page has at most 999 rows; keep the memory bounded anyway.
+		if ( count( self::$names ) >= 1000 ) {
+			self::$names = array();
+		}
+
+		self::$names[ $key ] = array(
+			'raw'  => $raw,
+			'name' => $name,
+		);
 	}
 
 	/**

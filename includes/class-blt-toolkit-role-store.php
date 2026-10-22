@@ -109,6 +109,13 @@ class BLT_Toolkit_Role_Store {
 	 * @param array  $on_page       Capability names rendered on the form.
 	 * @param array  $checked       Of those, the ones submitted as granted.
 	 * @param string $expected_hash role_hash() from when the form was drawn.
+	 * Who may save depends on where the form was: `simple` (Simple view)
+	 * needs `blt_edit_roles`, `advanced` (the matrix) also
+	 * `blt_edit_capabilities` (SPEC 9.3, 10.7). For a Simple save the
+	 * on-page set is the capabilities of the controls that changed (RS-5).
+	 * The Guard's rules (SEC-2, SEC-3, SEC-5, SEC-10, SEC-12, SEC-13) apply
+	 * to every context alike.
+	 *
 	 * @param array  $args {
 	 *     Optional.
 	 *
@@ -121,7 +128,8 @@ class BLT_Toolkit_Role_Store {
 	 * }
 	 * @return array|WP_Error array( 'changes' => array( role => array( 'add' => cap => bool, 'remove' => string[], ... ) ),
 	 *                        'snapshot_id', 'log_id', 'diff', 'critical', 'dry_run' [, 'guard'] ), or a WP_Error:
-	 *                        `blt_toolkit_bad_request` (no lock token), `blt_toolkit_roles_in_code`,
+	 *                        `blt_toolkit_bad_request` (no lock token), `blt_toolkit_forbidden` (the
+	 *                        context's permission is missing), `blt_toolkit_roles_in_code`,
 	 *                        `blt_toolkit_role_not_found`, `blt_toolkit_role_changed` (RO-2, data `diff`),
 	 *                        a Guard refusal, `blt_toolkit_critical_review` (SEC-10),
 	 *                        `blt_toolkit_snapshot_failed` or `blt_toolkit_roles_write_failed`.
@@ -134,6 +142,25 @@ class BLT_Toolkit_Role_Store {
 
 		if ( ! preg_match( '/^[0-9a-f]{64}$/', $expected ) ) {
 			return new WP_Error( 'blt_toolkit_bad_request', __( 'The form is missing its check for changes made by someone else. Reload the page and try again.', 'blt-toolkit' ), array( 'status' => 400 ) );
+		}
+
+		$context = isset( $args['context'] ) && is_string( $args['context'] ) && '' !== $args['context'] ? $args['context'] : 'advanced';
+		$actor   = isset( $args['actor'] ) && $args['actor'] instanceof WP_User ? $args['actor'] : wp_get_current_user();
+		$needs   = self::context_cap( $context );
+
+		// SPEC 9.3, 10.7: Simple view is for `blt_edit_roles`; single
+		// capabilities (Advanced) also need `blt_edit_capabilities`.
+		if ( '' !== $needs && ! user_can( $actor, $needs ) ) {
+			return new WP_Error(
+				'blt_toolkit_forbidden',
+				'simple' === $context
+					? __( 'You are not allowed to change roles.', 'blt-toolkit' )
+					: __( 'Changing capabilities one by one needs the "Edit capabilities" permission.', 'blt-toolkit' ),
+				array(
+					'status' => 403,
+					'caps'   => array( $needs ),
+				)
+			);
 		}
 
 		$computed = array(
@@ -162,7 +189,7 @@ class BLT_Toolkit_Role_Store {
 		$args = array_merge(
 			$args,
 			array(
-				'context'     => isset( $args['context'] ) ? $args['context'] : 'advanced',
+				'context'     => $context,
 				'module'      => 'roles',
 				'action'      => 'role_saved',
 				'object_type' => 'role',
@@ -174,6 +201,26 @@ class BLT_Toolkit_Role_Store {
 		);
 
 		return self::transaction( $mutate, $args );
+	}
+
+	/**
+	 * The permission a one-role save needs by context (SPEC 9.3, 10.7):
+	 * `blt_edit_roles` for Simple view, `blt_edit_capabilities` for the
+	 * Advanced matrix, none for other contexts (their own screens check).
+	 * Pure.
+	 *
+	 * @param string $context Context.
+	 * @return string Capability, or ''.
+	 */
+	public static function context_cap( $context ) {
+		switch ( (string) $context ) {
+			case 'simple':
+				return 'blt_edit_roles';
+			case 'advanced':
+				return 'blt_edit_capabilities';
+		}
+
+		return '';
 	}
 
 	// ---------- The general write ----------

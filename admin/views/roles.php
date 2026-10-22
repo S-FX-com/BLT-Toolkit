@@ -16,6 +16,7 @@
  * @var array         $header   Role header data (`users` is null when not counted).
  * @var array[]       $tabs     Simple / Advanced tabs, or empty when only Simple is open to the person.
  * @var array|null    $matrix   Advanced matrix data, or null in Simple view.
+ * @var array|null    $simple   Simple view data (BLT_Toolkit_Admin_Roles::simple_data()), or null in Advanced view.
  * @var array|null    $add_cap  Add capability data (Advanced view), or null.
  * @var array         $details  Role details data.
  * @var true|WP_Error $editable Whether the person may change this role.
@@ -123,8 +124,9 @@ $blt_tk_back = http_build_query( BLT_Toolkit_Admin_Roles::state_args( $state ) )
 			BLT_Toolkit_Admin_Roles::partial(
 				'roles-simple',
 				array(
-					'state' => $state,
-					'name'  => $header['name'],
+					'state'  => $state,
+					'name'   => $header['name'],
+					'simple' => $simple,
 				)
 			);
 		}

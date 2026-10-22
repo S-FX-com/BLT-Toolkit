@@ -75,6 +75,17 @@ class BLT_Toolkit_Guard {
 	const CODE_RECOVERY_TRANSIENT = 'blt_toolkit_recovery_in_code';
 
 	/**
+	 * User query variable that marks a query SEC-6 applies to. Its value is
+	 * the list of administrator IDs exclude_admin_ids() leaves out.
+	 */
+	const HIDE_QUERY_VAR = 'blt_toolkit_hide_admins';
+
+	/**
+	 * Object cache group of the administrator ID list (admin_ids()).
+	 */
+	const CACHE_GROUP = 'blt_toolkit';
+
+	/**
 	 * Capabilities the `map_meta_cap` callback looks at (SEC-9). Everything
 	 * else returns before any work.
 	 *
@@ -160,6 +171,38 @@ class BLT_Toolkit_Guard {
 	private static $after_cache = array();
 
 	/**
+	 * Whether this request is users.php for someone administrators are
+	 * hidden from (set by load_users_screen()).
+	 *
+	 * @var bool
+	 */
+	private static $users_screen = false;
+
+	/**
+	 * The users.php census (census()): `key` (the `users` last-changed time
+	 * and the role names it was taken for) and `result` (null when it could
+	 * not be taken).
+	 *
+	 * @var array{key:string,result:array|null}|null
+	 */
+	private static $census = null;
+
+	/**
+	 * Target users of guarded checks, by ID: `changed` (core's `users`
+	 * last-changed time when the object was built) and `user` (target()).
+	 *
+	 * @var array<int,array{changed:string,user:WP_User|false}>
+	 */
+	private static $targets = array();
+
+	/**
+	 * fingerprint() results by object: `caps` (the array hashed) and `hash`.
+	 *
+	 * @var array<int,array{caps:array,hash:string}>
+	 */
+	private static $fingerprints = array();
+
+	/**
 	 * Register the Guard's hooks. Called on `plugins_loaded` priority 1.
 	 *
 	 * @return void
@@ -188,7 +231,7 @@ class BLT_Toolkit_Guard {
 
 		// SEC-6. The list table query filter fires only inside
 		// WP_Users_List_Table; counts and views are adjusted on users.php.
-		add_filter( 'users_list_table_query_args', array( __CLASS__, 'exclude_admins_from_query' ) );
+		add_filter( 'users_list_table_query_args', array( __CLASS__, 'exclude_admins_from_list' ) );
 		add_filter( 'rest_user_query', array( __CLASS__, 'exclude_admins_from_query' ) );
 		add_action( 'load-users.php', array( __CLASS__, 'load_users_screen' ) );
 
@@ -344,7 +387,7 @@ class BLT_Toolkit_Guard {
 				return array( 'do_not_allow' );
 			}
 
-			$target = get_userdata( $target_id );
+			$target = self::target( $target_id );
 
 			if ( ! $target instanceof WP_User || ! $target->exists() ) {
 				return array( 'do_not_allow' );
@@ -400,7 +443,7 @@ class BLT_Toolkit_Guard {
 		}
 
 		if ( ! isset( $target ) ) {
-			$target = get_userdata( $target_id );
+			$target = self::target( $target_id );
 
 			if ( ! $target instanceof WP_User || ! $target->exists() ) {
 				return $caps;
@@ -475,6 +518,44 @@ class BLT_Toolkit_Guard {
 		return get_userdata( $user_id );
 	}
 
+	/**
+	 * The target user of a guarded check, as get_userdata() gives it, built
+	 * once while nothing about any user changes (SEC-9).
+	 *
+	 * get_userdata() builds a new WP_User, merging its role capabilities,
+	 * on every call, and a Users list row asks about the same user eight or
+	 * nine times (core's edit, delete and reset-password checks and its edit
+	 * link, then the switch and rename actions). The object is reused while
+	 * core's `users` last-changed time is unchanged: core moves it on every
+	 * change to a user, their meta or their roles (the same key WP_User_Query
+	 * caches its results under), and flush() drops the reuse when role
+	 * definitions change.
+	 *
+	 * @param int $target_id User ID.
+	 * @return WP_User|false
+	 */
+	private static function target( $target_id ) {
+		$changed = self::users_last_changed();
+
+		if ( isset( self::$targets[ $target_id ] ) && self::$targets[ $target_id ]['changed'] === $changed ) {
+			return self::$targets[ $target_id ]['user'];
+		}
+
+		// A list page has 20 to 999 rows; keep the memory bounded anyway.
+		if ( count( self::$targets ) >= 1000 ) {
+			self::$targets = array();
+		}
+
+		$user = get_userdata( $target_id );
+
+		self::$targets[ $target_id ] = array(
+			'changed' => $changed,
+			'user'    => $user,
+		);
+
+		return $user;
+	}
+
 	// ---------- Effective capabilities and caching (SEC-8, SEC-9) ----------
 
 	/**
@@ -526,6 +607,8 @@ class BLT_Toolkit_Guard {
 		self::$caps_cache    = array();
 		self::$missing_cache = array();
 		self::$after_cache   = array();
+		self::$census        = null;
+		self::$targets       = array();
 	}
 
 	/**
@@ -540,8 +623,28 @@ class BLT_Toolkit_Guard {
 	 */
 	private static function fingerprint( WP_User $user ) {
 		$caps = is_array( $user->caps ) ? $user->caps : array();
+		$id   = spl_object_id( $user );
 
-		return md5( (string) wp_json_encode( $caps ) );
+		// The hash is a function of the array alone, so a remembered one is
+		// reused only for an identical array (the same array is recognised
+		// at once; a changed one is compared, then hashed again). SEC-9: a
+		// Users list row checks the same two users seven or more times.
+		if ( isset( self::$fingerprints[ $id ] ) && self::$fingerprints[ $id ]['caps'] === $caps ) {
+			return self::$fingerprints[ $id ]['hash'];
+		}
+
+		if ( count( self::$fingerprints ) >= 1000 ) {
+			self::$fingerprints = array();
+		}
+
+		$hash = md5( (string) wp_json_encode( $caps ) );
+
+		self::$fingerprints[ $id ] = array(
+			'caps' => $caps,
+			'hash' => $hash,
+		);
+
+		return $hash;
 	}
 
 	/**
@@ -770,10 +873,15 @@ class BLT_Toolkit_Guard {
 	}
 
 	/**
-	 * Leave holders of the administrator role out of a user query: the Users
-	 * list table (`users_list_table_query_args`) and the REST users
-	 * collection (`rest_user_query`). It adds a `role__not_in` clause to the
-	 * query that runs anyway, so there is no extra query (SEC-6, SEC-9).
+	 * Leave holders of the administrator role out of the REST users
+	 * collection (`rest_user_query`), or any other user query this is given
+	 * to (SEC-6).
+	 *
+	 * The administrators are left out by ID (hide_admins_in()), from the list
+	 * admin_ids() keeps in the object cache, instead of core's `role__not_in`
+	 * clause: on MySQL that clause joins every user's capabilities row and,
+	 * with the total count core asks for, reads all of them on every request
+	 * (24 to 150 ms with 10,000 users, against 1 ms without it). SEC-9.
 	 *
 	 * @param array $args WP_User_Query arguments.
 	 * @return array
@@ -783,12 +891,142 @@ class BLT_Toolkit_Guard {
 			return $args;
 		}
 
-		$not_in   = isset( $args['role__not_in'] ) ? (array) $args['role__not_in'] : array();
-		$not_in[] = self::ADMIN_ROLE;
+		return self::hide_admins_in( $args, self::admin_ids() );
+	}
 
-		$args['role__not_in'] = array_values( array_unique( $not_in ) );
+	/**
+	 * `users_list_table_query_args` callback: SEC-6 for the Users list.
+	 *
+	 * Like exclude_admins_from_query(), except that on users.php, where core
+	 * counts the users of each role on every load (unless the site is large),
+	 * the administrator IDs come from the same scan as those counts
+	 * (census()), so hiding administrators costs no query of its own.
+	 *
+	 * @param array $args WP_User_Query arguments.
+	 * @return array
+	 */
+	public static function exclude_admins_from_list( $args ) {
+		if ( ! is_array( $args ) || ! self::hides_admins_from( wp_get_current_user() ) ) {
+			return $args;
+		}
+
+		$census = self::$users_screen && ! wp_is_large_user_count() ? self::census() : null;
+
+		return self::hide_admins_in( $args, null !== $census ? $census['admins'] : self::admin_ids() );
+	}
+
+	/**
+	 * Mark a user query so exclude_admin_ids() leaves these administrators
+	 * out of it (SEC-6).
+	 *
+	 * The IDs are added to the query's own WHERE clause on `pre_user_query`,
+	 * not passed as `exclude`, because core ignores `exclude` whenever
+	 * `include` is set (`GET /wp/v2/users?include=1`). When the IDs could not
+	 * be read, it falls back to core's `role__not_in` clause: slower, but it
+	 * never shows an administrator.
+	 *
+	 * @param array      $args WP_User_Query arguments.
+	 * @param int[]|null $ids  Administrator IDs, or null when they could not be read.
+	 * @return array
+	 */
+	private static function hide_admins_in( array $args, $ids ) {
+		if ( ! is_array( $ids ) ) {
+			$not_in   = isset( $args['role__not_in'] ) ? (array) $args['role__not_in'] : array();
+			$not_in[] = self::ADMIN_ROLE;
+
+			$args['role__not_in'] = array_values( array_unique( $not_in ) );
+
+			return $args;
+		}
+
+		$args[ self::HIDE_QUERY_VAR ] = $ids;
+
+		add_action( 'pre_user_query', array( __CLASS__, 'exclude_admin_ids' ) );
 
 		return $args;
+	}
+
+	/**
+	 * `pre_user_query` callback, added by hide_admins_in(): leave the
+	 * administrators the query was marked with out of its results and its
+	 * total.
+	 *
+	 * @param WP_User_Query $query The query.
+	 * @return void
+	 */
+	public static function exclude_admin_ids( $query ) {
+		global $wpdb;
+
+		if ( ! $query instanceof WP_User_Query ) {
+			return;
+		}
+
+		$ids = $query->get( self::HIDE_QUERY_VAR );
+
+		if ( ! is_array( $ids ) ) {
+			return;
+		}
+
+		$ids = self::id_list( $ids );
+
+		if ( array() !== $ids ) {
+			$query->query_where .= " AND {$wpdb->users}.ID NOT IN (" . implode( ',', $ids ) . ')';
+		}
+	}
+
+	/**
+	 * IDs of the users who hold the administrator role on this site, matched
+	 * as core's role clause matches them (the capabilities row contains
+	 * `"administrator"`), or null when they could not be read (SEC-6).
+	 *
+	 * Kept in the object cache under core's `users` last-changed time, which
+	 * moves on every change to a user, their meta or their roles: exactly as
+	 * fresh as WP_User_Query's own cached results, persistent with an object
+	 * cache and per request without one. On a site without one this is a
+	 * scan of the capabilities rows (about 13 ms with 10,000 users on
+	 * MariaDB 10.11), run only where administrators are hidden.
+	 *
+	 * @return int[]|null
+	 */
+	public static function admin_ids() {
+		global $wpdb;
+
+		$key = 'admin_ids:' . self::users_last_changed();
+		$ids = wp_cache_get( $key, self::CACHE_GROUP );
+
+		if ( is_array( $ids ) ) {
+			return $ids;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached just below under core's users last-changed time.
+		$rows = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT user_id FROM {$wpdb->usermeta} WHERE meta_key = %s AND meta_value LIKE %s",
+				$wpdb->get_blog_prefix() . 'capabilities',
+				'%' . $wpdb->esc_like( '"' . self::ADMIN_ROLE . '"' ) . '%'
+			)
+		);
+
+		if ( '' !== (string) $wpdb->last_error || ! is_array( $rows ) ) {
+			return null;
+		}
+
+		$ids = self::id_list( $rows );
+
+		// Each change makes a new key; let the old ones expire.
+		wp_cache_set( $key, $ids, self::CACHE_GROUP, DAY_IN_SECONDS );
+
+		return $ids;
+	}
+
+	/**
+	 * Core's `users` last-changed time (moved on every user, user meta and
+	 * role change).
+	 *
+	 * @return string
+	 */
+	private static function users_last_changed() {
+		return (string) wp_cache_get_last_changed( 'users' );
 	}
 
 	/**
@@ -802,15 +1040,224 @@ class BLT_Toolkit_Guard {
 			return;
 		}
 
+		self::$users_screen = true;
+
 		add_filter( 'pre_count_users', array( __CLASS__, 'count_users_without_admins' ), 10, 3 );
 		add_filter( 'views_users', array( __CLASS__, 'drop_admin_view' ) );
 	}
 
 	/**
+	 * One scan of the capabilities rows on users.php, in place of core's
+	 * counting query: the role counts without administrators (SEC-6) and the
+	 * administrators' IDs, for the list (SEC-9). Taken once per request (again
+	 * only if a user or role changes in between) by whichever comes first,
+	 * the list query or the counts.
+	 *
+	 * The scan has the columns of core's own counting query, with the
+	 * administrator column replaced by the list of their IDs, so it costs what
+	 * core's query costs. A second query over the administrators' rows only
+	 * (by ID) gives what to subtract, so a user holding the administrator
+	 * role and another role is left out of both counts, exactly as before.
+	 *
+	 * @return array{counts:array,admins:int[]}|null Null when it could not be
+	 *         taken, or the ID list may have been cut short by
+	 *         `group_concat_max_len`; callers then use the separate queries.
+	 */
+	private static function census() {
+		global $wpdb;
+
+		$names = array_values( array_diff( self::role_names(), array( self::ADMIN_ROLE ) ) );
+		$key   = self::users_last_changed() . '|' . implode( ',', $names );
+
+		if ( null !== self::$census && $key === self::$census['key'] ) {
+			return self::$census['result'];
+		}
+
+		self::$census = array(
+			'key'    => $key,
+			'result' => null,
+		);
+
+		$cap_key = $wpdb->get_blog_prefix() . 'capabilities';
+		$admin   = '%' . $wpdb->esc_like( '"' . self::ADMIN_ROLE . '"' ) . '%';
+		$columns = self::count_columns( $names );
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Replaces core's count_users() query on users.php; every value is prepared, as core does.
+		$all = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT {$columns}, COUNT(`meta_value`), GROUP_CONCAT(CASE WHEN `meta_value` LIKE %s THEN `user_id` END), @@SESSION.group_concat_max_len FROM {$wpdb->usermeta} INNER JOIN {$wpdb->users} ON user_id = ID WHERE meta_key = %s",
+				$admin,
+				$cap_key
+			),
+			ARRAY_N
+		);
+
+		if ( '' !== (string) $wpdb->last_error || ! is_array( $all ) ) {
+			return null;
+		}
+
+		$rows = self::concat_ids( $all[ count( $names ) + 2 ], $all[ count( $names ) + 3 ] );
+
+		if ( null === $rows ) {
+			return null;
+		}
+
+		$ids    = self::id_list( $rows );
+		$admins = null;
+
+		if ( array() !== $ids ) {
+			$admins = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT {$columns}, COUNT(*) FROM {$wpdb->usermeta} INNER JOIN {$wpdb->users} ON user_id = ID WHERE meta_key = %s AND user_id IN (" . implode( ',', $ids ) . ') AND meta_value LIKE %s',
+					$cap_key,
+					$admin
+				),
+				ARRAY_N
+			);
+
+			if ( '' !== (string) $wpdb->last_error || ! is_array( $admins ) ) {
+				return null;
+			}
+		}
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
+
+		$counts = self::census_counts( $names, $all, $admins, count( $rows ) );
+
+		if ( null === $counts ) {
+			return null;
+		}
+
+		self::$census['result'] = array(
+			'counts' => $counts,
+			'admins' => $ids,
+		);
+
+		wp_cache_set( 'admin_ids:' . self::users_last_changed(), $ids, self::CACHE_GROUP, DAY_IN_SECONDS );
+
+		return self::$census['result'];
+	}
+
+	/**
+	 * The counting columns of core's count_users() query for these roles:
+	 * one per role, then the users with an empty capabilities array.
+	 *
+	 * @param string[] $names Role names.
+	 * @return string SQL.
+	 */
+	private static function count_columns( array $names ) {
+		global $wpdb;
+
+		$select = array();
+
+		foreach ( $names as $name ) {
+			$select[] = $wpdb->prepare( 'COUNT(NULLIF(`meta_value` LIKE %s, false))', '%' . $wpdb->esc_like( '"' . $name . '"' ) . '%' );
+		}
+
+		$select[] = "COUNT(NULLIF(`meta_value` = 'a:0:{}', false))";
+
+		return implode( ', ', $select );
+	}
+
+	/**
+	 * The user IDs in a GROUP_CONCAT() result, one per row (repeats kept), or
+	 * null when the result may have been cut short. Pure.
+	 *
+	 * MySQL and MariaDB cut a GROUP_CONCAT() at `group_concat_max_len` bytes
+	 * (1,024 by default on MySQL) with only a warning, so a result within 32
+	 * bytes of the limit is not trusted. When the limit is unknown (the SQLite
+	 * drop-in returns NULL for it and never cuts), 1,024 is assumed.
+	 *
+	 * @param mixed $concat  The GROUP_CONCAT() value: comma-separated IDs, or null when no row matched.
+	 * @param mixed $max_len The `group_concat_max_len` value the query returned.
+	 * @return int[]|null
+	 */
+	public static function concat_ids( $concat, $max_len ) {
+		if ( null === $concat || '' === $concat ) {
+			return array();
+		}
+
+		$limit = is_numeric( $max_len ) && (int) $max_len > 0 ? (int) $max_len : 1024;
+
+		if ( ! is_string( $concat ) && ! is_int( $concat ) ) {
+			return null;
+		}
+
+		$concat = (string) $concat;
+
+		if ( strlen( $concat ) + 32 > $limit || 1 !== preg_match( '/^[0-9]+(?:,[0-9]+)*$/', $concat ) ) {
+			return null;
+		}
+
+		return array_map( 'intval', explode( ',', $concat ) );
+	}
+
+	/**
+	 * The counts count_users() returns, from the census. Pure.
+	 *
+	 * @param string[]   $names       Role names, administrator left out, in column order.
+	 * @param array      $all         The scan's row: one count per role, the empty-array count, then the rows with a value.
+	 * @param array|null $admins      The administrators' row (same role columns, the empty-array count, then their row count), or null when there are none.
+	 * @param int        $admin_rows  Number of administrator rows the scan listed.
+	 * @return array{total_users:int,avail_roles:array<string,int>}|null Null when the two queries disagree (a change in between).
+	 */
+	public static function census_counts( array $names, array $all, $admins, $admin_rows ) {
+		$width = count( $names ) + 1;
+
+		if ( count( $all ) < $width + 1 || ( null !== $admins && count( $admins ) < $width + 1 ) ) {
+			return null;
+		}
+
+		$admin_count = null === $admins ? 0 : (int) $admins[ $width ];
+
+		if ( $admin_count !== (int) $admin_rows ) {
+			return null;
+		}
+
+		$counts = array();
+
+		foreach ( $names as $col => $name ) {
+			$count = (int) $all[ $col ] - ( null === $admins ? 0 : (int) $admins[ $col ] );
+
+			if ( $count > 0 ) {
+				$counts[ $name ] = $count;
+			}
+		}
+
+		$counts['none'] = (int) $all[ $width - 1 ] - ( null === $admins ? 0 : (int) $admins[ $width - 1 ] );
+
+		return array(
+			'total_users' => (int) $all[ $width ] - $admin_count,
+			'avail_roles' => $counts,
+		);
+	}
+
+	/**
+	 * Positive integer IDs, unique, in order. Pure.
+	 *
+	 * @param array $values Values.
+	 * @return int[]
+	 */
+	public static function id_list( array $values ) {
+		$out = array();
+
+		foreach ( $values as $value ) {
+			if ( is_numeric( $value ) && (int) $value > 0 ) {
+				$out[ (int) $value ] = (int) $value;
+			}
+		}
+
+		return array_values( $out );
+	}
+
+	/**
 	 * `pre_count_users` callback on users.php for a user who does not see
-	 * administrators: core's own counting query with administrators left
-	 * out, run in its place, so the views show the counts of the users this
-	 * person can see, at no extra query.
+	 * administrators: the counts without administrators, in place of core's
+	 * counting query, so the views show the counts of the users this person
+	 * can see.
+	 *
+	 * They come from the census (census()), which also gives the list its
+	 * administrator IDs; when it cannot be taken, core's own counting query
+	 * with administrators left out runs instead, as before.
 	 *
 	 * The administrator count comes back as zero, so core leaves the
 	 * Administrator view out on its own; drop_admin_view() covers sites
@@ -838,13 +1285,13 @@ class BLT_Toolkit_Guard {
 			return $result;
 		}
 
-		$select = array();
+		if ( (int) get_current_blog_id() === (int) $site_id ) {
+			$census = self::census();
 
-		foreach ( $names as $name ) {
-			$select[] = $wpdb->prepare( 'COUNT(NULLIF(`meta_value` LIKE %s, false))', '%' . $wpdb->esc_like( '"' . $name . '"' ) . '%' );
+			if ( null !== $census ) {
+				return $census['counts'];
+			}
 		}
-
-		$select[] = "COUNT(NULLIF(`meta_value` = 'a:0:{}', false))";
 
 		$where = $wpdb->prepare(
 			'meta_key = %s AND meta_value NOT LIKE %s',
@@ -853,7 +1300,7 @@ class BLT_Toolkit_Guard {
 		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Replaces core's count_users() query on users.php; every value was prepared above, as core does.
-		$row = $wpdb->get_row( 'SELECT ' . implode( ', ', $select ) . ", COUNT(*) FROM {$wpdb->usermeta} INNER JOIN {$wpdb->users} ON user_id = ID WHERE {$where}", ARRAY_N );
+		$row = $wpdb->get_row( 'SELECT ' . self::count_columns( $names ) . ", COUNT(*) FROM {$wpdb->usermeta} INNER JOIN {$wpdb->users} ON user_id = ID WHERE {$where}", ARRAY_N );
 
 		if ( ! is_array( $row ) ) {
 			return null;

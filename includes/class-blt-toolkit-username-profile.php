@@ -96,6 +96,15 @@ class BLT_Toolkit_Username_Profile {
 	private static $attempt = array();
 
 	/**
+	 * Edit links core built on this request's Users list, keyed by
+	 * "current user ID|user ID": `link` and `changed` (core's `users`
+	 * last-changed time when it was built). See remember_edit_link().
+	 *
+	 * @var array<string,array{link:string,changed:string}>
+	 */
+	private static $edit_links = array();
+
+	/**
 	 * Whether boot() already ran.
 	 *
 	 * @var bool
@@ -126,6 +135,7 @@ class BLT_Toolkit_Username_Profile {
 
 		// UN-19.
 		add_filter( 'user_row_actions', array( __CLASS__, 'row_action' ), 10, 2 );
+		add_action( 'load-users.php', array( __CLASS__, 'load_users_screen' ) );
 	}
 
 	// ---------- UN-16 ----------
@@ -600,6 +610,80 @@ class BLT_Toolkit_Username_Profile {
 	// ---------- UN-19 ----------
 
 	/**
+	 * `load-users.php` callback: remember the edit links core builds for the
+	 * list's rows, so row_action() does not build each one a second time.
+	 *
+	 * @return void
+	 */
+	public static function load_users_screen() {
+		global $wpdb;
+
+		add_filter( 'get_edit_user_link', array( __CLASS__, 'remember_edit_link' ), PHP_INT_MAX, 2 );
+
+		// A change to the role definitions can change who may edit whom, and
+		// does not move core's `users` last-changed time.
+		$role_key = $wpdb->get_blog_prefix() . 'user_roles';
+		add_action( 'add_option_' . $role_key, array( __CLASS__, 'forget_edit_links' ), 10, 0 );
+		add_action( 'update_option_' . $role_key, array( __CLASS__, 'forget_edit_links' ), 10, 0 );
+	}
+
+	/**
+	 * `get_edit_user_link` filter on users.php, last in line: note the link
+	 * as every other filter left it, for this user and the current user, with
+	 * core's `users` last-changed time, and return it unchanged.
+	 *
+	 * get_edit_user_link() runs this filter only after
+	 * `current_user_can( 'edit_user', $user_id )` passed, so a noted link also
+	 * records that answer (edit_link()).
+	 *
+	 * @param string $link    The edit link.
+	 * @param int    $user_id The user it is for.
+	 * @return string
+	 */
+	public static function remember_edit_link( $link, $user_id ) {
+		if ( is_string( $link ) && '' !== $link ) {
+			// A list page has at most 999 rows; keep the memory bounded anyway.
+			if ( count( self::$edit_links ) >= 1000 ) {
+				self::$edit_links = array();
+			}
+
+			self::$edit_links[ get_current_user_id() . '|' . (int) $user_id ] = array(
+				'link'    => $link,
+				'changed' => (string) wp_cache_get_last_changed( 'users' ),
+			);
+		}
+
+		return $link;
+	}
+
+	/**
+	 * Forget the noted edit links. Hooked to writes of the roles option on
+	 * users.php.
+	 *
+	 * @return void
+	 */
+	public static function forget_edit_links() {
+		self::$edit_links = array();
+	}
+
+	/**
+	 * The edit link core noted for this user on this request, while nothing
+	 * about any user or role has changed since, or '' (remember_edit_link()).
+	 *
+	 * @param int $user_id User ID.
+	 * @return string
+	 */
+	private static function edit_link( $user_id ) {
+		$key = get_current_user_id() . '|' . (int) $user_id;
+
+		if ( ! isset( self::$edit_links[ $key ] ) || (string) wp_cache_get_last_changed( 'users' ) !== self::$edit_links[ $key ]['changed'] ) {
+			return '';
+		}
+
+		return self::$edit_links[ $key ]['link'];
+	}
+
+	/**
 	 * "Change username" on the Users list, linking to the profile section
 	 * (UN-19). Shown only when the profile screen opens for this user
 	 * (`edit_user`) and the rename is allowed (`blt_change_username`).
@@ -615,11 +699,23 @@ class BLT_Toolkit_Username_Profile {
 
 		$user_id = (int) $user->ID;
 
-		if ( ! current_user_can( 'blt_change_username', $user_id ) || ! current_user_can( 'edit_user', $user_id ) ) { // phpcs:ignore WordPress.WP.Capabilities.Unknown -- BLT Toolkit's meta capability (SPEC 5.1).
+		if ( ! current_user_can( 'blt_change_username', $user_id ) ) { // phpcs:ignore WordPress.WP.Capabilities.Unknown -- BLT Toolkit's meta capability (SPEC 5.1).
 			return $actions;
 		}
 
-		$url = get_edit_user_link( $user_id );
+		// `edit_user` as well. Core built this row's edit link just before the
+		// row actions, which get_edit_user_link() does only once `edit_user`
+		// passed, so the noted link answers it while no user or role changed
+		// since; otherwise ask, and build the link (SEC-9).
+		$url = self::edit_link( $user_id );
+
+		if ( '' === $url ) {
+			if ( ! current_user_can( 'edit_user', $user_id ) ) {
+				return $actions;
+			}
+
+			$url = get_edit_user_link( $user_id );
+		}
 
 		if ( ! is_string( $url ) || '' === $url ) {
 			return $actions;
@@ -641,7 +737,7 @@ class BLT_Toolkit_Username_Profile {
 		$actions['blt_change_username'] = sprintf(
 			'<a href="%1$s" aria-label="%2$s">%3$s</a>',
 			esc_url( $url . '#' . self::ANCHOR ),
-			esc_attr( sprintf( $labels['aria'], $user->display_name ) ),
+			esc_attr( sprintf( $labels['aria'], BLT_Toolkit_Plugin::display_name( $user ) ) ),
 			$labels['text']
 		);
 

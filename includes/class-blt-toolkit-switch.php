@@ -175,6 +175,14 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 	 */
 	private static $switch_urls = array();
 
+	/**
+	 * wp_login_url() for this request, kept once `wp_loaded` has fired
+	 * (login_url()); null until then.
+	 *
+	 * @var string|null
+	 */
+	private static $login_url = null;
+
 	// ---------- Module ----------
 
 	/**
@@ -368,7 +376,33 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 
 		$args['_wpnonce'] = wp_create_nonce( $nonce );
 
-		return add_query_arg( $args, wp_login_url() );
+		return add_query_arg( $args, self::login_url() );
+	}
+
+	/**
+	 * wp_login_url(), worked out once per request (SEC-9).
+	 *
+	 * A Users list asks for one switch link per row, and wp_login_url() runs
+	 * site_url() and the `login_url` filters each time, for the same answer.
+	 * It is kept only from `wp_loaded` on, when every plugin has added its
+	 * login URL filters (a custom login slug), and forgotten with the rest
+	 * of the per-request state when the current user changes. Each link still
+	 * gets its own nonce.
+	 *
+	 * @return string
+	 */
+	private static function login_url() {
+		if ( null !== self::$login_url ) {
+			return self::$login_url;
+		}
+
+		$url = wp_login_url();
+
+		if ( did_action( 'wp_loaded' ) ) {
+			self::$login_url = $url;
+		}
+
+		return $url;
 	}
 
 	// ---------- State ----------
@@ -740,6 +774,7 @@ class BLT_Toolkit_Switch implements BLT_Toolkit_Module {
 		self::$original    = null;
 		self::$chains      = array();
 		self::$switch_urls = array();
+		self::$login_url   = null;
 	}
 
 	/**

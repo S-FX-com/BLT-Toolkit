@@ -128,20 +128,34 @@ class BLT_Toolkit_Admin_Roles {
 	const STEPS = array( 'review', 'conflict', 'compare', 'delete_cap' );
 
 	/**
-	 * Query arguments the editor's own links carry, in URL order.
+	 * Query arguments the editor's own links carry, in URL order. `ctl`
+	 * narrows Advanced view to one Simple control's capabilities (RS-4's
+	 * "Edit in Advanced").
 	 */
-	const STATE_ARGS = array( 'role', 'user_id', 'view', 'group', 's', 'granted', 'deprecated', 'readable' );
+	const STATE_ARGS = array( 'role', 'user_id', 'view', 'group', 'ctl', 's', 'granted', 'deprecated', 'readable' );
+
+	/**
+	 * Role-editor pages of the separate-permissions flow (RS-30 to RS-32),
+	 * drawn by BLT_Toolkit_Admin_Isolation (the `action` query argument).
+	 */
+	const ISOLATION_VIEWS = array( 'isolate', 'revert', 'cleanup' );
+
+	/**
+	 * Field of a Simple form that says the script showed the review (RS-6).
+	 */
+	const REVIEWED_FIELD = 'reviewed';
 
 	/**
 	 * admin-post.php action => array( handler method, capability ).
 	 */
 	const ACTIONS = array(
-		'blt_toolkit_roles_save'       => array( 'handle_save', 'blt_edit_roles' ),
-		'blt_toolkit_roles_user_caps'  => array( 'handle_user_caps', 'blt_edit_capabilities' ),
-		'blt_toolkit_roles_add_cap'    => array( 'handle_add_cap', 'blt_edit_capabilities' ),
-		'blt_toolkit_roles_delete_cap' => array( 'handle_delete_cap', 'blt_edit_capabilities' ),
-		'blt_toolkit_roles_details'    => array( 'handle_details', 'blt_edit_roles' ),
-		'blt_toolkit_roles_test_as'    => array( 'handle_test_as', 'blt_edit_roles' ),
+		'blt_toolkit_roles_simple_save' => array( 'handle_simple_save', 'blt_edit_roles' ),
+		'blt_toolkit_roles_save'        => array( 'handle_save', 'blt_edit_roles' ),
+		'blt_toolkit_roles_user_caps'   => array( 'handle_user_caps', 'blt_edit_capabilities' ),
+		'blt_toolkit_roles_add_cap'     => array( 'handle_add_cap', 'blt_edit_capabilities' ),
+		'blt_toolkit_roles_delete_cap'  => array( 'handle_delete_cap', 'blt_edit_capabilities' ),
+		'blt_toolkit_roles_details'     => array( 'handle_details', 'blt_edit_roles' ),
+		'blt_toolkit_roles_test_as'     => array( 'handle_test_as', 'blt_edit_roles' ),
 	);
 
 	/**
@@ -333,6 +347,10 @@ class BLT_Toolkit_Admin_Roles {
 			$args['group'] = (string) $state['group'];
 		}
 
+		if ( isset( $state['ctl'] ) && '' !== $state['ctl'] ) {
+			$args['ctl'] = (string) $state['ctl'];
+		}
+
 		if ( isset( $state['search'] ) && '' !== $state['search'] ) {
 			$args['s'] = (string) $state['search'];
 		}
@@ -387,6 +405,7 @@ class BLT_Toolkit_Admin_Roles {
 					$value = in_array( $value, array( 'simple', 'advanced' ), true ) ? $value : '';
 					break;
 				case 'group':
+				case 'ctl':
 					$value = self::clean_group( $value );
 					break;
 				case 's':
@@ -450,6 +469,7 @@ class BLT_Toolkit_Admin_Roles {
 			'view_arg'       => $view_arg,
 			'can_advanced'   => $can_advanced,
 			'group'          => '' !== self::clean_group( self::arg( 'group' ) ) ? self::clean_group( self::arg( 'group' ) ) : 'all',
+			'ctl'            => self::clean_group( self::arg( 'ctl' ) ),
 			'search'         => self::clean_search( self::arg( 's' ) ),
 			'granted'        => '1' === self::arg( 'granted' ),
 			'deprecated'     => '' !== $deprecated ? '1' === $deprecated : (bool) BLT_Toolkit_Settings::get( 'roles', 'show_deprecated' ),
@@ -530,11 +550,24 @@ class BLT_Toolkit_Admin_Roles {
 			}
 		}
 
+		// RS-30 to RS-32: "Give {Type} separate permissions", revert and
+		// clean up, linked from Simple view's content rows.
+		$isolation = self::isolation_view();
+
+		if ( '' !== $isolation && false !== BLT_Toolkit_Admin_Isolation::render( $isolation ) ) {
+			return;
+		}
+
 		$module_on = self::module_on();
 		$state     = $module_on ? $this->state() : array();
 
 		if ( $module_on ) {
 			$this->store_preferences( $state );
+
+			// RO-21: the matrix names each capability's Simple control.
+			if ( class_exists( 'BLT_Toolkit_Simple_Controls' ) && class_exists( 'BLT_Toolkit_Simple_Mapper' ) ) {
+				BLT_Toolkit_Simple_Controls::register_provider();
+			}
 		}
 
 		echo '<div class="wrap blt-ui blt-ui-wide blt-toolkit blt-toolkit-roles">';
@@ -653,6 +686,7 @@ class BLT_Toolkit_Admin_Roles {
 		$editable = BLT_Toolkit_Guard::check_role_change( $actor, $role, array(), array() );
 		$advanced = 'advanced' === $state['view'];
 		$matrix   = $advanced ? $this->role_matrix( $state, $editable ) : null;
+		$simple   = $advanced ? null : $this->simple_data( $state, $editable );
 
 		self::enqueue();
 
@@ -666,6 +700,7 @@ class BLT_Toolkit_Admin_Roles {
 				'header'   => $this->role_header( $state, $editable ),
 				'tabs'     => $this->view_tabs( $state ),
 				'matrix'   => $matrix,
+				'simple'   => $simple,
 				'add_cap'  => $advanced ? $this->add_cap_data( $state ) : null,
 				'details'  => $this->details_data( $state, $editable ),
 				'editable' => $editable,
@@ -921,15 +956,17 @@ class BLT_Toolkit_Admin_Roles {
 		}
 
 		$entries   = BLT_Toolkit_Capability_Catalog::all();
-		$node      = $this->current_node( $state );
+		$control   = $this->simple_control_filter( $state );
+		$node      = null !== $control ? $control['node'] : $this->current_node( $state );
 		$sections  = self::visible_sections(
-			self::sections_for( BLT_Toolkit_Capability_Catalog::tree(), $node['id'] ),
+			self::sections_for( BLT_Toolkit_Capability_Catalog::tree(), null !== $control ? 'all' : $node['id'] ),
 			$entries,
 			array(
-				'deprecated' => $state['deprecated'] || 'core-deprecated' === $node['id'],
+				'deprecated' => $state['deprecated'] || 'core-deprecated' === $node['id'] || null !== $control,
 				'search'     => $state['search'],
 				'granted'    => $state['granted'] ? $granted : null,
 				'readable'   => $state['readable'],
+				'only'       => null !== $control ? $control['caps'] : null,
 			)
 		);
 		$actor     = wp_get_current_user();
@@ -1148,6 +1185,40 @@ class BLT_Toolkit_Admin_Roles {
 	}
 
 	/**
+	 * The Simple control the URL narrows Advanced view to (`ctl`, RS-4's
+	 * "Edit in Advanced"): its capabilities and a heading for the matrix, or
+	 * null when there is none.
+	 *
+	 * @param array $state state().
+	 * @return array{caps:string[],node:array}|null
+	 */
+	private function simple_control_filter( array $state ) {
+		if ( '' === $state['ctl'] || ! class_exists( 'BLT_Toolkit_Simple_Controls' ) || ! class_exists( 'BLT_Toolkit_Simple_Mapper' ) ) {
+			return null;
+		}
+
+		$controls = BLT_Toolkit_Simple_Controls::definitions();
+
+		if ( ! isset( $controls[ $state['ctl'] ] ) || array() === $controls[ $state['ctl'] ]['universe'] ) {
+			return null;
+		}
+
+		$control = $controls[ $state['ctl'] ];
+
+		return array(
+			'caps' => $control['universe'],
+			'node' => array(
+				'id'       => 'simple-' . $control['id'],
+				/* translators: %s: Simple view control, such as "Install, update or delete themes". */
+				'label'    => sprintf( __( 'Simple view: %s', 'blt-toolkit' ), $control['label'] ),
+				'caps'     => $control['universe'],
+				'count'    => count( $control['universe'] ),
+				'children' => array(),
+			),
+		);
+	}
+
+	/**
 	 * Tree nodes for display, recursively. Deprecated is hidden while
 	 * deprecated capabilities are, and groups with nothing in them are left
 	 * out.
@@ -1189,7 +1260,13 @@ class BLT_Toolkit_Admin_Roles {
 			$out[] = array(
 				'id'       => $node['id'],
 				'label'    => $node['label'],
-				'url'      => self::state_url( $state, array( 'group' => 'all' === $node['id'] ? null : $node['id'] ) ),
+				'url'      => self::state_url(
+					$state,
+					array(
+						'group' => 'all' === $node['id'] ? null : $node['id'],
+						'ctl'   => null,
+					)
+				),
 				'total'    => $total,
 				'granted'  => $have,
 				'current'  => $node['id'] === $current,
@@ -1250,9 +1327,1059 @@ class BLT_Toolkit_Admin_Roles {
 			'role'         => $role,
 			'description'  => isset( $own['description'] ) ? (string) $own['description'] : '',
 			'hide_toolbar' => ! empty( $own['hide_toolbar'] ),
+			// Simple view shows the toolbar setting in its Basics card
+			// (Appendix A), so the details card leaves it out there.
+			'toolbar'      => 'simple' !== $state['view'],
 			'editable'     => true === $editable,
 			'back'         => http_build_query( self::state_args( $state ) ),
 		);
+	}
+
+	// ---------- Simple view (SPEC 10, Appendix A) ----------
+
+	/**
+	 * What Simple view draws for a role (SPEC 10, 13.2): the cards in order,
+	 * each control with its state, tier badge (SEC-11), hints (RS-7) and
+	 * whether the person may change it, plus the data the script uses for
+	 * the change counter and the review (RS-5, RS-6).
+	 *
+	 * The administrator role is read only here (SEC-12); a role the person
+	 * may not change (SEC-2, SEC-5) is read only with the Guard's reason; a
+	 * control that would give the person's role editor something they do
+	 * not hold is locked (SEC-3). Drawing changes nothing (RO-5).
+	 *
+	 * @param array         $state    state().
+	 * @param true|WP_Error $editable Whether the person may change the role.
+	 * @return array
+	 */
+	private function simple_data( array $state, $editable ) {
+		$role = $state['role'];
+
+		if ( ! class_exists( 'BLT_Toolkit_Simple_Controls' ) || ! class_exists( 'BLT_Toolkit_Simple_Mapper' ) ) {
+			return array( 'available' => false );
+		}
+
+		$actor     = wp_get_current_user();
+		$protected = BLT_Toolkit_Guard::is_protected_role( $role );
+		$read_only = $protected || true !== $editable;
+		$controls  = BLT_Toolkit_Simple_Controls::all( $role );
+		$context   = array(
+			'state'     => $state,
+			'read_only' => $read_only,
+			'is_admin'  => BLT_Toolkit_Guard::is_toolkit_admin( $actor ),
+			'own'       => BLT_Toolkit_Guard::effective_caps( $actor ),
+			'isolate'   => current_user_can( 'blt_edit_capabilities' ) && current_user_can( 'manage_options' ), // phpcs:ignore WordPress.WP.Capabilities.Unknown -- BLT Toolkit's own capability (SPEC 5.1); RS-30 needs both.
+			'controls'  => $controls,
+		);
+		$sections  = array();
+		$script    = array();
+		$labels    = array();
+
+		foreach ( BLT_Toolkit_Simple_Controls::sections() as $id => $section ) {
+			$sections[ $id ] = $section + array(
+				'id'       => $id,
+				'controls' => array(),
+			);
+		}
+
+		foreach ( $controls as $id => $control ) {
+			$view = BLT_Toolkit_Simple_Controls::SUMMARY === $control['kind'] ? $this->simple_summary_view( $control, $state ) : $this->simple_control_view( $control, $context );
+
+			if ( ! isset( $sections[ $control['section'] ] ) ) {
+				continue;
+			}
+
+			$sections[ $control['section'] ]['controls'][] = $view;
+
+			if ( ! $view['disabled'] && BLT_Toolkit_Simple_Controls::changeable( $control ) ) {
+				$script[] = $this->simple_script_data( $control );
+
+				foreach ( $control['universe'] as $cap ) {
+					$labels[ $cap ] = BLT_Toolkit_Capability_Catalog::label( $cap );
+				}
+			}
+		}
+
+		$critical = array();
+
+		foreach ( array_keys( $labels ) as $cap ) {
+			if ( BLT_Toolkit_Caps::CRITICAL === BLT_Toolkit_Caps::tier( (string) $cap ) ) {
+				$critical[ $cap ] = self::consequence( (string) $cap );
+			}
+		}
+
+		$reason = '';
+
+		if ( $protected ) {
+			$reason = $state['can_advanced']
+				? __( 'The Administrator role always has every permission, so nobody can be locked out of the site. Simple view shows it read only; single capabilities can be changed in Advanced view, where the ones that keep the site reachable stay locked.', 'blt-toolkit' )
+				: __( 'The Administrator role always has every permission, so nobody can be locked out of the site. Simple view shows it read only.', 'blt-toolkit' );
+		} elseif ( is_wp_error( $editable ) ) {
+			$reason = $editable->get_error_message();
+		}
+
+		return array(
+			'available' => true,
+			'role'      => $role,
+			'sections'  => array_filter(
+				$sections,
+				static function ( $section ) {
+					return array() !== $section['controls'];
+				}
+			),
+			'read_only' => $read_only,
+			'protected' => $protected,
+			'reason'    => $reason,
+			'hash'      => BLT_Toolkit_Role_Store::role_hash( $role ),
+			'back'      => http_build_query( self::state_args( $state ) ),
+			'discard'   => self::state_url( $state ),
+			'advanced'  => $state['can_advanced'] ? self::state_url( $state, array( 'view' => 'advanced' ) ) : '',
+			'script'    => array(
+				'role'      => self::role_name( $role ),
+				'names'     => array_values( array_unique( array_filter( array( self::role_name( $role ), self::stored_role_name( $role ) ) ) ) ),
+				'threshold' => self::REVIEW_THRESHOLD,
+				'controls'  => $script,
+				'labels'    => $labels,
+				'critical'  => $critical,
+				'levels'    => BLT_Toolkit_Simple_Controls::level_labels(),
+			),
+		);
+	}
+
+	/**
+	 * One control as Simple view draws it.
+	 *
+	 * @param array $control Control with state (BLT_Toolkit_Simple_Controls::all()).
+	 * @param array $context state, read_only, is_admin, own, isolate, controls.
+	 * @return array
+	 */
+	private function simple_control_view( array $control, array $context ) {
+		$state    = $context['state'];
+		$id       = $control['id'];
+		$disabled = $context['read_only'];
+		$locked   = '';
+		$missing  = $context['is_admin'] ? array() : array_values( array_diff( $control['universe'], array_keys( $context['own'] ) ) );
+
+		$view = array(
+			'id'           => $id,
+			'dom'          => 'blt-tk-ctl-' . $id,
+			'kind'         => $control['kind'],
+			'label'        => $control['label'],
+			'help'         => $control['help'],
+			'note'         => $control['note'],
+			'tier'         => $control['tier'],
+			'caps'         => BLT_Toolkit_Simple_Controls::LEVEL === $control['kind'] ? array() : $control['universe'],
+			'badges'       => array(),
+			'hints'        => array(),
+			'advanced_url' => $state['can_advanced'] && array() !== $control['universe'] ? self::state_url(
+				$state,
+				array(
+					'view'  => 'advanced',
+					'ctl'   => $id,
+					'group' => null,
+					's'     => null,
+				)
+			) : '',
+		);
+
+		// SEC-3: a non-admin cannot give what they do not hold, so a control
+		// that is not fully on and needs more than they have is locked.
+		if ( ! $disabled && array() !== $missing && BLT_Toolkit_Simple_Controls::TOGGLE === $control['kind'] && 'on' !== $control['state'] ) {
+			$disabled = true;
+			$locked   = __( 'You do not have this permission yourself, so you cannot give it.', 'blt-toolkit' );
+		}
+
+		$view['disabled'] = $disabled;
+		$view['locked']   = $locked;
+
+		if ( BLT_Toolkit_Simple_Controls::LEVEL === $control['kind'] ) {
+			$view = $this->simple_level_view( $control, $context, $view );
+		} else {
+			$view['checked']       = 'on' === $control['state'];
+			$view['indeterminate'] = 'indeterminate' === $control['state'];
+			$view['drawn']         = $view['indeterminate'] ? 'indeterminate' : 'off';
+
+			if ( $view['indeterminate'] ) {
+				$view['badges'][] = array( 'pending', __( 'Partly allowed', 'blt-toolkit' ) );
+			}
+		}
+
+		foreach ( $control['hints'] as $index => $hint ) {
+			$needs = isset( $context['controls'][ $hint['control'] ] ) ? $context['controls'][ $hint['control'] ] : null;
+
+			if ( null === $needs ) {
+				continue;
+			}
+
+			$needs_missing = $context['is_admin'] ? array() : array_diff( $needs['universe'], array_keys( $context['own'] ) );
+
+			$view['hints'][] = array(
+				'dom'         => $view['dom'] . '-hint-' . $index,
+				'text'        => $hint['text'],
+				'needs'       => $hint['control'],
+				'needs_dom'   => 'blt-tk-ctl-' . $hint['control'],
+				'needs_label' => $needs['label'],
+				'when'        => $hint['when'],
+				'active'      => $hint['active'],
+				'can_allow'   => ! $context['read_only'] && array() === $needs_missing,
+			);
+		}
+
+		return $view;
+	}
+
+	/**
+	 * The parts of a content row's view (SPEC 10.2 to 10.4): the level
+	 * selector with each level's help text, Can delete and Manage
+	 * {taxonomy}, badges (RS-11 to RS-13), and separate permissions (RS-30,
+	 * RS-32).
+	 *
+	 * @param array $control Level row with state.
+	 * @param array $context See simple_control_view().
+	 * @param array $view    The view so far.
+	 * @return array
+	 */
+	private function simple_level_view( array $control, array $context, array $view ) {
+		$plural  = $control['plural'];
+		$labels  = BLT_Toolkit_Simple_Controls::level_labels();
+		$current = $control['state']['level'];
+		$mods    = $control['state']['mods'];
+		$own     = $context['own'];
+		$role    = $context['state']['role'];
+
+		$view['plural']   = $plural;
+		$view['readonly'] = $control['readonly'];
+		$view['level']    = $current;
+		$view['granted']  = count( $control['granted'] );
+		$view['total']    = count( $control['universe'] );
+		$view['also']     = $control['also'];
+		$view['isolate']  = array();
+		$view['revert']   = '';
+		$view['options']  = array();
+		$view['mods']     = array();
+
+		if ( '' !== $control['readonly'] ) {
+			$view['disabled'] = true;
+
+			switch ( $control['readonly'] ) {
+				case BLT_Toolkit_Simple_Controls::READONLY_EXCLUDED:
+					$owners = $this->simple_owners( $control['foreign'], $context['controls'] );
+
+					$view['controlled_by'] = $owners;
+					$view['badges'][]      = array(
+						'pending',
+						/* translators: %s: Simple view control names, such as "Change settings". */
+						sprintf( __( 'Controlled by: %s', 'blt-toolkit' ), array() !== $owners ? implode( ', ', wp_list_pluck( $owners, 'label' ) ) : __( 'capabilities managed in Advanced', 'blt-toolkit' ) ),
+					);
+					$view['status']        = __( 'This content type uses site-wide permissions instead of its own, so it has no levels. Whoever has those permissions can work with it.', 'blt-toolkit' );
+					break;
+				case BLT_Toolkit_Simple_Controls::READONLY_OWNERSHIP:
+					$view['badges'][] = array( 'pending', __( 'Custom ownership rules', 'blt-toolkit' ) );
+					$view['status']   = __( 'This content type does not let WordPress tell people\'s own items from everyone else\'s, so levels such as Author (own only) cannot be enforced. Manage it in Advanced.', 'blt-toolkit' );
+					break;
+				default:
+					$view['badges'][] = array( 'cancelled', __( 'Separate permissions not applied', 'blt-toolkit' ) );
+					$view['status']   = __( 'This content type was given separate permissions, but they are not in effect: another plugin changed them, or it was registered before BLT Toolkit loaded. Its levels are switched off until that is fixed.', 'blt-toolkit' );
+			}
+
+			return $view;
+		}
+
+		$view['create_distinct'] = $control['create_distinct'];
+
+		// RS-13: "Enforced by BLT Toolkit" while the row is at View and the
+		// type has a create capability of its own.
+		if ( $control['create_distinct'] ) {
+			$view['badges'][] = array( 'on', __( 'Enforced by BLT Toolkit', 'blt-toolkit' ), 'view' );
+		}
+
+		if ( 1 === count( $control['types'] ) && isset( $control['isolated'][ $control['types'][0] ] ) ) {
+			$view['badges'][] = array( 'confirmed', __( 'Separate permissions', 'blt-toolkit' ) );
+
+			if ( $context['isolate'] ) {
+				$view['revert'] = self::isolation_url( 'revert', $control['types'][0], $role );
+			}
+		}
+
+		// Isolated members of a shared group: their separate permissions did
+		// not apply (RS-33), so they still follow this row.
+		$failed = $control['isolated'];
+
+		if ( 1 === count( $control['types'] ) ) {
+			unset( $failed[ (string) $control['types'][0] ] );
+		}
+
+		if ( array() !== $failed ) {
+			$view['badges'][] = array(
+				'cancelled',
+				/* translators: %s: comma-separated content type names. */
+				sprintf( __( 'Separate permissions not applied: %s', 'blt-toolkit' ), implode( ', ', $failed ) ),
+			);
+		}
+
+		$separate = array();
+
+		if ( $context['isolate'] ) {
+			foreach ( $control['candidates'] as $type => $type_label ) {
+				$view['isolate'][] = array(
+					/* translators: %s: plural content type name, such as Events. */
+					'label' => sprintf( __( 'Give %s separate permissions', 'blt-toolkit' ), $type_label ),
+					'url'   => self::isolation_url( 'isolate', (string) $type, $role ),
+				);
+				$separate[]        = $type_label;
+			}
+		}
+
+		$view_help = BLT_Toolkit_Simple_Controls::level_help( 'view', $plural );
+
+		if ( ! $control['create_distinct'] ) {
+			$view_help .= ' ' . BLT_Toolkit_Simple_Controls::site_only_help( $plural, false );
+
+			foreach ( $separate as $type_label ) {
+				/* translators: %1$s: plural content type name, such as Events. */
+				$view_help .= ' ' . sprintf( __( 'To browse %1$s read-only in the dashboard, give %1$s separate permissions.', 'blt-toolkit' ), $type_label );
+			}
+		}
+
+		foreach ( BLT_Toolkit_Simple_Mapper::LEVELS as $level ) {
+			$target = BLT_Toolkit_Simple_Mapper::caps_for( $control['map'], $level, BLT_Toolkit_Simple_Mapper::default_mods( $control['map'], $level ) );
+			$lacks  = $context['is_admin'] ? array() : array_diff( $target, array_keys( $own ) );
+
+			$view['options'][ $level ] = array(
+				'label'    => $labels[ $level ],
+				'help'     => 'view' === $level ? $view_help : BLT_Toolkit_Simple_Controls::level_help( $level, $plural ),
+				// SEC-3: a level that would give what the person lacks.
+				'disabled' => $level !== $current && array() !== $lacks,
+			);
+		}
+
+		if ( BLT_Toolkit_Simple_Mapper::CUSTOM === $current ) {
+			$view['options']  = array(
+				'custom' => array(
+					'label'    => $labels['custom'],
+					'help'     => BLT_Toolkit_Simple_Controls::level_help( 'custom', $plural ),
+					'disabled' => false,
+				),
+			) + $view['options'];
+			$view['badges'][] = array( 'pending', $labels['custom'] );
+		}
+
+		$view['help_text'] = $view['options'][ $current ]['help'];
+
+		// Can delete (SPEC 10.3), drawn for every level; the script hides it
+		// where it does not apply. Locked (SEC-3) only when the person could
+		// not give even Contribute's deletion; at higher levels the levels
+		// themselves are locked, and the Guard checks every save.
+		$delete_caps = array_diff(
+			BLT_Toolkit_Simple_Mapper::caps_for( $control['map'], 'contribute', array( 'can_delete' => true ) ),
+			BLT_Toolkit_Simple_Mapper::caps_for( $control['map'], 'contribute', array( 'can_delete' => false ) )
+		);
+
+		$view['mods'][] = array(
+			'key'      => 'can_delete',
+			'name'     => 'simple[' . $view['id'] . '][can_delete]',
+			'dom'      => $view['dom'] . '-delete',
+			'label'    => __( 'Can delete', 'blt-toolkit' ),
+			'desc'     => __( 'For Contribute, Author (own only) and Edit all. Full control always includes deleting.', 'blt-toolkit' ),
+			'checked'  => ! empty( $mods['can_delete'] ),
+			'levels'   => array_keys( BLT_Toolkit_Simple_Mapper::DELETE_DEFAULTS ),
+			'shown'    => BLT_Toolkit_Simple_Mapper::shows_can_delete( $current ),
+			'disabled' => $view['disabled'] || ( empty( $mods['can_delete'] ) && ! $context['is_admin'] && array() !== array_diff( $delete_caps, array_keys( $own ) ) ),
+		);
+
+		foreach ( BLT_Toolkit_Simple_Mapper::toggles( $control['map'] ) as $tax => $strings ) {
+			$on             = ! empty( $mods['manage'][ $tax ] );
+			$view['mods'][] = array(
+				'key'      => 'manage',
+				'tax'      => $tax,
+				'name'     => 'simple[' . $view['id'] . '][manage][' . $tax . ']',
+				'dom'      => $view['dom'] . '-manage-' . sanitize_html_class( $tax ),
+				/* translators: %s: plural taxonomy name, such as Event Categories. */
+				'label'    => sprintf( __( 'Manage %s', 'blt-toolkit' ), isset( $control['taxonomies'][ $tax ] ) ? $control['taxonomies'][ $tax ] : $tax ),
+				'desc'     => __( 'For Contribute and above. Add, rename and delete them.', 'blt-toolkit' ),
+				'checked'  => $on,
+				'levels'   => BLT_Toolkit_Simple_Mapper::MANAGE_LEVELS,
+				'shown'    => BLT_Toolkit_Simple_Mapper::shows_manage( $current ),
+				'disabled' => $view['disabled'] || ( ! $on && ! $context['is_admin'] && array() !== array_diff( $strings, array_keys( $own ) ) ),
+			);
+		}
+
+		return $view;
+	}
+
+	/**
+	 * "Other plugin permissions" (SPEC 13.2).
+	 *
+	 * @param array $control The summary.
+	 * @param array $state   state().
+	 * @return array
+	 */
+	private function simple_summary_view( array $control, array $state ) {
+		$url = '';
+
+		if ( $state['can_advanced'] ) {
+			$plugins = BLT_Toolkit_Capability_Catalog::node( 'plugins' );
+			$node    = is_array( $plugins ) && array() !== $plugins['caps'] ? 'plugins' : 'orphaned';
+			$url     = self::state_url(
+				$state,
+				array(
+					'view'  => 'advanced',
+					'group' => $node,
+					'ctl'   => null,
+					's'     => null,
+				)
+			);
+		}
+
+		return array(
+			'id'           => $control['id'],
+			'dom'          => 'blt-tk-ctl-' . $control['id'],
+			'kind'         => $control['kind'],
+			'label'        => $control['label'],
+			'count'        => count( $control['universe'] ),
+			'held'         => count( $control['granted'] ),
+			'advanced_url' => $url,
+			'disabled'     => true,
+		);
+	}
+
+	/**
+	 * The controls owning some capabilities (RS-11's "Controlled by").
+	 *
+	 * @param string[] $caps     Capabilities.
+	 * @param array    $controls Controls.
+	 * @return array[] Each: id, dom, label.
+	 */
+	private function simple_owners( array $caps, array $controls ) {
+		$out = array();
+
+		foreach ( $controls as $id => $control ) {
+			if ( BLT_Toolkit_Simple_Controls::changeable( $control ) && BLT_Toolkit_Simple_Controls::TOGGLE === $control['kind'] && array() !== array_intersect( $caps, $control['universe'] ) ) {
+				$out[] = array(
+					'id'    => (string) $id,
+					'dom'   => 'blt-tk-ctl-' . $id,
+					'label' => $control['label'],
+				);
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * What the script needs to count changes and preview them (RS-5,
+	 * RS-6): a toggle's capabilities and state; a level row's capabilities
+	 * per level, split into the base set, what Can delete adds and what
+	 * each Manage toggle adds (BLT_Toolkit_Simple_Mapper::caps_for()), and
+	 * the defaults each level starts with.
+	 *
+	 * @param array $control Control with state.
+	 * @return array
+	 */
+	private function simple_script_data( array $control ) {
+		$out = array(
+			'id'       => $control['id'],
+			'kind'     => $control['kind'],
+			'label'    => $control['label'],
+			'universe' => $control['universe'],
+			'granted'  => $control['granted'],
+			'state'    => $control['state'],
+		);
+
+		if ( BLT_Toolkit_Simple_Controls::LEVEL !== $control['kind'] ) {
+			return $out;
+		}
+
+		$map    = $control['map'];
+		$taxes  = array_keys( BLT_Toolkit_Simple_Mapper::toggles( $map ) );
+		$none   = array_fill_keys( $taxes, false );
+		$levels = array();
+
+		foreach ( BLT_Toolkit_Simple_Mapper::LEVELS as $level ) {
+			$base = BLT_Toolkit_Simple_Mapper::caps_for(
+				$map,
+				$level,
+				array(
+					'can_delete' => false,
+					'manage'     => $none,
+				)
+			);
+			$del  = BLT_Toolkit_Simple_Mapper::caps_for(
+				$map,
+				$level,
+				array(
+					'can_delete' => true,
+					'manage'     => $none,
+				)
+			);
+
+			$manage = array();
+
+			foreach ( $taxes as $tax ) {
+				$manage[ $tax ] = array_values(
+					array_diff(
+						BLT_Toolkit_Simple_Mapper::caps_for(
+							$map,
+							$level,
+							array(
+								'can_delete' => false,
+								'manage'     => array( $tax => true ) + $none,
+							)
+						),
+						$base
+					)
+				);
+			}
+
+			$levels[ $level ] = array(
+				'base'     => $base,
+				'del'      => array_values( array_diff( $del, $base ) ),
+				'manage'   => (object) $manage,
+				'defaults' => BLT_Toolkit_Simple_Mapper::default_mods( $map, $level ),
+			);
+		}
+
+		$out['levels']     = $levels;
+		$out['taxonomies'] = (object) $control['taxonomies'];
+
+		return $out;
+	}
+
+	/**
+	 * A separate-permissions page's URL (RS-30, RS-32), drawn by
+	 * BLT_Toolkit_Admin_Isolation on the Roles screen.
+	 *
+	 * @param string $action `isolate`, `revert` or `cleanup`.
+	 * @param string $type   Post type.
+	 * @param string $role   Role to come back to.
+	 * @return string
+	 */
+	public static function isolation_url( $action, $type, $role = '' ) {
+		$extra = '' !== (string) $role ? array( 'role' => (string) $role ) : array();
+
+		if ( class_exists( 'BLT_Toolkit_Admin_Isolation' ) && is_callable( array( 'BLT_Toolkit_Admin_Isolation', 'url' ) ) ) {
+			return BLT_Toolkit_Admin_Isolation::url( (string) $action, (string) $type, $extra );
+		}
+
+		return BLT_Toolkit_Admin::page_url(
+			'roles',
+			array_merge(
+				array(
+					'action' => (string) $action,
+					'type'   => (string) $type,
+				),
+				$extra
+			)
+		);
+	}
+
+	/**
+	 * The separate-permissions page the URL asks for, when its screen class
+	 * is loaded; '' otherwise.
+	 *
+	 * @return string
+	 */
+	private static function isolation_view() {
+		$action = sanitize_key( self::arg( 'action' ) );
+
+		if ( ! in_array( $action, self::ISOLATION_VIEWS, true ) || ! class_exists( 'BLT_Toolkit_Admin_Isolation' ) || ! is_callable( array( 'BLT_Toolkit_Admin_Isolation', 'render' ) ) ) {
+			return '';
+		}
+
+		return $action;
+	}
+
+	/**
+	 * Save Simple view (RS-5, RS-6, SPEC 10.7): the controls that changed,
+	 * worked out again on the server (BLT_Toolkit_Simple_Controls::
+	 * changes_for()), written through the role store with context `simple`
+	 * and the render-time hash (RO-1, RO-2), after the review when it is
+	 * needed, plus the toolbar setting (SPEC 9.5).
+	 *
+	 * The review (RS-6) is shown before writing when the change touches a
+	 * Critical capability, changes more than ten capabilities, or replaces a
+	 * Custom mix by taking capabilities away (RS-4). With JavaScript the
+	 * page's own dialog shows it (`reviewed`, with the typed role name for
+	 * SEC-10); without, or when the dialog could not settle it, it is its
+	 * own page (`step=review`), as is the SEC-13 confirmation.
+	 *
+	 * @return void
+	 */
+	public function handle_simple_save() {
+		$token = self::posted( self::PENDING_ARG );
+
+		if ( '' !== $token ) {
+			$pending = self::pending( $token, array( 'simple_review' ) );
+
+			if ( null === $pending ) {
+				self::back( array(), 'error', __( 'Nothing was saved: that review is no longer available. Make the change again.', 'blt-toolkit' ) );
+			}
+
+			$data     = $pending['data'];
+			$reviewed = true;
+		} else {
+			if ( ! self::form_complete() ) {
+				self::back( self::posted_back(), 'error', self::truncated_message() );
+			}
+
+			$role = self::clean_role( self::posted( 'role' ) );
+			$back = self::posted_back();
+
+			if ( '' === $role || ! wp_roles()->is_role( $role ) ) {
+				self::back( $back, 'error', __( 'Nothing was saved: that role does not exist. Someone may have deleted it.', 'blt-toolkit' ) );
+			}
+
+			if ( ! class_exists( 'BLT_Toolkit_Simple_Controls' ) || ! class_exists( 'BLT_Toolkit_Simple_Mapper' ) ) {
+				self::back( $back, 'error', __( 'Nothing was saved: Simple view is not available on this site.', 'blt-toolkit' ) );
+			}
+
+			// SEC-12, before anything is worked out.
+			if ( BLT_Toolkit_Guard::is_protected_role( $role ) ) {
+				self::back( $back, 'error', __( 'Nothing was saved: the Administrator role cannot be changed in Simple view.', 'blt-toolkit' ) );
+			}
+
+			$plan = BLT_Toolkit_Simple_Controls::changes_for( $role, self::posted_simple() );
+
+			if ( is_wp_error( $plan ) ) {
+				self::back( $back, 'error', self::error_text( $plan ) );
+			}
+
+			$data     = array(
+				'role'     => $role,
+				'on_page'  => $plan['on_page'],
+				'checked'  => $plan['checked'],
+				'hash'     => self::posted( 'hash' ),
+				'back'     => $back,
+				'controls' => $plan['controls'],
+				'meta'     => $plan['meta'],
+				// RS-2: "Save and switch" lands in the other view.
+				'then'     => in_array( self::posted( 'then_view' ), array( 'simple', 'advanced' ), true ) ? self::posted( 'then_view' ) : '',
+			);
+			$reviewed = false;
+		}
+
+		$back = $data['back'];
+		$role = $data['role'];
+
+		if ( BLT_Toolkit_Guard::is_protected_role( $role ) ) {
+			self::back( $back, 'error', __( 'Nothing was saved: the Administrator role cannot be changed in Simple view.', 'blt-toolkit' ) );
+		}
+
+		if ( array() === $data['on_page'] && array() === $data['meta'] ) {
+			self::back( $back, 'warning', __( 'Nothing was saved: you did not change anything.', 'blt-toolkit' ) );
+		}
+
+		$client             = ! $reviewed && '1' === self::posted( self::REVIEWED_FIELD );
+		$typed              = self::posted( self::CONFIRM_FIELD );
+		$confirmed_critical = ( $reviewed || $client ) && self::confirms( $typed, array( self::role_name( $role ), self::stored_role_name( $role ) ) );
+		$args               = array(
+			'context'            => 'simple',
+			'confirmed_critical' => $confirmed_critical,
+			'confirmed_lockout'  => $reviewed && '1' === self::posted( self::LOCKOUT_FIELD ),
+		);
+		$change             = array(
+			'add'    => array(),
+			'remove' => array(),
+		);
+
+		if ( array() !== $data['on_page'] ) {
+			$dry = BLT_Toolkit_Role_Store::save_caps( $role, $data['on_page'], $data['checked'], $data['hash'], $args + array( 'dry_run' => true ) );
+
+			if ( is_wp_error( $dry ) ) {
+				$this->refused( $dry, $data );
+			}
+
+			if ( isset( $dry['changes'][ $role ] ) ) {
+				$change = $dry['changes'][ $role ];
+			}
+
+			$guard = isset( $dry['guard'] ) ? $dry['guard'] : true;
+
+			if ( is_wp_error( $guard ) ) {
+				$code = $guard->get_error_code();
+
+				if ( 'blt_toolkit_critical_review' === $code || ( 'blt_toolkit_self_lockout' === $code && self::confirmable( $guard ) ) ) {
+					$data['mismatch'] = ( $reviewed || $client ) && '' !== $typed && ! $confirmed_critical;
+
+					self::to_review( 'simple_review', $data );
+				}
+
+				$this->refused( $guard, $data );
+			}
+
+			if ( ! $reviewed && ! $client && self::simple_needs_review( $change, $data['controls'] ) ) {
+				self::to_review( 'simple_review', $data );
+			}
+		}
+
+		if ( array() === $change['add'] && array() === $change['remove'] && array() === $data['meta'] ) {
+			self::back( $back, 'warning', __( 'Nothing was saved: you did not change anything.', 'blt-toolkit' ) );
+		}
+
+		if ( array() !== $change['add'] || array() !== $change['remove'] ) {
+			$result = BLT_Toolkit_Role_Store::save_caps( $role, $data['on_page'], $data['checked'], $data['hash'], $args );
+
+			if ( is_wp_error( $result ) ) {
+				$this->refused( $result, $data );
+			}
+		}
+
+		if ( array() !== $data['meta'] && ! self::save_toolbar_flag( $role, ! empty( $data['meta'][ BLT_Toolkit_Simple_Controls::TOOLBAR_ID ] ) ) ) {
+			self::back( $back, 'error', __( 'The capabilities were saved, but the toolbar setting could not be. Try again.', 'blt-toolkit' ) );
+		}
+
+		if ( $reviewed ) {
+			self::forget_pending();
+		}
+
+		// SEC-13, confirmed: the person can no longer open this screen.
+		if ( ! current_user_can( 'blt_edit_roles' ) ) { // phpcs:ignore WordPress.WP.Capabilities.Unknown -- BLT Toolkit's own capability (SPEC 5.1).
+			wp_safe_redirect( admin_url() );
+			exit;
+		}
+
+		if ( ! empty( $data['then'] ) && ( 'simple' === $data['then'] || self::can_advanced() ) ) {
+			$back['view'] = $data['then'];
+		}
+
+		self::back(
+			$back,
+			'success',
+			sprintf(
+				/* translators: %s: role name. */
+				__( 'Saved the %s role.', 'blt-toolkit' ),
+				self::role_name( $role )
+			),
+			self::simple_summary( $data['controls'] )
+		);
+	}
+
+	/**
+	 * The review page of a Simple save (RS-6): its own page, so it works
+	 * without JavaScript.
+	 *
+	 * @param array $pending Pending entry.
+	 * @return void
+	 */
+	private function render_simple_review( array $pending ) {
+		$data = $pending['data'];
+		$role = (string) $data['role'];
+		$back = BLT_Toolkit_Admin::page_url( 'roles', $data['back'] );
+		$add  = array();
+		$rem  = array();
+
+		$guard    = true;
+		$critical = array();
+
+		if ( array() !== $data['on_page'] ) {
+			$dry = BLT_Toolkit_Role_Store::save_caps(
+				$role,
+				$data['on_page'],
+				$data['checked'],
+				$data['hash'],
+				array(
+					'context'            => 'simple',
+					'dry_run'            => true,
+					'confirmed_critical' => true,
+					'confirmed_lockout'  => false,
+				)
+			);
+
+			if ( is_wp_error( $dry ) ) {
+				if ( 'blt_toolkit_role_changed' === $dry->get_error_code() ) {
+					self::view( 'roles-conflict', self::conflict_data( $role, $dry, $data ) + array( 'back_url' => $back ) );
+					return;
+				}
+
+				self::view( 'roles-message', self::refusal( $dry, $back ) );
+				return;
+			}
+
+			$change = isset( $dry['changes'][ $role ] ) ? $dry['changes'][ $role ] : array(
+				'add'    => array(),
+				'remove' => array(),
+			);
+			$guard  = isset( $dry['guard'] ) ? $dry['guard'] : true;
+
+			if ( is_wp_error( $guard ) && ! ( 'blt_toolkit_self_lockout' === $guard->get_error_code() && self::confirmable( $guard ) ) ) {
+				self::view( 'roles-message', self::refusal( $guard, $back ) );
+				return;
+			}
+
+			$add      = array_keys( array_filter( $change['add'] ) );
+			$rem      = array_values( $change['remove'] );
+			$critical = isset( $dry['critical'][ $role ] ) ? (array) $dry['critical'][ $role ] : array();
+		}
+
+		$controls = array();
+
+		foreach ( $data['controls'] as $control ) {
+			$controls[] = array(
+				'label'   => (string) $control['label'],
+				'from'    => (string) $control['from'],
+				'to'      => (string) $control['to'],
+				'adds'    => self::cap_rows( (array) $control['add'] ),
+				'removes' => self::cap_rows( (array) $control['remove'] ),
+				'custom'  => ! empty( $control['custom'] ) && array() !== (array) $control['remove'],
+			);
+		}
+
+		$removed_critical = array();
+
+		foreach ( $rem as $cap ) {
+			if ( BLT_Toolkit_Caps::CRITICAL === BLT_Toolkit_Caps::tier( (string) $cap ) ) {
+				$removed_critical[] = (string) $cap;
+			}
+		}
+
+		self::view(
+			'roles-simple-review',
+			array(
+				'token'            => $pending['token'],
+				'name'             => self::role_name( $role ),
+				'controls'         => $controls,
+				'grants'           => self::cap_rows( $add ),
+				'removes'          => self::cap_rows( $rem ),
+				'critical'         => self::critical_rows( $critical ),
+				'removed_critical' => self::cap_rows( $removed_critical ),
+				'lockout'          => is_wp_error( $guard ),
+				'mismatch'         => ! empty( $data['mismatch'] ),
+				'back_url'         => $back,
+				'count'            => count( $add ) + count( $rem ),
+				'threshold'        => self::REVIEW_THRESHOLD,
+			)
+		);
+	}
+
+	/**
+	 * Whether a Simple change is reviewed before it is saved (RS-6, RS-4):
+	 * it touches a Critical capability, changes more than ten, or replaces
+	 * a Custom (or partly allowed) control by taking capabilities away.
+	 * Pure apart from the tier lookup.
+	 *
+	 * @param array $change   One role's change set from the store.
+	 * @param array $controls The changed controls (changes_for()'s `controls`).
+	 * @return bool
+	 */
+	public static function simple_needs_review( array $change, array $controls ) {
+		$add    = isset( $change['add'] ) ? array_keys( (array) $change['add'] ) : array();
+		$remove = isset( $change['remove'] ) ? array_values( (array) $change['remove'] ) : array();
+
+		if ( count( $add ) + count( $remove ) > self::REVIEW_THRESHOLD ) {
+			return true;
+		}
+
+		foreach ( array_merge( $add, $remove ) as $cap ) {
+			if ( BLT_Toolkit_Caps::CRITICAL === BLT_Toolkit_Caps::tier( (string) $cap ) ) {
+				return true;
+			}
+		}
+
+		foreach ( $controls as $control ) {
+			if ( ! empty( $control['custom'] ) && ! empty( $control['remove'] ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * The plain-English lines of a Simple change (RS-6): "Events: Author
+	 * (own only) → Edit all. Adds: edit others' Events. Removes: publish
+	 * Events."
+	 *
+	 * @param array $controls The changed controls (changes_for()'s `controls`).
+	 * @return string[]
+	 */
+	private static function simple_summary( array $controls ) {
+		$out = array();
+
+		foreach ( $controls as $control ) {
+			/* translators: 1: control, such as Events, 2: state before, 3: state after. */
+			$line = sprintf( __( '%1$s: %2$s → %3$s.', 'blt-toolkit' ), $control['label'], $control['from'], $control['to'] );
+
+			if ( ! empty( $control['add'] ) ) {
+				/* translators: %s: comma-separated capability labels. */
+				$line .= ' ' . sprintf( __( 'Adds: %s.', 'blt-toolkit' ), self::cap_words( (array) $control['add'] ) );
+			}
+
+			if ( ! empty( $control['remove'] ) ) {
+				/* translators: %s: comma-separated capability labels. */
+				$line .= ' ' . sprintf( __( 'Removes: %s.', 'blt-toolkit' ), self::cap_words( (array) $control['remove'] ) );
+			}
+
+			$out[] = $line;
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Capability labels as words in a sentence: "edit others' Events,
+	 * publish Events".
+	 *
+	 * @param string[] $caps Capabilities.
+	 * @return string
+	 */
+	public static function cap_words( array $caps ) {
+		$words = array();
+
+		foreach ( $caps as $cap ) {
+			$words[] = self::sentence_case( BLT_Toolkit_Capability_Catalog::label( (string) $cap ) );
+		}
+
+		return implode( ', ', $words );
+	}
+
+	/**
+	 * A label lowercased at its start for use inside a sentence ("Edit
+	 * others' Events" becomes "edit others' Events"), unless its first word
+	 * is a name or an acronym (two capitals in a row, "BLT"). Pure.
+	 *
+	 * @param string $label Label.
+	 * @return string
+	 */
+	public static function sentence_case( $label ) {
+		$label = (string) $label;
+
+		if ( preg_match( '/^[A-Z][a-z\']/', $label ) && ! preg_match( '/^(WordPress|Site Health|Customizer)\b/', $label ) ) {
+			return strtolower( $label[0] ) . substr( $label, 1 );
+		}
+
+		return $label;
+	}
+
+	/**
+	 * Write "Hide the toolbar on the site" for a role (SPEC 9.5), as the
+	 * role details card does, with its log row.
+	 *
+	 * @param string $role Role ID.
+	 * @param bool   $hide Whether the toolbar is hidden.
+	 * @return bool Whether it is stored.
+	 */
+	private static function save_toolbar_flag( $role, $hide ) {
+		$meta   = BLT_Toolkit_Settings::get( 'roles', 'role_meta' );
+		$meta   = is_array( $meta ) ? $meta : array();
+		$before = array(
+			'description'  => isset( $meta[ $role ]['description'] ) ? (string) $meta[ $role ]['description'] : '',
+			'hide_toolbar' => ! empty( $meta[ $role ]['hide_toolbar'] ),
+		);
+		$after  = array(
+			'description'  => $before['description'],
+			'hide_toolbar' => (bool) $hide,
+		);
+
+		if ( $before === $after ) {
+			return true;
+		}
+
+		$meta[ $role ] = $after;
+
+		if ( ! BLT_Toolkit_Settings::set( 'roles', 'role_meta', $meta ) ) {
+			return false;
+		}
+
+		BLT_Toolkit_Log::record(
+			array(
+				'module'      => 'roles',
+				'action'      => 'role_details_saved',
+				'object_type' => 'role',
+				'object_id'   => $role,
+				'summary'     => sprintf(
+					/* translators: %s: role name. */
+					__( 'Saved the details of the %s role.', 'blt-toolkit' ),
+					self::role_name( $role )
+				),
+				'details'     => array(
+					'before'  => $before,
+					'after'   => $after,
+					'context' => 'simple',
+				),
+			)
+		);
+
+		return true;
+	}
+
+	/**
+	 * The Simple form's controls as posted (`simple[ID]`): a toggle's `on`,
+	 * `off` or `indeterminate`; a content row's level, Can delete, Manage
+	 * {taxonomy} and whether the script set them (`mods_set`). Keys and
+	 * values are cleaned; BLT_Toolkit_Simple_Controls checks them against
+	 * the controls that exist.
+	 *
+	 * @return array
+	 */
+	private static function posted_simple() {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- route() checked the nonce; every key and value is cleaned below.
+		if ( ! isset( $_POST['simple'] ) || ! is_array( $_POST['simple'] ) ) {
+			return array();
+		}
+
+		$raw = wp_unslash( $_POST['simple'] );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
+		return self::clean_simple( (array) $raw );
+	}
+
+	/**
+	 * Clean a posted `simple` array. Pure.
+	 *
+	 * @param array $raw Unslashed input.
+	 * @return array
+	 */
+	public static function clean_simple( array $raw ) {
+		$key = static function ( $value ) {
+			return substr( (string) preg_replace( '/[^A-Za-z0-9_-]/', '', (string) $value ), 0, 191 );
+		};
+		$out = array();
+
+		foreach ( $raw as $id => $value ) {
+			$id = strtolower( $key( $id ) );
+
+			if ( '' === $id ) {
+				continue;
+			}
+
+			if ( is_scalar( $value ) ) {
+				$value = strtolower( trim( (string) $value ) );
+
+				if ( in_array( $value, array( 'on', 'off', 'indeterminate' ), true ) ) {
+					$out[ $id ] = $value;
+				}
+
+				continue;
+			}
+
+			if ( ! is_array( $value ) || ! isset( $value['level'] ) || ! is_scalar( $value['level'] ) ) {
+				continue;
+			}
+
+			$entry = array( 'level' => strtolower( $key( $value['level'] ) ) );
+
+			if ( isset( $value['can_delete'] ) && is_scalar( $value['can_delete'] ) ) {
+				$entry['can_delete'] = '1' === (string) $value['can_delete'];
+			}
+
+			if ( isset( $value['manage'] ) && is_array( $value['manage'] ) ) {
+				$entry['manage'] = array();
+
+				foreach ( $value['manage'] as $tax => $on ) {
+					if ( '' !== $key( $tax ) && is_scalar( $on ) ) {
+						$entry['manage'][ $key( $tax ) ] = '1' === (string) $on;
+					}
+				}
+			}
+
+			if ( ! empty( $value['mods_set'] ) ) {
+				$entry['mods_set'] = true;
+			}
+
+			$out[ $id ] = $entry;
+		}
+
+		return $out;
 	}
 
 	// ---------- User mode (US-10) ----------
@@ -1589,7 +2716,7 @@ class BLT_Toolkit_Admin_Roles {
 	 * @return void
 	 */
 	private function render_review( array $state ) {
-		$pending = self::pending( self::arg( self::PENDING_ARG ), array( 'review', 'user_review' ) );
+		$pending = self::pending( self::arg( self::PENDING_ARG ), array( 'review', 'user_review', 'simple_review' ) );
 
 		if ( null === $pending ) {
 			self::view( 'roles-message', self::expired( $state ) );
@@ -1600,6 +2727,11 @@ class BLT_Toolkit_Admin_Roles {
 
 		if ( 'user_review' === $pending['kind'] ) {
 			$this->render_user_review( $pending );
+			return;
+		}
+
+		if ( 'simple_review' === $pending['kind'] ) {
+			$this->render_simple_review( $pending );
 			return;
 		}
 
@@ -2051,7 +3183,7 @@ class BLT_Toolkit_Admin_Roles {
 		$back = $data['back'];
 
 		// SPEC 9.3: Advanced view needs blt_edit_capabilities. Simple view
-		// (Phase 5) saves through its own context.
+		// saves through handle_simple_save() (context `simple`).
 		if ( ! self::can_advanced() ) {
 			self::back( $back, 'error', __( 'Nothing was saved: changing capabilities one by one needs the "Edit capabilities" permission.', 'blt-toolkit' ) );
 		}
@@ -2416,7 +3548,9 @@ class BLT_Toolkit_Admin_Roles {
 		$after       = array(
 			// The settings layer keeps at most 500 characters (SPEC 9.5).
 			'description'  => function_exists( 'mb_substr' ) ? mb_substr( $description, 0, 500 ) : substr( $description, 0, 500 ),
-			'hide_toolbar' => '1' === self::posted( 'hide_toolbar' ),
+			// In Simple view the toolbar setting is on the Simple form, not
+			// this one (`keep_toolbar`), so it stays as it is.
+			'hide_toolbar' => '1' === self::posted( 'keep_toolbar' ) ? $before['hide_toolbar'] : '1' === self::posted( 'hide_toolbar' ),
 		);
 
 		if ( $before === $after ) {
@@ -2632,7 +3766,7 @@ class BLT_Toolkit_Admin_Roles {
 	 * Keep a submission for the review (or conflict) page and redirect there.
 	 * Stops.
 	 *
-	 * @param string $kind `review` or `user_review`.
+	 * @param string $kind `review`, `user_review` or `simple_review`.
 	 * @param array  $data The submission.
 	 * @return void
 	 */
@@ -2644,7 +3778,7 @@ class BLT_Toolkit_Admin_Roles {
 	 * Store a pending entry for the person and redirect to the page that
 	 * shows it. Stops.
 	 *
-	 * @param string $kind `review`, `user_review` or `conflict`.
+	 * @param string $kind `review`, `user_review`, `simple_review` or `conflict`.
 	 * @param array  $data What the page needs.
 	 * @param array  $args Query arguments of that page.
 	 * @return void
@@ -3211,6 +4345,7 @@ class BLT_Toolkit_Admin_Roles {
 	 *     @type string     $search     Quick filter.
 	 *     @type array|null $granted    Capability => true to keep only those, or null for all.
 	 *     @type bool       $readable   Sort by label (true) or raw name.
+	 *     @type array|null $only       Capability names to keep (one Simple control's, RS-4), or null for all.
 	 * }
 	 * @return array[] Each array( 'id', 'label', 'caps' ).
 	 */
@@ -3219,6 +4354,7 @@ class BLT_Toolkit_Admin_Roles {
 		$search     = isset( $opts['search'] ) ? self::lower( trim( (string) $opts['search'] ) ) : '';
 		$granted    = isset( $opts['granted'] ) && is_array( $opts['granted'] ) ? $opts['granted'] : null;
 		$readable   = ! isset( $opts['readable'] ) || ! empty( $opts['readable'] );
+		$only       = isset( $opts['only'] ) && is_array( $opts['only'] ) ? array_fill_keys( array_map( 'strval', $opts['only'] ), true ) : null;
 		$seen       = array();
 		$out        = array();
 
@@ -3228,7 +4364,7 @@ class BLT_Toolkit_Admin_Roles {
 			foreach ( (array) $section['caps'] as $cap ) {
 				$cap = (string) $cap;
 
-				if ( isset( $seen[ $cap ] ) || ! isset( $entries[ $cap ] ) ) {
+				if ( isset( $seen[ $cap ] ) || ! isset( $entries[ $cap ] ) || ( null !== $only && ! isset( $only[ $cap ] ) ) ) {
 					continue;
 				}
 
@@ -3551,6 +4687,28 @@ class BLT_Toolkit_Admin_Roles {
 				/* translators: %s: number of users found. */
 				'foundUsers' => __( 'Users found: %s.', 'blt-toolkit' ),
 				'failed'     => __( 'The search did not work. Try again, or reload the page.', 'blt-toolkit' ),
+				// Simple view (RS-5, RS-6).
+				'allowed'    => __( 'Allowed', 'blt-toolkit' ),
+				'notAllowed' => __( 'Not allowed', 'blt-toolkit' ),
+				'partly'     => __( 'Partly allowed', 'blt-toolkit' ),
+				'hidden'     => __( 'Hidden', 'blt-toolkit' ),
+				'shownState' => __( 'Shown', 'blt-toolkit' ),
+				'canDelete'  => __( 'can delete', 'blt-toolkit' ),
+				/* translators: %s: plural taxonomy name, such as Event Categories. */
+				'manages'    => __( 'manages %s', 'blt-toolkit' ),
+				/* translators: 1: control, such as Events, 2: state before, 3: state after. */
+				'line'       => __( '%1$s: %2$s → %3$s.', 'blt-toolkit' ),
+				/* translators: %s: comma-separated capability labels. */
+				'adds'       => __( 'Adds: %s.', 'blt-toolkit' ),
+				/* translators: %s: comma-separated capability labels. */
+				'removes'    => __( 'Removes: %s.', 'blt-toolkit' ),
+				'granted'    => __( 'Granted', 'blt-toolkit' ),
+				'removed'    => __( 'Removed', 'blt-toolkit' ),
+				/* translators: %s: number of capabilities. */
+				'touches'    => __( 'Nothing is saved yet. Capabilities this change touches: %s.', 'blt-toolkit' ),
+				/* translators: %s: number of capabilities. */
+				'large'      => __( 'Changes to more than %s capabilities are shown for review before they are saved.', 'blt-toolkit' ),
+				'noChange'   => __( 'Nothing to save: no control was changed.', 'blt-toolkit' ),
 			),
 		);
 

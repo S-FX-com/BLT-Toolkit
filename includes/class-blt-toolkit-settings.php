@@ -44,6 +44,13 @@ class BLT_Toolkit_Settings {
 	const GITHUB_TOKEN_KEY = 'github_token';
 
 	/**
+	 * Option the bundled update checker keeps its state in (its StateStore
+	 * names it `external_updates-{slug}`). Not autoloaded; read on every
+	 * admin screen that counts updates. See prime_admin_options().
+	 */
+	const UPDATE_STATE_OPTION = 'external_updates-blt-toolkit';
+
+	/**
 	 * Settings tabs and the settings group each one edits.
 	 */
 	const TABS = array(
@@ -102,6 +109,13 @@ class BLT_Toolkit_Settings {
 	 * @var array|null
 	 */
 	private static $own_token = null;
+
+	/**
+	 * Further options prime_admin_options() reads (prime_also()).
+	 *
+	 * @var string[]
+	 */
+	private static $prime = array();
 
 	/**
 	 * Default settings, exactly SPEC 14.1.
@@ -338,6 +352,50 @@ class BLT_Toolkit_Settings {
 	// ---------- GitHub token ----------
 
 	/**
+	 * `init` priority 0 on admin requests (BLT_Toolkit_Plugin::boot()): read
+	 * in one query the options that are not autoloaded and that admin
+	 * screens read one query each later on (SEC-9): the update token's
+	 * secrets and the family opt-in (github_token(), `init` priority 1), the
+	 * update checker's state (UPDATE_STATE_OPTION, read by `menu.php` on
+	 * every admin screen that counts updates), and whatever prime_also()
+	 * added for this request. An option that does not exist is remembered
+	 * as missing, as get_option() would. Nothing is read twice: options
+	 * already cached are skipped. Needs wp_prime_option_caches() (WordPress
+	 * 6.4); does nothing before.
+	 *
+	 * @return void
+	 */
+	public static function prime_admin_options() {
+		if ( ! function_exists( 'wp_prime_option_caches' ) ) {
+			return;
+		}
+
+		$names = array( self::SECRETS_OPTION, self::UPDATE_STATE_OPTION );
+
+		if ( class_exists( 'BLT_Family' ) && defined( 'BLT_Family::OPT_IN_OPTION' ) ) {
+			$names[] = BLT_Family::OPT_IN_OPTION;
+		}
+
+		wp_prime_option_caches( array_values( array_unique( array_merge( $names, self::$prime ) ) ) );
+	}
+
+	/**
+	 * Have prime_admin_options() read these options too. Call it before
+	 * `init`; the names are option names as stored (a transient is
+	 * `_transient_{name}` and `_transient_timeout_{name}`).
+	 *
+	 * @param string[] $names Option names.
+	 * @return void
+	 */
+	public static function prime_also( array $names ) {
+		foreach ( $names as $name ) {
+			if ( is_string( $name ) && '' !== $name ) {
+				self::$prime[] = $name;
+			}
+		}
+	}
+
+	/**
 	 * The effective GitHub update token, or '' when there is none.
 	 *
 	 * Precedence (CONVENTIONS 9.1): the `BLT_TOOLKIT_GITHUB_TOKEN` constant,
@@ -358,6 +416,19 @@ class BLT_Toolkit_Settings {
 
 		if ( '' !== $constant ) {
 			return $constant;
+		}
+
+		// Both options read below are not autoloaded and this runs on every
+		// admin request (`init`): read them in one query, not one each
+		// (SEC-9). wp_prime_option_caches() arrived in WordPress 6.4.
+		if ( null === self::$own_token && function_exists( 'wp_prime_option_caches' ) ) {
+			$names = array( self::SECRETS_OPTION );
+
+			if ( class_exists( 'BLT_Family' ) && defined( 'BLT_Family::OPT_IN_OPTION' ) ) {
+				$names[] = BLT_Family::OPT_IN_OPTION;
+			}
+
+			wp_prime_option_caches( $names );
 		}
 
 		$own = self::own_github_token();
@@ -874,6 +945,16 @@ class BLT_Toolkit_Settings {
 	 */
 	private static function shared_github_token() {
 		if ( ! class_exists( 'BLT_Family' ) ) {
+			return '';
+		}
+
+		// BLT_Family::get() answers the default unless the owner opted this
+		// plugin in to the group, but builds the family's group list (with
+		// translated labels) before it asks. Asking first gives the same
+		// answer without that work on every admin request of a site that
+		// never opted in (SEC-9).
+		// The elected family copy may come from another BLT plugin.
+		if ( method_exists( 'BLT_Family', 'opted_in' ) && ! in_array( 'github', (array) BLT_Family::opted_in( 'blt-toolkit' ), true ) ) {
 			return '';
 		}
 

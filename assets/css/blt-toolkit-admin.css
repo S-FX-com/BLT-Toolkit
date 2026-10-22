@@ -985,3 +985,340 @@ html:has(.blt-toolkit-roles .blt-toolkit-savebar) {
 		width: 100%;
 	}
 }
+
+/* =========================================================================
+   Roles screen, Simple view (SPEC 10, 13.2; RS-1 to RS-17, Appendix A).
+   Layout only; the cards, toggles, badges and callouts are the design
+   system's. `.js` is the class core puts on <body> once scripts run, so
+   without JavaScript every modifier stays visible and usable.
+   ========================================================================= */
+
+/* --- Content table (SPEC 10.2): one row per capability group ------------- */
+
+.blt-toolkit-roles .blt-toolkit-simple-content {
+	table-layout: fixed;
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-content thead th:first-child {
+	width: 38%;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-content tbody th,
+.blt-toolkit-roles .blt-toolkit-simple-content tbody td {
+	padding: 14px 10px;
+	vertical-align: top;
+	border-top: 1px solid var(--blt-surface-muted);
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-content tbody th {
+	font-weight: 400;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-row:focus {
+	outline: 2px solid var(--blt-primary);
+	outline-offset: -2px;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-label {
+	display: block;
+	font-weight: 600;
+	color: var(--blt-fg);
+	overflow-wrap: anywhere;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-badges,
+.blt-toolkit-roles .blt-toolkit-simple-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 8px;
+	margin: 6px 0 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-content th .blt-toolkit-note {
+	display: block;
+	margin-top: 6px;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 8px;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-level {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 10px;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-level label {
+	font-weight: 600;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-level select {
+	min-width: 12em;
+	max-width: 100%;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-help {
+	margin: 6px 0 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-status {
+	margin: 0 0 6px;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-mods {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin-top: 12px;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-mods:empty {
+	display: none;
+}
+
+.js .blt-toolkit-roles .blt-toolkit-simple-mod.is-off,
+.js .blt-toolkit-roles .blt-toolkit-simple-level-badge.is-off {
+	display: none;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-levels {
+	margin-top: 10px;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-levels > summary,
+.blt-toolkit-roles .blt-toolkit-simple-raw > summary {
+	cursor: pointer;
+	color: var(--blt-primary);
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-levels dl {
+	margin: 6px 0 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-levels dt {
+	margin-top: 6px;
+	font-weight: 600;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-levels dd {
+	margin: 0;
+	color: var(--blt-muted-fg);
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-advanced {
+	display: inline-block;
+	margin-top: 8px;
+	font-size: 12px;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-meta .blt-toolkit-simple-advanced {
+	margin-top: 0;
+}
+
+/* --- Toggles (Appendix A) ------------------------------------------------- */
+
+.blt-toolkit-roles .blt-toolkit-simple-control {
+	padding: 14px 0;
+	border-top: 1px solid var(--blt-surface-muted);
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-control:first-child {
+	padding-top: 0;
+	border-top: 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-control:focus {
+	outline: 2px solid var(--blt-primary);
+	outline-offset: 2px;
+}
+
+/* Line the badges and notes up with the label, past the 36px track and
+   its 10px gap. */
+.blt-toolkit-roles .blt-toolkit-simple-control > .blt-toolkit-simple-meta,
+.blt-toolkit-roles .blt-toolkit-simple-control > .blt-toolkit-note,
+.blt-toolkit-roles .blt-toolkit-simple-control > .blt-toolkit-simple-hint {
+	margin-left: 46px;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-control > .blt-toolkit-note {
+	margin-top: 6px;
+	margin-bottom: 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-summary > .blt-toolkit-note,
+.blt-toolkit-roles .blt-toolkit-simple-summary p {
+	margin: 0 0 4px;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-meta .blt-chip {
+	font-size: 11px;
+	overflow-wrap: anywhere;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-control.is-locked .blt-toggle {
+	cursor: not-allowed;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-control.is-locked .blt-toggle-track,
+.blt-toolkit-roles .blt-toolkit-simple-mod input:disabled + .blt-toggle-track {
+	opacity: 0.55;
+}
+
+/* RS-4: a toggle whose capabilities are only partly granted. The design
+   system has no mixed state, so the thumb sits in the middle. */
+.blt-toolkit-roles .blt-toggle input:indeterminate + .blt-toggle-track {
+	background: var(--blt-primary-tint);
+	border-color: var(--blt-primary);
+}
+
+.blt-toolkit-roles .blt-toggle input:indeterminate + .blt-toggle-track .blt-toggle-thumb {
+	background: var(--blt-primary);
+	transform: translateX(9px);
+}
+
+/* A control reached by keyboard or a hint's link stays clear of the sticky
+   save bar (WCAG 2.2, 2.4.11), as in the matrix: the hidden checkbox is
+   stretched over its toggle. */
+.blt-toolkit-roles .blt-toolkit-simple-control .blt-toggle,
+.blt-toolkit-roles .blt-toolkit-simple-mod .blt-toggle {
+	position: relative;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-control .blt-toggle input[type="checkbox"],
+.blt-toolkit-roles .blt-toolkit-simple-mod .blt-toggle input[type="checkbox"] {
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-control,
+.blt-toolkit-roles .blt-toolkit-simple-row,
+.blt-toolkit-roles .blt-toolkit-simple-wrap input,
+.blt-toolkit-roles .blt-toolkit-simple-wrap select {
+	scroll-margin-top: 48px;
+	scroll-margin-bottom: 160px;
+}
+
+/* --- Hints (RS-7, RS-17) -------------------------------------------------- */
+
+.blt-toolkit-roles .blt-toolkit-simple-hint {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 10px;
+	margin: 10px 0 0;
+	padding: 8px 12px;
+	border-radius: var(--blt-radius-sm);
+	background: var(--blt-warning-bg);
+	color: var(--blt-warning-fg);
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-hint[hidden],
+.blt-toolkit-roles .blt-toolkit-simple-hint .button[hidden] {
+	display: none;
+}
+
+/* --- Review and view-switch dialogs (RS-2, RS-6) --------------------------- */
+
+.blt-toolkit-roles .blt-toolkit-dialog {
+	width: min(640px, calc(100vw - 32px));
+	max-height: calc(100vh - 32px);
+	padding: 0;
+	border: 0;
+	background: transparent;
+	overflow: auto;
+}
+
+/* Parts of the review the script leaves out stay out: the design system's
+   callouts set their own display, which beats the `hidden` attribute. */
+.blt-toolkit-roles .blt-toolkit-dialog [hidden] {
+	display: none;
+}
+
+.blt-toolkit-roles .blt-toolkit-dialog::backdrop {
+	background: color-mix(in srgb, var(--blt-fg, #1e1e1e) 55%, transparent);
+}
+
+.blt-toolkit-roles .blt-toolkit-dialog .blt-card {
+	margin: 0;
+}
+
+.blt-toolkit-roles .blt-toolkit-dialog .blt-settings-footer {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 8px;
+	margin: 0;
+	padding: 12px 24px 16px;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-review-lines li {
+	margin: 0 0 10px;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-raw {
+	margin-top: 12px;
+}
+
+.blt-toolkit-roles .blt-toolkit-simple-raw .blt-chip {
+	display: inline-block;
+	margin: 2px 0;
+	font-size: 11px;
+	overflow-wrap: anywhere;
+}
+
+/* --- Narrow screens -------------------------------------------------------
+   The content table becomes one block per row, the type over its level. */
+
+@media screen and (max-width: 600px) {
+	.blt-toolkit-roles .blt-toolkit-simple-content thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+	}
+
+	.blt-toolkit-roles .blt-toolkit-simple-content,
+	.blt-toolkit-roles .blt-toolkit-simple-content tbody,
+	.blt-toolkit-roles .blt-toolkit-simple-content tr,
+	.blt-toolkit-roles .blt-toolkit-simple-content tbody th,
+	.blt-toolkit-roles .blt-toolkit-simple-content tbody td {
+		display: block;
+		width: auto;
+	}
+
+	.blt-toolkit-roles .blt-toolkit-simple-content tbody th {
+		padding-bottom: 4px;
+	}
+
+	.blt-toolkit-roles .blt-toolkit-simple-content tbody td {
+		padding-top: 4px;
+		border-top: 0;
+	}
+
+	.blt-toolkit-roles .blt-toolkit-simple-level select {
+		width: 100%;
+		min-width: 0;
+	}
+
+	.blt-toolkit-roles .blt-toolkit-simple-control > .blt-toolkit-simple-meta,
+	.blt-toolkit-roles .blt-toolkit-simple-control > .blt-toolkit-note,
+	.blt-toolkit-roles .blt-toolkit-simple-control > .blt-toolkit-simple-hint {
+		margin-left: 0;
+	}
+
+	.blt-toolkit-roles .blt-toolkit-dialog .blt-settings-footer {
+		padding: 12px 16px 16px;
+	}
+}

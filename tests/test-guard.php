@@ -900,4 +900,108 @@ class Test_Guard extends TestCase {
 
 		$this->assertSame( 'You do not have permission to do that.', BLT_Toolkit_Guard::error( array( 'code' => 'anything_else' ) )->get_error_message() );
 	}
+
+	/**
+	 * SEC-6, SEC-9: administrator IDs from the census's GROUP_CONCAT(): one
+	 * per row, and nothing trusted that may have been cut at
+	 * `group_concat_max_len`.
+	 *
+	 * @return void
+	 */
+	public function test_sec6_concat_ids() {
+		$this->assertSame( array(), BLT_Toolkit_Guard::concat_ids( null, 1024 ) );
+		$this->assertSame( array(), BLT_Toolkit_Guard::concat_ids( '', 1024 ) );
+		$this->assertSame( array( 1 ), BLT_Toolkit_Guard::concat_ids( '1', '1048576' ) );
+		$this->assertSame( array( 1 ), BLT_Toolkit_Guard::concat_ids( 1, 1024 ) );
+		$this->assertSame( array( 1, 5, 5, 12 ), BLT_Toolkit_Guard::concat_ids( '1,5,5,12', 1024 ), 'Repeats are kept: they are rows.' );
+
+		// Within 32 bytes of the limit: may have been cut, so not trusted.
+		$long = implode( ',', range( 1000, 1199 ) );
+		$this->assertSame( 999, strlen( $long ) );
+		$this->assertNull( BLT_Toolkit_Guard::concat_ids( $long, 1024 ) );
+		$this->assertCount( 200, BLT_Toolkit_Guard::concat_ids( $long, 1048576 ) );
+		$this->assertNull( BLT_Toolkit_Guard::concat_ids( substr( $long, 0, 1024 ), 1024 ) );
+
+		// Unknown limit (the SQLite drop-in returns NULL): assume MySQL's 1,024.
+		$this->assertNull( BLT_Toolkit_Guard::concat_ids( $long, null ) );
+		$this->assertSame( array( 3, 4 ), BLT_Toolkit_Guard::concat_ids( '3,4', null ) );
+		$this->assertSame( array( 3, 4 ), BLT_Toolkit_Guard::concat_ids( '3,4', 0 ) );
+
+		// Anything but a list of IDs is not trusted.
+		$this->assertNull( BLT_Toolkit_Guard::concat_ids( '1,,2', 1024 ) );
+		$this->assertNull( BLT_Toolkit_Guard::concat_ids( '1, 2', 1024 ) );
+		$this->assertNull( BLT_Toolkit_Guard::concat_ids( '1,2,', 1024 ) );
+		$this->assertNull( BLT_Toolkit_Guard::concat_ids( '-1', 1024 ) );
+		$this->assertNull( BLT_Toolkit_Guard::concat_ids( array( 1 ), 1024 ) );
+	}
+
+	/**
+	 * SEC-6: the census gives the counts core's counting query gave with
+	 * administrators left out, including users who hold the administrator
+	 * role and another one.
+	 *
+	 * @return void
+	 */
+	public function test_sec6_census_counts() {
+		$names = array( 'editor', 'author', 'subscriber' );
+
+		// Every capabilities row: editor 400, author 1000, subscriber 8500,
+		// empty 3, 9,906 rows with a value. Administrators: 3 rows, one of
+		// them also an editor and one also a subscriber.
+		$all    = array( '400', '1000', '8500', '3', '9906', '7,1,9', '1048576' );
+		$admins = array( '1', '0', '1', '0', '3' );
+
+		$this->assertSame(
+			array(
+				'total_users' => 9903,
+				'avail_roles' => array(
+					'editor'     => 399,
+					'author'     => 1000,
+					'subscriber' => 8499,
+					'none'       => 3,
+				),
+			),
+			BLT_Toolkit_Guard::census_counts( $names, $all, $admins, 3 )
+		);
+
+		// No administrators: the scan's counts as they are; roles nobody
+		// holds are left out, `none` always present.
+		$this->assertSame(
+			array(
+				'total_users' => 12,
+				'avail_roles' => array(
+					'editor' => 2,
+					'none'   => 0,
+				),
+			),
+			BLT_Toolkit_Guard::census_counts( $names, array( 2, 0, 0, 0, 12, null, 1024 ), null, 0 )
+		);
+
+		// The two queries disagree (a change in between): no answer.
+		$this->assertNull( BLT_Toolkit_Guard::census_counts( $names, $all, $admins, 2 ) );
+		$this->assertNull( BLT_Toolkit_Guard::census_counts( $names, $all, null, 1 ) );
+
+		// Rows too short for the role list: no answer.
+		$this->assertNull( BLT_Toolkit_Guard::census_counts( $names, array( 1, 2, 3 ), null, 0 ) );
+		$this->assertNull( BLT_Toolkit_Guard::census_counts( $names, $all, array( 1, 0 ), 3 ) );
+
+		// Only the administrator role exists: the empty count and the total.
+		$this->assertSame(
+			array(
+				'total_users' => 1,
+				'avail_roles' => array( 'none' => 1 ),
+			),
+			BLT_Toolkit_Guard::census_counts( array(), array( 1, 2, '2', 1024 ), array( 0, 1 ), 1 )
+		);
+	}
+
+	/**
+	 * SEC-6: positive integer IDs, unique, in order.
+	 *
+	 * @return void
+	 */
+	public function test_sec6_id_list() {
+		$this->assertSame( array( 3, 1, 7 ), BLT_Toolkit_Guard::id_list( array( '3', 1, 3, '7', 0, -2, 'x', '1abc', null ) ) );
+		$this->assertSame( array(), BLT_Toolkit_Guard::id_list( array() ) );
+	}
 }

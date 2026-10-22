@@ -227,7 +227,7 @@ class BLT_Toolkit_Switch_Ui {
 		$actions['blt_switch_to_user'] = sprintf(
 			'<a href="%1$s" aria-label="%2$s">%3$s</a>',
 			esc_url( $url ),
-			esc_attr( sprintf( $labels['aria'], $user->display_name ) ),
+			esc_attr( sprintf( $labels['aria'], BLT_Toolkit_Plugin::display_name( $user ) ) ),
 			$labels['text']
 		);
 

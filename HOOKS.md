@@ -18,8 +18,8 @@ Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) se
 | [`blt_toolkit_role_created`](#blt_toolkit_role_created) | action | RO-30 | Available | After a role is added |
 | [`blt_toolkit_role_deleted`](#blt_toolkit_role_deleted) | action | RO-40, RO-42 | Available | After a role is deleted |
 | [`blt_toolkit_role_renamed`](#blt_toolkit_role_renamed) | action | RO-31 | Available | After a role's display name changes |
-| [`blt_toolkit_post_type_isolated`](#blt_toolkit_post_type_isolated) | action | RS-30 | Planned (Phase 5) | A post type was given separate permissions |
-| [`blt_toolkit_post_type_shared`](#blt_toolkit_post_type_shared) | action | RS-32 | Planned (Phase 5) | A post type shares Posts' permissions again |
+| [`blt_toolkit_post_type_isolated`](#blt_toolkit_post_type_isolated) | action | RS-30 | Available | A post type was given separate permissions |
+| [`blt_toolkit_post_type_shared`](#blt_toolkit_post_type_shared) | action | RS-32 | Available | A post type shares Posts' permissions again |
 | [`blt_toolkit_before_job`](#blt_toolkit_before_job) | action | JOB-1 to JOB-5 | Available | A background job starts |
 | [`blt_toolkit_after_job`](#blt_toolkit_after_job) | action | JOB-1 to JOB-5 | Available | A background job ends |
 | [`blt_toolkit_logged`](#blt_toolkit_logged) | action | LOG-6 | Available | After a log row is written |
@@ -42,9 +42,9 @@ Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) se
 | [`blt_toolkit_lockout_critical_caps`](#blt_toolkit_lockout_critical_caps) | filter | SEC-12 | Available | Capabilities administrator always keeps |
 | [`blt_toolkit_capability_labels`](#blt_toolkit_capability_labels) | filter | RO-12 | Available | Plain-English capability labels |
 | [`blt_toolkit_capability_groups`](#blt_toolkit_capability_groups) | filter | RO-11, RO-13 | Available | Named capability groups |
-| [`blt_toolkit_simple_controls`](#blt_toolkit_simple_controls) | filter | RS-3 | Planned (Phase 5) | Simple view controls |
-| [`blt_toolkit_isolation_excluded_types`](#blt_toolkit_isolation_excluded_types) | filter | RS-30, RS-35 | Planned (Phase 5) | Post types that cannot get separate permissions |
-| [`blt_toolkit_isolation_caps`](#blt_toolkit_isolation_caps) | filter | RS-31 | Planned (Phase 5) | Arguments applied to an isolated post type |
+| [`blt_toolkit_simple_controls`](#blt_toolkit_simple_controls) | filter | RS-3 | Available | Simple view controls |
+| [`blt_toolkit_isolation_excluded_types`](#blt_toolkit_isolation_excluded_types) | filter | RS-30, RS-35 | Available | Post types that cannot get separate permissions |
+| [`blt_toolkit_isolation_caps`](#blt_toolkit_isolation_caps) | filter | RS-31 | Available | Arguments applied to an isolated post type |
 | [`blt_toolkit_hide_admins_from_non_admins`](#blt_toolkit_hide_admins_from_non_admins) | filter | SEC-6 | Available | Hide administrators in the Users list and REST |
 | [`blt_toolkit_snapshot_retention`](#blt_toolkit_snapshot_retention) | filter | SNAP-3 | Available | Snapshots kept besides the baseline |
 | [`blt_toolkit_log_retention_days`](#blt_toolkit_log_retention_days) | filter | LOG-4 | Available | Days log rows are kept |
@@ -126,7 +126,7 @@ Fires after the Guard has approved a computed change set (and the SEC-10 review 
 | Argument | Type | Description |
 | --- | --- | --- |
 | `$changes` | array | Role ID => `array( 'add' => array<string,bool>, 'remove' => string[], 'created' => bool, 'deleted' => bool, 'name' => null or array( 'from' => string, 'to' => string ) )`. `add` holds the new value of each capability added or flipped (`true` grants, `false` denies); `remove` the capabilities taken out of the role. A created role lists all its capabilities in `add`, a deleted one all of them in `remove`. |
-| `$context` | string | Where the save came from: `advanced` (the Advanced matrix, and adding or deleting a capability there; the default for a one-role save), `simple` (Phase 5), `self_service` (Settings > Usernames, UN-20), `support_agent` (SW-21), `lifecycle` (add, rename, move to a new role, delete and merge, RO-30 to RO-42), `activation` and `sync` (the administrator grant), `recovery` (SEC-14), and later phases' own (`isolation`, `import`, `restore`, `reset`). A `transaction()` without one passes `roles`. |
+| `$context` | string | Where the save came from: `advanced` (the Advanced matrix, and adding or deleting a capability there; the default for a one-role save), `simple` (Simple view; needs `blt_edit_roles`, while `advanced` needs `blt_edit_capabilities` too), `self_service` (Settings > Usernames, UN-20), `support_agent` (SW-21), `lifecycle` (add, rename, move to a new role, delete and merge, RO-30 to RO-42), `activation` and `sync` (the administrator grant), `recovery` (SEC-14), and later phases' own (`isolation`, `import`, `restore`, `reset`). A `transaction()` without one passes `roles`. |
 
 Requirement RO-4. Status: Available.
 
@@ -187,7 +187,9 @@ Fires after a post type was given separate permissions: the seed capabilities ar
 | --- | --- | --- |
 | `$post_type` | string | The post type. |
 
-Requirement RS-30. Status: Planned (Phase 5).
+Fired by `BLT_Toolkit_Isolation::isolate()` after the roles were written in one batch through the role store (snapshot reason `before_isolation`, log action `post_type_isolated`), users with Posts or Pages capabilities of their own were updated, and the type was stored with its `since` time.
+
+Requirement RS-30. Status: Available.
 
 ### `blt_toolkit_post_type_shared`
 
@@ -197,7 +199,9 @@ Fires after a post type was reverted to sharing Posts' (or Pages') permissions (
 | --- | --- | --- |
 | `$post_type` | string | The post type. |
 
-Requirement RS-32. Status: Planned (Phase 5).
+Fired by `BLT_Toolkit_Isolation::revert()` after the type was taken off `roles.isolated_post_types` (log action `post_type_shared`). No role is written; the cleanup step logs `capability_deleted` and fires no hook.
+
+Requirement RS-32. Status: Available.
 
 ### `blt_toolkit_before_job`
 
@@ -458,13 +462,31 @@ Requirement RO-11, RO-13. Status: Available.
 
 ### `blt_toolkit_simple_controls`
 
-The controls Simple view shows (RS-3). Other BLT plugins register their own sections here (for example BLT Documents' document management or BLT Events' event management). Each control declares an id, section, label, help text, its capability universe, how to compute its state from a role, how to compute target capabilities from a chosen state, its tier, its dependencies and an `available()` predicate. Simple view saves only controls that changed, and only within each control's universe (RS-5).
+The controls Simple view shows (RS-3). Other BLT plugins register their own here (for example BLT Documents' document management or BLT Events' event management), in a built-in section or a new one. Simple view saves only controls that changed, and only within each control's capabilities (RS-5); the Guard applies to every save (SEC-2, SEC-3, SEC-5, SEC-10, SEC-12, SEC-13). Applied once per request, only on the Roles screen and its save handler (`BLT_Toolkit_Simple_Controls::definitions()`).
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$controls` | array | The built-in controls: one content row per capability group (SPEC 10.2 to 10.4) and the site and people controls in Appendix A | Control definitions. |
+| `$controls` | array[] | The built-in controls: Basics (`read`, and `hide_toolbar`, the role setting of SPEC 9.5), one content row per capability group (`content-{type}`, SPEC 10.2 to 10.4), then the Appendix A controls in its order | Control definitions, a list. |
 
-Requirement RS-3. Status: Planned (Phase 5).
+Each control is an array:
+
+| Key | Type | Description |
+| --- | --- | --- |
+| `id` | string | Unique, `[a-z0-9_-]`. A duplicate ID is dropped. |
+| `section` | string | `basics`, `content`, `media`, `appearance`, `plugins`, `site`, `people` or `blt`, or a new section (drawn as its own card before "Other plugin permissions"). |
+| `section_label` | string | Optional. The card title of a new section (default: the section ID humanized). |
+| `label`, `help` | string | What the control is called and the line under it. |
+| `kind` | string | `toggle` (default) or `level`. |
+| `caps` | string[] | A toggle's capabilities, turned on and off together; partly granted reads as indeterminate (RS-4). |
+| `map` | array | A `level` row's type map for `BLT_Toolkit_Simple_Mapper` (see that class). |
+| `tier` | string | Optional. `critical`, `elevated` or `standard`; the default is the highest tier among its capabilities (SEC-11). |
+| `depends` | array[] | Optional RS-7 hints: each `array( 'control' => ID, 'text' => string, 'min' => level )` (`min` for level rows). Shown, with "Also allow", while the control is on and the one it needs is off. |
+| `note` | string | Optional. An extra line under the control. |
+| `available` | bool\|callable | Optional. False (or a callable returning false) leaves the control out. |
+
+Each capability a control covers is named in the Advanced matrix as "Simple: Events → level" or "Simple: Site → Change settings" (RO-21).
+
+Requirement RS-3. Status: Available.
 
 ### `blt_toolkit_isolation_excluded_types`
 
@@ -472,9 +494,9 @@ Post types that are never offered "Give {Type} separate permissions" (RS-30), fo
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$types` | string[] | `array()`, plus any type found to break under isolation during the RS-35 tests (recorded in `tasks/lessons.md`) | Post type names. |
+| `$types` | string[] | `array( 'bricks_template' )` (RS-35; the reason is in `tasks/lessons.md`, Phase 5 isolation) | Post type names. |
 
-Requirement RS-30, RS-35. Status: Planned (Phase 5).
+Requirement RS-30, RS-35. Status: Available.
 
 ### `blt_toolkit_isolation_caps`
 
@@ -483,10 +505,12 @@ The `register_post_type_args` changes applied to each isolated post type (RS-31)
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
 | `$args` | array | `capability_type => array( singular, plural )`, `map_meta_cap => true`, `capabilities => array( 'create_posts' => "create_{plural}" )` | Arguments merged into the type's registration. |
-| `$post_type` | string | | *Proposed.* The post type. |
-| `$isolation` | array | | *Proposed.* Its stored entry: `singular`, `plural`, `since`. |
+| `$post_type` | string | | The post type. |
+| `$isolation` | array | | Its stored entry: `singular`, `plural`, `since` (`since` is 0 while a dry run computes the new capabilities). |
 
-Requirement RS-31. Status: Planned (Phase 5).
+The dry run, the collision check and the cleanup build the new capability strings through the same filter, so a change made here is what the preview shows. Return an array; anything else is ignored.
+
+Requirement RS-31. Status: Available.
 
 ### `blt_toolkit_hide_admins_from_non_admins`
 
