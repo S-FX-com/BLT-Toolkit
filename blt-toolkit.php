@@ -3,7 +3,7 @@
  * Plugin Name:       BLT Toolkit
  * Plugin URI:        https://github.com/S-FX-com/BLT-Toolkit
  * Description:       Switch to another user and back, change usernames, and edit roles and capabilities in a Simple or Advanced view, under one security model and one activity log.
- * Version:           0.1.0
+ * Version:           0.1.1
  * Requires at least: 6.3
  * Requires PHP:      7.4
  * Network:           false
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BLT_TOOLKIT_VERSION', '0.1.0' ); // Must equal the header. CI enforces this.
+define( 'BLT_TOOLKIT_VERSION', '0.1.1' ); // Must equal the header. CI enforces this.
 define( 'BLT_TOOLKIT_FILE', __FILE__ );
 define( 'BLT_TOOLKIT_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BLT_TOOLKIT_URL', plugin_dir_url( __FILE__ ) );
