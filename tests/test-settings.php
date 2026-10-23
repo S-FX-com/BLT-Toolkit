@@ -308,9 +308,9 @@ class Test_Settings extends TestCase {
 		$saved = BLT_Toolkit_Settings::save_tab(
 			'general',
 			array(
-				'switch'  => '1',
-				'roles'   => 'on',
-				'bogus'   => '1',
+				'switch' => '1',
+				'roles'  => 'on',
+				'bogus'  => '1',
 			)
 		);
 
@@ -436,8 +436,8 @@ class Test_Settings extends TestCase {
 			'isolated_post_types',
 			array(
 				'event' => array(
-					'singular' => 'Event',
-					'plural'   => 'Events',
+					'singular' => 'event',
+					'plural'   => 'events',
 					'since'    => 1700000000,
 				),
 			)
@@ -552,18 +552,18 @@ class Test_Settings extends TestCase {
 				'roles',
 				'role_meta',
 				array(
-					'editor'        => array(
+					'editor'       => array(
 						'description'  => ' Edits <b>everything</b> ',
 						'hide_toolbar' => '0',
 						'extra'        => 'dropped',
 					),
-					'shop_manager'  => array( 'hide_toolbar' => '1' ),
-					'empty'         => array(
+					'shop_manager' => array( 'hide_toolbar' => '1' ),
+					'empty'        => array(
 						'description'  => '',
 						'hide_toolbar' => false,
 					),
-					'bad role!'     => array( 'description' => 'kept under a cleaned ID' ),
-					'not-an-array'  => 'x',
+					'bad role!'    => array( 'description' => 'kept under a cleaned ID' ),
+					'not-an-array' => 'x',
 				)
 			)
 		);
@@ -590,20 +590,33 @@ class Test_Settings extends TestCase {
 			'roles',
 			'isolated_post_types',
 			array(
-				'Event'                           => array(
-					'singular' => '<i>Event</i>',
-					'plural'   => 'Events',
+				'Event'                             => array(
+					'singular' => '<i>event</i>',
+					'plural'   => 'events',
 					'since'    => '1700000000',
 				),
 				'a_post_type_key_over_twenty_chars' => array( 'singular' => 'Too long' ),
+				// RS-30, RS-31: entries the filter would refuse are dropped.
+				'post'                              => array(
+					'singular' => 'article',
+					'plural'   => 'articles',
+				),
+				'testimonial'                       => array(
+					'singular' => 'testimonial',
+					'plural'   => 'pages',
+				),
+				'promo'                             => array(
+					'singular' => 'Promo',
+					'plural'   => 'Promos',
+				),
 			)
 		);
 
 		$this->assertSame(
 			array(
 				'event' => array(
-					'singular' => 'Event',
-					'plural'   => 'Events',
+					'singular' => 'event',
+					'plural'   => 'events',
 					'since'    => 1700000000,
 				),
 			),

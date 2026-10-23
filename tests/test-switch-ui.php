@@ -106,4 +106,34 @@ class Test_Switch_Ui extends TestCase {
 			BLT_Toolkit_Switch_Ui::removable_query_args( array( 'updated' ) )
 		);
 	}
+
+	/**
+	 * SW-16: the wp_die() arguments are read as core reads them before the
+	 * switch-back link is added, so a query string keeps its response code
+	 * and an integer title or argument is the response code.
+	 *
+	 * @return void
+	 */
+	public function test_sw16_die_args_keep_core_shapes() {
+		$this->assertSame( array( 'Title', array( 'response' => '403' ) ), BLT_Toolkit_Switch_Ui::die_args( 'Title', 'response=403' ) );
+		$this->assertSame( array( 'Title', array( 'response' => 410 ) ), BLT_Toolkit_Switch_Ui::die_args( 'Title', 410 ) );
+		$this->assertSame( array( '', array( 'response' => 404 ) ), BLT_Toolkit_Switch_Ui::die_args( 404, array( 'back_link' => true ) ) );
+		$this->assertSame(
+			array(
+				'Title',
+				array(
+					'response'  => 500,
+					'back_link' => true,
+				),
+			),
+			BLT_Toolkit_Switch_Ui::die_args(
+				'Title',
+				array(
+					'response'  => 500,
+					'back_link' => true,
+				)
+			)
+		);
+		$this->assertSame( array( 'Title', array() ), BLT_Toolkit_Switch_Ui::die_args( 'Title', '' ) );
+	}
 }

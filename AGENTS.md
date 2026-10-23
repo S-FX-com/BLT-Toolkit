@@ -8,7 +8,7 @@ Operational checklist for working in this repository. What the plugin is, how it
 - Check `tasks/todo.md` for the current phase and what is open, and `tasks/lessons.md` for decisions already made and gotchas that have already cost time.
 - Build in phase order (SPEC 17). Do not start the next phase while one of the current phase's acceptance criteria fails.
 - `composer install` (dev tools only: phpcs, WPCS, PHPCompatibility, PHPUnit). The plugin has no runtime Composer dependencies. Running as root (the cloud dev container), prefix every Composer command with `COMPOSER_ALLOW_SUPERUSER=1`, or Composer disables its plugins and phpcs never learns about WPCS (`CLAUDE.md` "Commands" has the repair step).
-- For smoke tests, `bin/dev-site.sh DIR [WP_VERSION]` builds a disposable WordPress on SQLite with this repo symlinked in. Use your own site name and port so you never disturb someone else's.
+- For smoke tests, `bin/dev-site.sh DIR [WP_VERSION]` builds a disposable WordPress on SQLite with this repo symlinked in. Use your own site name and port so you never disturb someone else's. Never run `wp plugin uninstall` or `wp plugin delete` on it (the plugin folder is a symlink to this repo), and check object-cache behavior on MariaDB or MySQL with Redis, not SQLite, whose drop-in flushes the cache on every redirect (`tasks/lessons.md`, Phase 7).
 - The three source plugins (User Switching 1.12.2, User Role Editor 4.66.2, Username Changer 3.3.1) are reference reading only. Reimplement from SPEC; never include or execute their code. A block that is genuinely ported keeps its original copyright line in the file header, and the authors are credited in `readme.txt`.
 
 ## Never
@@ -25,7 +25,7 @@ Operational checklist for working in this repository. What the plugin is, how it
   - Copy or import a role without checking that the actor holds every capability in it (URE-3, SEC-3).
   - Show a custom post type that shares Posts' capabilities as an independent group (URE-4, RO-14).
   - Offer to delete a capability that core, an active post type or taxonomy, or BLT Toolkit registers (URE-7, RO-24).
-- Delete what the plugin does not own. Orphaned capabilities are flagged, never removed automatically (RO-11). Uninstall removes only BLT Toolkit's own SPEC 5.1 capabilities and `blt_readonly_*` markers, never another BLT plugin's `blt_*` capabilities, never a role, never a role edit, and never the shared store.
+- Delete or grant what the plugin does not own. Orphaned capabilities are flagged, never removed automatically (RO-11). Uninstall removes only BLT Toolkit's own SPEC 5.1 capabilities and `blt_readonly_*` markers, never another BLT plugin's `blt_*` capabilities, never a role, never a role edit, and never the shared store; SEC-14 recovery likewise re-grants only the lockout-critical set and BLT Toolkit's own capabilities.
 - Run queries on a front-end page view by a visitor who is not switched, or do per-row work from scratch on the Users list (SEC-9). Anything on `init`, `map_meta_cap`, `user_has_cap`, `pre_get_users` or a list-table row gets a "what does this cost per request?" pass.
 - Add `add_filter( 'register_post_type_args', ... )` anywhere but the main file, or let its callback do work when no type is isolated (RS-31).
 - Use PHP 8 syntax (`match`, named arguments, `?->`, union types, constructor promotion, `str_contains()`). The floor is PHP 7.4 and WordPress 6.3.
@@ -43,7 +43,7 @@ Operational checklist for working in this repository. What the plugin is, how it
 4. Every PHP file starts with the `@package Blt_Toolkit` file docblock, then `if ( ! defined( 'ABSPATH' ) ) { exit; }` (`uninstall.php` checks `WP_UNINSTALL_PLUGIN`). Every function, method and class has a docblock.
 5. A new user-facing string is wrapped in the `blt-toolkit` text domain, in American English; then `node bin/make-pot.js` and commit `languages/blt-toolkit.pot` (CI fails on POT drift).
 6. Writes are POST to `admin-post.php` with a nonce, a capability check and a redirect (PRG), or REST with a `permission_callback`. The switch links are the only GET actions, with per-target nonces (SEC-7). Sanitize input, escape output, prepare SQL.
-7. A new or changed public hook is added to `HOOKS.md` (signature, default, requirement ID, status) and, if it changes behavior, to `CHANGELOG.md`.
+7. A new or changed public hook is added to `HOOKS.md` (signature, default, requirement ID, status) and, if it changes behavior, to `CHANGELOG.md`. `HOOKS.md` lists exactly the hooks the code fires or applies, no more and no fewer.
 8. A new pure rule gets a known-vector test in `tests/` whose name carries the requirement ID. A new WordPress-coupled behavior is added to `tasks/todo.md` and exercised against a real WordPress install.
 9. Reference requirement IDs in commit messages and in `tasks/todo.md`.
 10. A **Should** that is not followed gets a written reason in `tasks/lessons.md`. A gotcha that cost you time goes at the end of `tasks/lessons.md`. Append; never rewrite history.
@@ -60,7 +60,8 @@ Operational checklist for working in this repository. What the plugin is, how it
 - Wrapper `<div class="wrap blt-ui blt-<page>">`; `blt-design-system.css` enqueued on that screen's hook only; composed from the `DESIGN.md` catalog; booleans are `.blt-toggle`, statuses `.blt-badge`; tokens, not hex; no `form-table`. Write page CSS (`assets/css/blt-toolkit-admin.css`) only for layout the catalog does not cover, and grep for a class name before reusing a shared component on a page with custom markup.
 - Each submenu carries the capability in SPEC 13.1. Tabs are links, one URL each.
 - The page works with JavaScript disabled; JavaScript is vanilla, unminified source is shipped, and nothing uses jQuery.
-- Check the screen at 420 px wide, with JavaScript disabled, and keyboard only.
+- Tie every field's instructions to it: `aria-describedby` with the field id plus `-desc` (`BLT_Toolkit_Admin_Settings::number()` and `BLT_Toolkit_Admin::toggle()` take the id), and give a group of toggles `role="group"` with `aria-labelledby` (WCAG 1.3.1).
+- Check the screen at 420 px wide, with JavaScript disabled, and keyboard only, with a visible focus ring on every control (WCAG 2.4.7).
 - Run the CONVENTIONS 14.4 checklist before calling a screen done.
 
 ## Front end
@@ -71,7 +72,7 @@ Operational checklist for working in this repository. What the plugin is, how it
 ## Release
 
 - Merging to `main` publishes the release. `.github/scripts/verify-zip.sh` checks the zip: one top-level `blt-toolkit/` folder, the update checker and the family layer inside, no dev files, and the same version in the header, the constant and the readme.
-- The repository version stays 0.1.0 while phases are built; the first CI release after a merge is 0.1.1. Put `#major` in the merge that completes Phase 7 to publish 1.0.0.
-- The update checker reads releases from `S-FX-com/BLT-Toolkit` (SPEC 3). Until the owner confirms where the repository lives, releases published anywhere else are invisible to installed sites (see `tasks/lessons.md`).
+- The repository version stays 0.1.0 until the first release. Put `#major` in the merge that completes Phase 7 to publish 1.0.0; a merge without it would publish 0.1.1. After that, every merge to `main` publishes a release.
+- The update checker reads releases from `S-FX-com/BLT-Toolkit` (SPEC 3), where the repository now lives. It is private, so a test site needs `BLT_TOOLKIT_GITHUB_TOKEN` or a stored token to see releases.
 - Install the zip on a clean test site, then ship a second release to prove the update path.
 - Whenever data storage changes, test uninstall: by default nothing is removed; with **Delete all plugin data on uninstall** on, the two tables, the options, transient, user meta, job options, cron events, update-checker state, BLT Toolkit's own capabilities and the `blt_readonly_*` markers are removed, while roles, role edits, other BLT plugins' capabilities, `blt_family_shared` and `blt_family_opt_in` are left alone.

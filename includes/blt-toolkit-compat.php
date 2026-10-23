@@ -36,6 +36,6 @@ if ( ! function_exists( 'current_user_switched' ) ) {
 			return false;
 		}
 
-		return BLT_Toolkit_Switch::original_user();
+		return BLT_Toolkit_Switch::old_user();
 	}
 }

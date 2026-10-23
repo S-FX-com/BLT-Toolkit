@@ -710,4 +710,49 @@ class Test_Log extends TestCase {
 		$this->assertCount( BLT_Toolkit_Log::MENU_USERS, BLT_Toolkit_Log::merge_menus( array(), $many )['acting_as'] );
 		$this->assertSame( 1, BLT_Toolkit_Log::merge_menus( array( 'acting_as' => range( 50, 300 ) ), array( 'acting_as' => array( 1 ) ) )['acting_as'][0], 'A lower ID from newer rows enters a full list.' );
 	}
+
+	/**
+	 * LOG-3: the failure flag as the Site Health test reads it. A later
+	 * successful write stamps `recovered` once and never clears the flag; a
+	 * new failure (stored without `recovered`) reads as failing again.
+	 *
+	 * @return void
+	 */
+	public function test_log3_failure_flag_is_stamped_recovered_not_cleared() {
+		$flag = array(
+			'time'  => 1000,
+			'error' => 'no such table',
+			'count' => 3,
+		);
+
+		$this->assertSame(
+			array(
+				'time'      => 1000,
+				'error'     => 'no such table',
+				'count'     => 3,
+				'recovered' => 0,
+			),
+			BLT_Toolkit_Log::failure_from( $flag ),
+			'Still failing: no write succeeded since.'
+		);
+
+		$stamped = BLT_Toolkit_Log::recovered_flag( $flag, 1500 );
+
+		$this->assertSame( 1500, $stamped['recovered'] );
+		$this->assertSame( 3, $stamped['count'], 'The count of lost entries stays.' );
+		$this->assertSame( 1500, BLT_Toolkit_Log::failure_from( $stamped )['recovered'] );
+		$this->assertNull( BLT_Toolkit_Log::recovered_flag( $stamped, 2000 ), 'Stamped once: the first success after the failure.' );
+
+		$this->assertNull( BLT_Toolkit_Log::recovered_flag( false, 2000 ), 'No flag: nothing to store.' );
+		$this->assertNull( BLT_Toolkit_Log::failure_from( false ) );
+		$this->assertNull( BLT_Toolkit_Log::failure_from( array( 'time' => 0 ) ) );
+		$this->assertNull( BLT_Toolkit_Log::failure_from( array( 'time' => 'soon' ) ) );
+
+		// A clock that went back never stamps a recovery before the failure.
+		$this->assertSame( 1000, BLT_Toolkit_Log::recovered_flag( $flag, 900 )['recovered'] );
+
+		// A damaged stamp older than the failure reads as still failing.
+		$this->assertSame( 0, BLT_Toolkit_Log::failure_from( array_merge( $flag, array( 'recovered' => 999 ) ) )['recovered'] );
+		$this->assertSame( 1, BLT_Toolkit_Log::failure_from( array( 'time' => 5 ) )['count'] );
+	}
 }

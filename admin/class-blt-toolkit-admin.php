@@ -188,41 +188,148 @@ class BLT_Toolkit_Admin {
 	 * Each handler runs only after route_post() has checked the method, the
 	 * capability and the nonce, and it ends with a redirect.
 	 *
-	 * @return array<string,array{screen:string,method:string,cap:string}>
+	 * Optional keys: `class`, a class whose static `method` handles the
+	 * action instead of the screen object (a tab owned by its own class);
+	 * `dropped`, a static method of that class called before the nonce check
+	 * that redirects with a reason when PHP threw an upload's body away.
+	 *
+	 * @return array<string,array{screen:string,method:string,cap:string,class?:string,dropped?:string}>
 	 */
 	public static function post_actions() {
 		return array(
-			'blt_toolkit_save_modules'         => array(
+			'blt_toolkit_save_modules'           => array(
 				'screen' => 'overview',
 				'method' => 'handle_save_modules',
 				'cap'    => 'manage_options',
 			),
-			'blt_toolkit_save_settings'        => array(
+			'blt_toolkit_save_settings'          => array(
 				'screen' => 'settings',
 				'method' => 'handle_save',
 				'cap'    => 'manage_options',
 			),
-			'blt_toolkit_remove_token'         => array(
+			'blt_toolkit_remove_token'           => array(
 				'screen' => 'settings',
 				'method' => 'handle_remove_token',
 				'cap'    => 'manage_options',
 			),
-			'blt_toolkit_test_connection'      => array(
+			'blt_toolkit_test_connection'        => array(
 				'screen' => 'settings',
 				'method' => 'handle_test_connection',
 				'cap'    => 'manage_options',
 			),
 			// SW-21. The handler also requires blt_create_roles.
-			'blt_toolkit_create_support_agent' => array(
+			'blt_toolkit_create_support_agent'   => array(
 				'screen' => 'settings',
 				'method' => 'handle_create_support_agent',
 				'cap'    => 'manage_options',
 			),
 			// Streams the CSV and exits instead of redirecting (SPEC 13.2).
-			'blt_toolkit_export_log'           => array(
+			'blt_toolkit_export_log'             => array(
 				'screen' => 'activity',
 				'method' => 'handle_export',
 				'cap'    => 'blt_view_toolkit_log',
+			),
+			// UN-30. The template streams a CSV and exits instead of redirecting.
+			'blt_toolkit_bulk_template'          => array(
+				'screen' => 'usernames',
+				'method' => 'handle_template',
+				'cap'    => 'blt_change_usernames',
+			),
+			'blt_toolkit_bulk_plan'              => array(
+				'screen' => 'usernames',
+				'method' => 'handle_plan',
+				'cap'    => 'blt_change_usernames',
+			),
+			'blt_toolkit_bulk_start'             => array(
+				'screen' => 'usernames',
+				'method' => 'handle_start',
+				'cap'    => 'blt_change_usernames',
+			),
+			'blt_toolkit_bulk_discard'           => array(
+				'screen' => 'usernames',
+				'method' => 'handle_discard',
+				'cap'    => 'blt_change_usernames',
+			),
+			// Tools > Snapshots, Reset and Sync administrator (SNAP-4, RO-43,
+			// RO-5). Each previews on its tab first; these POSTs write.
+			'blt_toolkit_snapshot_restore'       => array(
+				'screen' => 'tools',
+				'method' => 'handle_restore',
+				'cap'    => 'blt_reset_roles',
+			),
+			'blt_toolkit_roles_reset'            => array(
+				'screen' => 'tools',
+				'method' => 'handle_reset',
+				'cap'    => 'blt_reset_roles',
+			),
+			'blt_toolkit_sync_admin'             => array(
+				'screen' => 'tools',
+				'method' => 'handle_sync',
+				'cap'    => 'blt_reset_roles',
+			),
+			// Tools > Export and import (RO-44, RO-45). Handled by static
+			// methods of BLT_Toolkit_Admin_Transfer (`class`); the export
+			// streams a JSON file and exits instead of redirecting. The upload
+			// names `dropped`, which says why when PHP threw the body away.
+			'blt_toolkit_roles_export'           => array(
+				'screen' => 'tools',
+				'class'  => 'BLT_Toolkit_Admin_Transfer',
+				'method' => 'handle_export',
+				'cap'    => 'blt_reset_roles',
+			),
+			'blt_toolkit_roles_import_upload'    => array(
+				'screen'  => 'tools',
+				'class'   => 'BLT_Toolkit_Admin_Transfer',
+				'method'  => 'handle_upload',
+				'cap'     => 'blt_reset_roles',
+				'dropped' => 'handle_dropped',
+			),
+			'blt_toolkit_roles_import'           => array(
+				'screen' => 'tools',
+				'class'  => 'BLT_Toolkit_Admin_Transfer',
+				'method' => 'handle_import',
+				'cap'    => 'blt_reset_roles',
+			),
+			'blt_toolkit_roles_import_discard'   => array(
+				'screen' => 'tools',
+				'class'  => 'BLT_Toolkit_Admin_Transfer',
+				'method' => 'handle_discard',
+				'cap'    => 'blt_reset_roles',
+			),
+			// Tools > Import from legacy plugins (SPEC 15). The tab needs
+			// manage_options (SPEC 13.1); each handler also checks the
+			// screen's blt_reset_roles.
+			'blt_toolkit_legacy_import_uc'       => array(
+				'screen' => 'tools',
+				'class'  => 'BLT_Toolkit_Admin_Legacy',
+				'method' => 'handle_import_uc',
+				'cap'    => 'manage_options',
+			),
+			'blt_toolkit_legacy_import_ure'      => array(
+				'screen' => 'tools',
+				'class'  => 'BLT_Toolkit_Admin_Legacy',
+				'method' => 'handle_import_ure',
+				'cap'    => 'manage_options',
+			),
+			'blt_toolkit_legacy_remove_ure_caps' => array(
+				'screen' => 'tools',
+				'class'  => 'BLT_Toolkit_Admin_Legacy',
+				'method' => 'handle_remove_ure_caps',
+				'cap'    => 'manage_options',
+			),
+			// Site Health buttons (LOG-3, SPEC 14.3), handled by
+			// BLT_Toolkit_Site_Health, which redirects back to Site Health.
+			'blt_toolkit_clear_log_failure'      => array(
+				'screen' => 'overview',
+				'class'  => 'BLT_Toolkit_Site_Health',
+				'method' => 'handle_clear_log_failure',
+				'cap'    => 'manage_options',
+			),
+			'blt_toolkit_repair_tables'          => array(
+				'screen' => 'overview',
+				'class'  => 'BLT_Toolkit_Site_Health',
+				'method' => 'handle_repair_tables',
+				'cap'    => 'manage_options',
 			),
 		);
 	}
@@ -284,6 +391,12 @@ class BLT_Toolkit_Admin {
 			// False when the current user lacks the capability: nothing to gate.
 			if ( is_string( $hook ) && '' !== $hook ) {
 				$this->page_hooks[ $hook ] = $key;
+
+				// A role lifecycle page the user may not open answers 403
+				// before any output (render() would be too late for a status).
+				if ( 'roles' === $key && class_exists( 'BLT_Toolkit_Admin_Role_Lifecycle' ) ) {
+					add_action( 'load-' . $hook, array( 'BLT_Toolkit_Admin_Role_Lifecycle', 'check_access' ) );
+				}
 			}
 		}
 
@@ -441,17 +554,20 @@ class BLT_Toolkit_Admin {
 	/**
 	 * Print a toggle switch (DESIGN 2, Toggle switch) for a boolean.
 	 *
-	 * @param string $name    Field name.
-	 * @param bool   $checked Whether it is on.
-	 * @param string $label   Label.
-	 * @param string $desc    Optional description under the label.
-	 * @param string $id      Optional id for the checkbox.
+	 * @param string $name        Field name.
+	 * @param bool   $checked     Whether it is on.
+	 * @param string $label       Label.
+	 * @param string $desc        Optional description under the label.
+	 * @param string $id          Optional id for the checkbox.
+	 * @param string $describedby Optional id(s) of instructions printed outside
+	 *                            the label, such as a warning under the toggle,
+	 *                            space-separated (WCAG 1.3.1).
 	 * @return void
 	 */
-	public static function toggle( $name, $checked, $label, $desc = '', $id = '' ) {
+	public static function toggle( $name, $checked, $label, $desc = '', $id = '', $describedby = '' ) {
 		?>
 		<label class="blt-toggle">
-			<input type="checkbox" name="<?php echo esc_attr( $name ); ?>" value="1"<?php echo '' !== $id ? ' id="' . esc_attr( $id ) . '"' : ''; ?> <?php checked( (bool) $checked ); ?> />
+			<input type="checkbox" name="<?php echo esc_attr( $name ); ?>" value="1"<?php echo '' !== $id ? ' id="' . esc_attr( $id ) . '"' : ''; ?><?php echo '' !== $describedby ? ' aria-describedby="' . esc_attr( $describedby ) . '"' : ''; ?> <?php checked( (bool) $checked ); ?> />
 			<span class="blt-toggle-track" aria-hidden="true"><span class="blt-toggle-thumb"></span></span>
 			<span class="blt-toggle-text">
 				<span class="blt-toggle-label"><?php echo esc_html( $label ); ?></span>
@@ -726,11 +842,29 @@ class BLT_Toolkit_Admin {
 			);
 		}
 
+		// UN-30 step 2: an upload over post_max_size reaches here with an
+		// empty body (the upload form puts its action in the URL), so there
+		// is no nonce to check. Nothing is written; say why instead of
+		// failing the nonce or leaving a blank admin-post.php page.
+		if ( 'usernames' === $route['screen'] && class_exists( 'BLT_Toolkit_Admin_Usernames' ) && BLT_Toolkit_Admin_Usernames::body_dropped() ) {
+			self::redirect( $route['screen'], array(), 'bulk_too_large' );
+		}
+
+		// The same for an upload handled by a class of its own: its `dropped`
+		// method redirects with the reason when the body is gone, and
+		// returns otherwise.
+		if ( isset( $route['class'], $route['dropped'] ) && is_callable( array( $route['class'], $route['dropped'] ) ) ) {
+			call_user_func( array( $route['class'], $route['dropped'] ) );
+		}
+
 		check_admin_referer( $action, self::NONCE_FIELD );
 
-		$screen = $this->screen( $route['screen'] );
+		// A route with `class` is handled by that class's static method (a
+		// tab owned by a class other than its screen's); otherwise by the
+		// screen object.
+		$target = isset( $route['class'] ) ? $route['class'] : $this->screen( $route['screen'] );
 
-		call_user_func( array( $screen, $route['method'] ) );
+		call_user_func( array( $target, $route['method'] ) );
 
 		// Handlers redirect and exit. Reaching this line is a bug; still end on
 		// a redirect rather than a blank admin-post.php page.
@@ -846,6 +980,19 @@ class BLT_Toolkit_Admin {
 			case 'saved_adjusted':
 				return self::make_notice( 'warning', __( 'Settings saved. A number was outside its allowed range or not a number, so the nearest allowed value, or the previous value, was saved instead. Check the values below.', 'blt-toolkit' ) );
 
+			// UN-20: the other settings were saved; the self-service roles were not.
+			case 'self_service_denied':
+				return self::make_notice( 'error', __( 'Settings saved, but no role was changed: you are not allowed to change who can change their own username for one of the roles you chose. BLT Toolkit protects the Administrator role, your own roles and roles with more access than yours.', 'blt-toolkit' ) );
+
+			case 'self_service_snapshot':
+				return self::make_notice( 'error', __( 'Settings saved, but no role was changed: a copy of the roles could not be saved first. Try again; if this keeps happening, the PHP error log says why.', 'blt-toolkit' ) );
+
+			case 'self_service_in_code':
+				return self::make_notice( 'error', __( 'Settings saved, but no role was changed: this site\'s roles are defined in code, so who can change their own username must be set there.', 'blt-toolkit' ) );
+
+			case 'self_service_failed':
+				return self::make_notice( 'error', __( 'Settings saved, but the roles could not be saved. Check who can change their own username below and try again.', 'blt-toolkit' ) );
+
 			case 'modules_saved':
 				return self::make_notice( 'success', __( 'Modules saved. A module that is switched off loads no code; protection for administrators and the activity log keep running.', 'blt-toolkit' ) );
 
@@ -894,6 +1041,41 @@ class BLT_Toolkit_Admin {
 
 			case 'support_agent_failed':
 				return self::make_notice( 'error', __( 'The Support Agent role could not be created. Try again.', 'blt-toolkit' ) );
+
+			// UN-30, the bulk rename.
+			case 'bulk_started':
+				return self::make_notice( 'success', __( 'The bulk rename has started. It keeps running in the background if you leave this page; come back here to see how it went.', 'blt-toolkit' ) );
+
+			case 'bulk_ack':
+				return self::make_notice( 'error', __( 'Nothing was renamed: confirm that you have a recent backup of this site first.', 'blt-toolkit' ) );
+
+			case 'bulk_busy':
+				return self::make_notice( 'error', __( 'Nothing was renamed: another bulk rename is still running. Start this one when it has finished, or cancel the other.', 'blt-toolkit' ) );
+
+			case 'bulk_nothing':
+				return self::make_notice( 'error', __( 'Nothing was renamed: no row of the file is ready.', 'blt-toolkit' ) );
+
+			case 'bulk_not_started':
+				return self::make_notice( 'error', __( 'Nothing was renamed: the bulk rename could not be started. Try again.', 'blt-toolkit' ) );
+
+			case 'bulk_expired':
+				return self::make_notice( 'error', __( 'Nothing was renamed: that dry run is no longer available. It expires after an hour, or when you upload another file. Upload the file again.', 'blt-toolkit' ) );
+
+			case 'bulk_not_stored':
+				return self::make_notice( 'error', __( 'The file was checked, but the dry run could not be saved. Try again; if this keeps happening, upload fewer rows at a time.', 'blt-toolkit' ) );
+
+			case 'bulk_discarded':
+				return self::make_notice( 'success', __( 'The dry run was discarded. Nothing was renamed.', 'blt-toolkit' ) );
+
+			case 'bulk_too_large':
+				return self::make_notice(
+					'error',
+					sprintf(
+						/* translators: %s: the largest file accepted, such as 2 MB. */
+						__( 'Nothing was uploaded: the file is larger than this server accepts. It can be at most %s; split it into smaller files.', 'blt-toolkit' ),
+						size_format( BLT_Toolkit_Admin_Usernames::max_upload() )
+					)
+				);
 
 			case 'failed':
 				return self::make_notice( 'error', __( 'Nothing was changed: the request could not be completed. Try again.', 'blt-toolkit' ) );

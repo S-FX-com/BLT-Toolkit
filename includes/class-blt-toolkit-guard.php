@@ -29,8 +29,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * - SEC-6 (hide administrators): the Users list query, its role counts and
  *   views, and the REST users collection.
  * - SEC-2, SEC-3, SEC-5, SEC-10, SEC-12 and SEC-13 for BLT write paths:
- *   can_act_on_user(), can_change_user_caps(), can_grant(),
- *   check_role_change(), requires_critical_review(), is_protected_role().
+ *   can_act_on_user(), can_change_user_caps(), can_change_user_roles(),
+ *   can_grant(), check_role_change(), requires_critical_review(),
+ *   is_protected_role().
  * - SEC-14 recovery mode: maybe_recover() and recovery_notice(), hooked
  *   only while `BLT_TOOLKIT_RECOVERY` is true.
  *
@@ -72,6 +73,17 @@ class BLT_Toolkit_Guard {
 	 * logged (SEC-14), so it is logged once a day, not on every request.
 	 */
 	const CODE_RECOVERY_TRANSIENT = 'blt_toolkit_recovery_in_code';
+
+	/**
+	 * User query variable that marks a query SEC-6 applies to. Its value is
+	 * the list of administrator IDs exclude_admin_ids() leaves out.
+	 */
+	const HIDE_QUERY_VAR = 'blt_toolkit_hide_admins';
+
+	/**
+	 * Object cache group of the administrator ID list (admin_ids()).
+	 */
+	const CACHE_GROUP = 'blt_toolkit';
 
 	/**
 	 * Capabilities the `map_meta_cap` callback looks at (SEC-9). Everything
@@ -150,6 +162,55 @@ class BLT_Toolkit_Guard {
 	private static $missing_cache = array();
 
 	/**
+	 * The read-only markers of registered types (restrictions()) and the
+	 * BLT_Toolkit_Readonly::markers() map they were built from.
+	 *
+	 * @var array{from:array,map:array}|null
+	 */
+	private static $restrictions = null;
+
+	/**
+	 * A user's effective capabilities after a change of roles, keyed by the
+	 * new roles and the user's own capabilities (SEC-9; see
+	 * can_change_user_roles()).
+	 *
+	 * @var array<string,array<string,true>>
+	 */
+	private static $after_cache = array();
+
+	/**
+	 * Whether this request is users.php for someone administrators are
+	 * hidden from (set by load_users_screen()).
+	 *
+	 * @var bool
+	 */
+	private static $users_screen = false;
+
+	/**
+	 * The users.php census (census()): `key` (the `users` last-changed time
+	 * and the role names it was taken for) and `result` (null when it could
+	 * not be taken).
+	 *
+	 * @var array{key:string,result:array|null}|null
+	 */
+	private static $census = null;
+
+	/**
+	 * Target users of guarded checks, by ID: `changed` (core's `users`
+	 * last-changed time when the object was built) and `user` (target()).
+	 *
+	 * @var array<int,array{changed:string,user:WP_User|false}>
+	 */
+	private static $targets = array();
+
+	/**
+	 * fingerprint() results by object: `caps` (the array hashed) and `hash`.
+	 *
+	 * @var array<int,array{caps:array,hash:string}>
+	 */
+	private static $fingerprints = array();
+
+	/**
 	 * Register the Guard's hooks. Called on `plugins_loaded` priority 1.
 	 *
 	 * @return void
@@ -178,7 +239,7 @@ class BLT_Toolkit_Guard {
 
 		// SEC-6. The list table query filter fires only inside
 		// WP_Users_List_Table; counts and views are adjusted on users.php.
-		add_filter( 'users_list_table_query_args', array( __CLASS__, 'exclude_admins_from_query' ) );
+		add_filter( 'users_list_table_query_args', array( __CLASS__, 'exclude_admins_from_list' ) );
 		add_filter( 'rest_user_query', array( __CLASS__, 'exclude_admins_from_query' ) );
 		add_action( 'load-users.php', array( __CLASS__, 'load_users_screen' ) );
 
@@ -334,7 +395,7 @@ class BLT_Toolkit_Guard {
 				return array( 'do_not_allow' );
 			}
 
-			$target = get_userdata( $target_id );
+			$target = self::target( $target_id );
 
 			if ( ! $target instanceof WP_User || ! $target->exists() ) {
 				return array( 'do_not_allow' );
@@ -390,7 +451,7 @@ class BLT_Toolkit_Guard {
 		}
 
 		if ( ! isset( $target ) ) {
-			$target = get_userdata( $target_id );
+			$target = self::target( $target_id );
 
 			if ( ! $target instanceof WP_User || ! $target->exists() ) {
 				return $caps;
@@ -465,6 +526,44 @@ class BLT_Toolkit_Guard {
 		return get_userdata( $user_id );
 	}
 
+	/**
+	 * The target user of a guarded check, as get_userdata() gives it, built
+	 * once while nothing about any user changes (SEC-9).
+	 *
+	 * get_userdata() builds a new WP_User, merging its role capabilities,
+	 * on every call, and a Users list row asks about the same user eight or
+	 * nine times (core's edit, delete and reset-password checks and its edit
+	 * link, then the switch and rename actions). The object is reused while
+	 * core's `users` last-changed time is unchanged: core moves it on every
+	 * change to a user, their meta or their roles (the same key WP_User_Query
+	 * caches its results under), and flush() drops the reuse when role
+	 * definitions change.
+	 *
+	 * @param int $target_id User ID.
+	 * @return WP_User|false
+	 */
+	private static function target( $target_id ) {
+		$changed = self::users_last_changed();
+
+		if ( isset( self::$targets[ $target_id ] ) && self::$targets[ $target_id ]['changed'] === $changed ) {
+			return self::$targets[ $target_id ]['user'];
+		}
+
+		// A list page has 20 to 999 rows; keep the memory bounded anyway.
+		if ( count( self::$targets ) >= 1000 ) {
+			self::$targets = array();
+		}
+
+		$user = get_userdata( $target_id );
+
+		self::$targets[ $target_id ] = array(
+			'changed' => $changed,
+			'user'    => $user,
+		);
+
+		return $user;
+	}
+
 	// ---------- Effective capabilities and caching (SEC-8, SEC-9) ----------
 
 	/**
@@ -497,13 +596,88 @@ class BLT_Toolkit_Guard {
 	 * @return string[] Sorted capability names; empty when the target is a subset.
 	 */
 	public static function missing_caps( WP_User $actor, WP_User $target ) {
-		$key = self::fingerprint( $actor ) . '|' . self::fingerprint( $target );
+		$restrictions = self::restrictions();
+		$key          = self::fingerprint( $actor ) . '|' . self::fingerprint( $target );
 
 		if ( ! isset( self::$missing_cache[ $key ] ) ) {
-			self::$missing_cache[ $key ] = BLT_Toolkit_Superset::missing( self::effective_caps( $actor ), self::effective_caps( $target ) );
+			self::$missing_cache[ $key ] = BLT_Toolkit_Superset::missing( self::effective_caps( $actor ), self::effective_caps( $target ), $restrictions );
 		}
 
 		return self::$missing_cache[ $key ];
+	}
+
+	/**
+	 * The read-only markers of the registered types, for SEC-2 and SEC-3
+	 * comparisons (BLT_Toolkit_Superset::marker_strings()): marker =>
+	 * array( 'edit' => the type's `edit_posts`, 'create' => its
+	 * `create_posts` strings ). Built from BLT_Toolkit_Readonly::markers()
+	 * (no query) and rebuilt when that changes, which also drops cached
+	 * comparisons.
+	 *
+	 * @return array<string,array{edit:string,create:string[]}>
+	 */
+	public static function restrictions() {
+		$markers = class_exists( 'BLT_Toolkit_Readonly' ) ? BLT_Toolkit_Readonly::markers() : array();
+
+		if ( null !== self::$restrictions && self::$restrictions['from'] === $markers ) {
+			return self::$restrictions['map'];
+		}
+
+		$map = array();
+
+		foreach ( $markers as $type => $entry ) {
+			$marker = isset( $entry['marker'] ) ? (string) $entry['marker'] : '';
+
+			if ( '' === $marker ) {
+				continue;
+			}
+
+			if ( ! isset( $map[ $marker ] ) ) {
+				$map[ $marker ] = array(
+					'edit'   => 'edit_' . substr( $marker, strlen( BLT_Toolkit_Superset::MARKER_PREFIX ) ),
+					'create' => array(),
+				);
+			}
+
+			$create = isset( $entry['create'] ) ? (string) $entry['create'] : '';
+
+			if ( '' !== $create && ! in_array( $create, $map[ $marker ]['create'], true ) ) {
+				$map[ $marker ]['create'][] = $create;
+			}
+		}
+
+		ksort( $map, SORT_STRING );
+
+		self::$missing_cache = array();
+		self::$after_cache   = array();
+		self::$restrictions  = array(
+			'from' => $markers,
+			'map'  => $map,
+		);
+
+		return $map;
+	}
+
+	/**
+	 * What the actor lacks to take a read-only marker away (SEC-3, RS-14):
+	 * empty for a toolkit admin, otherwise
+	 * BLT_Toolkit_Superset::lift_needs(). Simple and Advanced view use it to
+	 * lock what the Guard would refuse.
+	 *
+	 * @param WP_User $actor  Who is acting.
+	 * @param string  $marker `blt_readonly_{plural}`.
+	 * @return string[]
+	 */
+	public static function lift_missing( WP_User $actor, $marker ) {
+		if ( ! $actor->exists() ) {
+			return array( (string) $marker );
+		}
+
+		if ( self::is_toolkit_admin( $actor ) ) {
+			return array();
+		}
+
+		return BLT_Toolkit_Superset::lift_needs( self::effective_caps( $actor ), (string) $marker, self::restrictions() );
 	}
 
 	/**
@@ -515,6 +689,10 @@ class BLT_Toolkit_Guard {
 	public static function flush() {
 		self::$caps_cache    = array();
 		self::$missing_cache = array();
+		self::$after_cache   = array();
+		self::$census        = null;
+		self::$targets       = array();
+		self::$restrictions  = null;
 	}
 
 	/**
@@ -529,8 +707,28 @@ class BLT_Toolkit_Guard {
 	 */
 	private static function fingerprint( WP_User $user ) {
 		$caps = is_array( $user->caps ) ? $user->caps : array();
+		$id   = spl_object_id( $user );
 
-		return md5( (string) wp_json_encode( $caps ) );
+		// The hash is a function of the array alone, so a remembered one is
+		// reused only for an identical array (the same array is recognised
+		// at once; a changed one is compared, then hashed again). SEC-9: a
+		// Users list row checks the same two users seven or more times.
+		if ( isset( self::$fingerprints[ $id ] ) && self::$fingerprints[ $id ]['caps'] === $caps ) {
+			return self::$fingerprints[ $id ]['hash'];
+		}
+
+		if ( count( self::$fingerprints ) >= 1000 ) {
+			self::$fingerprints = array();
+		}
+
+		$hash = md5( (string) wp_json_encode( $caps ) );
+
+		self::$fingerprints[ $id ] = array(
+			'caps' => $caps,
+			'hash' => $hash,
+		);
+
+		return $hash;
 	}
 
 	/**
@@ -573,13 +771,14 @@ class BLT_Toolkit_Guard {
 			return array();
 		}
 
-		$actor_caps = self::effective_caps( $actor );
-		$names      = self::role_names();
+		$actor_caps   = self::effective_caps( $actor );
+		$names        = self::role_names();
+		$restrictions = self::restrictions();
 
 		foreach ( $roles as $role => $data ) {
 			$role_caps = is_array( $data ) && isset( $data['capabilities'] ) && is_array( $data['capabilities'] ) ? $data['capabilities'] : array();
 
-			if ( self::ADMIN_ROLE === (string) $role || ! BLT_Toolkit_Superset::is_subset( $actor_caps, BLT_Toolkit_Superset::normalize( $role_caps, $names ) ) ) {
+			if ( self::ADMIN_ROLE === (string) $role || ! BLT_Toolkit_Superset::is_subset( $actor_caps, BLT_Toolkit_Superset::normalize( $role_caps, $names ), $restrictions ) ) {
 				unset( $roles[ $role ] );
 			}
 		}
@@ -759,10 +958,15 @@ class BLT_Toolkit_Guard {
 	}
 
 	/**
-	 * Leave holders of the administrator role out of a user query: the Users
-	 * list table (`users_list_table_query_args`) and the REST users
-	 * collection (`rest_user_query`). It adds a `role__not_in` clause to the
-	 * query that runs anyway, so there is no extra query (SEC-6, SEC-9).
+	 * Leave holders of the administrator role out of the REST users
+	 * collection (`rest_user_query`), or any other user query this is given
+	 * to (SEC-6).
+	 *
+	 * The administrators are left out by ID (hide_admins_in()), from the list
+	 * admin_ids() keeps in the object cache, instead of core's `role__not_in`
+	 * clause: on MySQL that clause joins every user's capabilities row and,
+	 * with the total count core asks for, reads all of them on every request
+	 * (24 to 150 ms with 10,000 users, against 1 ms without it). SEC-9.
 	 *
 	 * @param array $args WP_User_Query arguments.
 	 * @return array
@@ -772,12 +976,142 @@ class BLT_Toolkit_Guard {
 			return $args;
 		}
 
-		$not_in   = isset( $args['role__not_in'] ) ? (array) $args['role__not_in'] : array();
-		$not_in[] = self::ADMIN_ROLE;
+		return self::hide_admins_in( $args, self::admin_ids() );
+	}
 
-		$args['role__not_in'] = array_values( array_unique( $not_in ) );
+	/**
+	 * `users_list_table_query_args` callback: SEC-6 for the Users list.
+	 *
+	 * Like exclude_admins_from_query(), except that on users.php, where core
+	 * counts the users of each role on every load (unless the site is large),
+	 * the administrator IDs come from the same scan as those counts
+	 * (census()), so hiding administrators costs no query of its own.
+	 *
+	 * @param array $args WP_User_Query arguments.
+	 * @return array
+	 */
+	public static function exclude_admins_from_list( $args ) {
+		if ( ! is_array( $args ) || ! self::hides_admins_from( wp_get_current_user() ) ) {
+			return $args;
+		}
+
+		$census = self::$users_screen && ! wp_is_large_user_count() ? self::census() : null;
+
+		return self::hide_admins_in( $args, null !== $census ? $census['admins'] : self::admin_ids() );
+	}
+
+	/**
+	 * Mark a user query so exclude_admin_ids() leaves these administrators
+	 * out of it (SEC-6).
+	 *
+	 * The IDs are added to the query's own WHERE clause on `pre_user_query`,
+	 * not passed as `exclude`, because core ignores `exclude` whenever
+	 * `include` is set (`GET /wp/v2/users?include=1`). When the IDs could not
+	 * be read, it falls back to core's `role__not_in` clause: slower, but it
+	 * never shows an administrator.
+	 *
+	 * @param array      $args WP_User_Query arguments.
+	 * @param int[]|null $ids  Administrator IDs, or null when they could not be read.
+	 * @return array
+	 */
+	private static function hide_admins_in( array $args, $ids ) {
+		if ( ! is_array( $ids ) ) {
+			$not_in   = isset( $args['role__not_in'] ) ? (array) $args['role__not_in'] : array();
+			$not_in[] = self::ADMIN_ROLE;
+
+			$args['role__not_in'] = array_values( array_unique( $not_in ) );
+
+			return $args;
+		}
+
+		$args[ self::HIDE_QUERY_VAR ] = $ids;
+
+		add_action( 'pre_user_query', array( __CLASS__, 'exclude_admin_ids' ) );
 
 		return $args;
+	}
+
+	/**
+	 * `pre_user_query` callback, added by hide_admins_in(): leave the
+	 * administrators the query was marked with out of its results and its
+	 * total.
+	 *
+	 * @param WP_User_Query $query The query.
+	 * @return void
+	 */
+	public static function exclude_admin_ids( $query ) {
+		global $wpdb;
+
+		if ( ! $query instanceof WP_User_Query ) {
+			return;
+		}
+
+		$ids = $query->get( self::HIDE_QUERY_VAR );
+
+		if ( ! is_array( $ids ) ) {
+			return;
+		}
+
+		$ids = self::id_list( $ids );
+
+		if ( array() !== $ids ) {
+			$query->query_where .= " AND {$wpdb->users}.ID NOT IN (" . implode( ',', $ids ) . ')';
+		}
+	}
+
+	/**
+	 * IDs of the users who hold the administrator role on this site, matched
+	 * as core's role clause matches them (the capabilities row contains
+	 * `"administrator"`), or null when they could not be read (SEC-6).
+	 *
+	 * Kept in the object cache under core's `users` last-changed time, which
+	 * moves on every change to a user, their meta or their roles: exactly as
+	 * fresh as WP_User_Query's own cached results, persistent with an object
+	 * cache and per request without one. On a site without one this is a
+	 * scan of the capabilities rows (about 13 ms with 10,000 users on
+	 * MariaDB 10.11), run only where administrators are hidden.
+	 *
+	 * @return int[]|null
+	 */
+	public static function admin_ids() {
+		global $wpdb;
+
+		$key = 'admin_ids:' . self::users_last_changed();
+		$ids = wp_cache_get( $key, self::CACHE_GROUP );
+
+		if ( is_array( $ids ) ) {
+			return $ids;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached just below under core's users last-changed time.
+		$rows = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT user_id FROM {$wpdb->usermeta} WHERE meta_key = %s AND meta_value LIKE %s",
+				$wpdb->get_blog_prefix() . 'capabilities',
+				'%' . $wpdb->esc_like( '"' . self::ADMIN_ROLE . '"' ) . '%'
+			)
+		);
+
+		if ( '' !== (string) $wpdb->last_error || ! is_array( $rows ) ) {
+			return null;
+		}
+
+		$ids = self::id_list( $rows );
+
+		// Each change makes a new key; let the old ones expire.
+		wp_cache_set( $key, $ids, self::CACHE_GROUP, DAY_IN_SECONDS );
+
+		return $ids;
+	}
+
+	/**
+	 * Core's `users` last-changed time (moved on every user, user meta and
+	 * role change).
+	 *
+	 * @return string
+	 */
+	private static function users_last_changed() {
+		return (string) wp_cache_get_last_changed( 'users' );
 	}
 
 	/**
@@ -791,15 +1125,224 @@ class BLT_Toolkit_Guard {
 			return;
 		}
 
+		self::$users_screen = true;
+
 		add_filter( 'pre_count_users', array( __CLASS__, 'count_users_without_admins' ), 10, 3 );
 		add_filter( 'views_users', array( __CLASS__, 'drop_admin_view' ) );
 	}
 
 	/**
+	 * One scan of the capabilities rows on users.php, in place of core's
+	 * counting query: the role counts without administrators (SEC-6) and the
+	 * administrators' IDs, for the list (SEC-9). Taken once per request (again
+	 * only if a user or role changes in between) by whichever comes first,
+	 * the list query or the counts.
+	 *
+	 * The scan has the columns of core's own counting query, with the
+	 * administrator column replaced by the list of their IDs, so it costs what
+	 * core's query costs. A second query over the administrators' rows only
+	 * (by ID) gives what to subtract, so a user holding the administrator
+	 * role and another role is left out of both counts, exactly as before.
+	 *
+	 * @return array{counts:array,admins:int[]}|null Null when it could not be
+	 *         taken, or the ID list may have been cut short by
+	 *         `group_concat_max_len`; callers then use the separate queries.
+	 */
+	private static function census() {
+		global $wpdb;
+
+		$names = array_values( array_diff( self::role_names(), array( self::ADMIN_ROLE ) ) );
+		$key   = self::users_last_changed() . '|' . implode( ',', $names );
+
+		if ( null !== self::$census && $key === self::$census['key'] ) {
+			return self::$census['result'];
+		}
+
+		self::$census = array(
+			'key'    => $key,
+			'result' => null,
+		);
+
+		$cap_key = $wpdb->get_blog_prefix() . 'capabilities';
+		$admin   = '%' . $wpdb->esc_like( '"' . self::ADMIN_ROLE . '"' ) . '%';
+		$columns = self::count_columns( $names );
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Replaces core's count_users() query on users.php; every value is prepared, as core does.
+		$all = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT {$columns}, COUNT(`meta_value`), GROUP_CONCAT(CASE WHEN `meta_value` LIKE %s THEN `user_id` END), @@SESSION.group_concat_max_len FROM {$wpdb->usermeta} INNER JOIN {$wpdb->users} ON user_id = ID WHERE meta_key = %s",
+				$admin,
+				$cap_key
+			),
+			ARRAY_N
+		);
+
+		if ( '' !== (string) $wpdb->last_error || ! is_array( $all ) ) {
+			return null;
+		}
+
+		$rows = self::concat_ids( $all[ count( $names ) + 2 ], $all[ count( $names ) + 3 ] );
+
+		if ( null === $rows ) {
+			return null;
+		}
+
+		$ids    = self::id_list( $rows );
+		$admins = null;
+
+		if ( array() !== $ids ) {
+			$admins = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT {$columns}, COUNT(*) FROM {$wpdb->usermeta} INNER JOIN {$wpdb->users} ON user_id = ID WHERE meta_key = %s AND user_id IN (" . implode( ',', $ids ) . ') AND meta_value LIKE %s',
+					$cap_key,
+					$admin
+				),
+				ARRAY_N
+			);
+
+			if ( '' !== (string) $wpdb->last_error || ! is_array( $admins ) ) {
+				return null;
+			}
+		}
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
+
+		$counts = self::census_counts( $names, $all, $admins, count( $rows ) );
+
+		if ( null === $counts ) {
+			return null;
+		}
+
+		self::$census['result'] = array(
+			'counts' => $counts,
+			'admins' => $ids,
+		);
+
+		wp_cache_set( 'admin_ids:' . self::users_last_changed(), $ids, self::CACHE_GROUP, DAY_IN_SECONDS );
+
+		return self::$census['result'];
+	}
+
+	/**
+	 * The counting columns of core's count_users() query for these roles:
+	 * one per role, then the users with an empty capabilities array.
+	 *
+	 * @param string[] $names Role names.
+	 * @return string SQL.
+	 */
+	private static function count_columns( array $names ) {
+		global $wpdb;
+
+		$select = array();
+
+		foreach ( $names as $name ) {
+			$select[] = $wpdb->prepare( 'COUNT(NULLIF(`meta_value` LIKE %s, false))', '%' . $wpdb->esc_like( '"' . $name . '"' ) . '%' );
+		}
+
+		$select[] = "COUNT(NULLIF(`meta_value` = 'a:0:{}', false))";
+
+		return implode( ', ', $select );
+	}
+
+	/**
+	 * The user IDs in a GROUP_CONCAT() result, one per row (repeats kept), or
+	 * null when the result may have been cut short. Pure.
+	 *
+	 * MySQL and MariaDB cut a GROUP_CONCAT() at `group_concat_max_len` bytes
+	 * (1,024 by default on MySQL) with only a warning, so a result within 32
+	 * bytes of the limit is not trusted. When the limit is unknown (the SQLite
+	 * drop-in returns NULL for it and never cuts), 1,024 is assumed.
+	 *
+	 * @param mixed $concat  The GROUP_CONCAT() value: comma-separated IDs, or null when no row matched.
+	 * @param mixed $max_len The `group_concat_max_len` value the query returned.
+	 * @return int[]|null
+	 */
+	public static function concat_ids( $concat, $max_len ) {
+		if ( null === $concat || '' === $concat ) {
+			return array();
+		}
+
+		$limit = is_numeric( $max_len ) && (int) $max_len > 0 ? (int) $max_len : 1024;
+
+		if ( ! is_string( $concat ) && ! is_int( $concat ) ) {
+			return null;
+		}
+
+		$concat = (string) $concat;
+
+		if ( strlen( $concat ) + 32 > $limit || 1 !== preg_match( '/^[0-9]+(?:,[0-9]+)*$/', $concat ) ) {
+			return null;
+		}
+
+		return array_map( 'intval', explode( ',', $concat ) );
+	}
+
+	/**
+	 * The counts count_users() returns, from the census. Pure.
+	 *
+	 * @param string[]   $names       Role names, administrator left out, in column order.
+	 * @param array      $all         The scan's row: one count per role, the empty-array count, then the rows with a value.
+	 * @param array|null $admins      The administrators' row (same role columns, the empty-array count, then their row count), or null when there are none.
+	 * @param int        $admin_rows  Number of administrator rows the scan listed.
+	 * @return array{total_users:int,avail_roles:array<string,int>}|null Null when the two queries disagree (a change in between).
+	 */
+	public static function census_counts( array $names, array $all, $admins, $admin_rows ) {
+		$width = count( $names ) + 1;
+
+		if ( count( $all ) < $width + 1 || ( null !== $admins && count( $admins ) < $width + 1 ) ) {
+			return null;
+		}
+
+		$admin_count = null === $admins ? 0 : (int) $admins[ $width ];
+
+		if ( $admin_count !== (int) $admin_rows ) {
+			return null;
+		}
+
+		$counts = array();
+
+		foreach ( $names as $col => $name ) {
+			$count = (int) $all[ $col ] - ( null === $admins ? 0 : (int) $admins[ $col ] );
+
+			if ( $count > 0 ) {
+				$counts[ $name ] = $count;
+			}
+		}
+
+		$counts['none'] = (int) $all[ $width - 1 ] - ( null === $admins ? 0 : (int) $admins[ $width - 1 ] );
+
+		return array(
+			'total_users' => (int) $all[ $width ] - $admin_count,
+			'avail_roles' => $counts,
+		);
+	}
+
+	/**
+	 * Positive integer IDs, unique, in order. Pure.
+	 *
+	 * @param array $values Values.
+	 * @return int[]
+	 */
+	public static function id_list( array $values ) {
+		$out = array();
+
+		foreach ( $values as $value ) {
+			if ( is_numeric( $value ) && (int) $value > 0 ) {
+				$out[ (int) $value ] = (int) $value;
+			}
+		}
+
+		return array_values( $out );
+	}
+
+	/**
 	 * `pre_count_users` callback on users.php for a user who does not see
-	 * administrators: core's own counting query with administrators left
-	 * out, run in its place, so the views show the counts of the users this
-	 * person can see, at no extra query.
+	 * administrators: the counts without administrators, in place of core's
+	 * counting query, so the views show the counts of the users this person
+	 * can see.
+	 *
+	 * They come from the census (census()), which also gives the list its
+	 * administrator IDs; when it cannot be taken, core's own counting query
+	 * with administrators left out runs instead, as before.
 	 *
 	 * The administrator count comes back as zero, so core leaves the
 	 * Administrator view out on its own; drop_admin_view() covers sites
@@ -827,13 +1370,13 @@ class BLT_Toolkit_Guard {
 			return $result;
 		}
 
-		$select = array();
+		if ( (int) get_current_blog_id() === (int) $site_id ) {
+			$census = self::census();
 
-		foreach ( $names as $name ) {
-			$select[] = $wpdb->prepare( 'COUNT(NULLIF(`meta_value` LIKE %s, false))', '%' . $wpdb->esc_like( '"' . $name . '"' ) . '%' );
+			if ( null !== $census ) {
+				return $census['counts'];
+			}
 		}
-
-		$select[] = "COUNT(NULLIF(`meta_value` = 'a:0:{}', false))";
 
 		$where = $wpdb->prepare(
 			'meta_key = %s AND meta_value NOT LIKE %s',
@@ -842,7 +1385,7 @@ class BLT_Toolkit_Guard {
 		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Replaces core's count_users() query on users.php; every value was prepared above, as core does.
-		$row = $wpdb->get_row( 'SELECT ' . implode( ', ', $select ) . ", COUNT(*) FROM {$wpdb->usermeta} INNER JOIN {$wpdb->users} ON user_id = ID WHERE {$where}", ARRAY_N );
+		$row = $wpdb->get_row( 'SELECT ' . self::count_columns( $names ) . ", COUNT(*) FROM {$wpdb->usermeta} INNER JOIN {$wpdb->users} ON user_id = ID WHERE {$where}", ARRAY_N );
 
 		if ( ! is_array( $row ) ) {
 			return null;
@@ -956,6 +1499,7 @@ class BLT_Toolkit_Guard {
 				'grants'         => $changes['grants'],
 				'denies'         => $changes['denies'],
 				'role_names'     => self::role_names(),
+				'restrictions'   => self::restrictions(),
 			)
 		);
 
@@ -1021,6 +1565,89 @@ class BLT_Toolkit_Guard {
 				'removes'         => $changes['removes'],
 				'target_denied'   => $denied,
 				'role_names'      => self::role_names(),
+				'restrictions'    => $compare ? self::restrictions() : array(),
+			)
+		);
+
+		return null === $violation ? true : self::error( $violation );
+	}
+
+	/**
+	 * Whether the actor may leave a user holding exactly these roles (SEC-2,
+	 * SEC-3): the check every path that adds, removes, swaps or replaces a
+	 * user's roles calls with the roles the user will hold afterwards (US-1,
+	 * US-3, RO-41).
+	 *
+	 * Checking only the roles involved is not enough. A role can store a
+	 * deny (`install_plugins => false`) that overrides another role's grant,
+	 * so taking that role away, or replacing it, gives the user the
+	 * capability back: lifting a deny is a grant, as check_role_change() and
+	 * can_change_user_caps() already count it. For a non-admin, the user's
+	 * effective capabilities after the change (the new roles in order, then
+	 * the user's own capabilities, as `WP_User::get_role_caps()` merges
+	 * them) must be a subset of the actor's. That also covers SEC-2 for what
+	 * the user holds already. A toolkit admin may make any change.
+	 *
+	 * SEC-1 and SEC-5 stay with the caller (can_act_on_user() and the
+	 * own-roles check), which also decides `promote_user`.
+	 *
+	 * @param WP_User  $actor     Who is acting.
+	 * @param WP_User  $target    Whose roles change.
+	 * @param string[] $new_roles The roles the user will hold, in order.
+	 * @param array    $role_caps Role ID => capabilities for roles that are
+	 *                            not stored yet (a dry run's new role).
+	 * @return true|WP_Error `blt_toolkit_no_actor`, `blt_toolkit_no_user` or
+	 *                       `blt_toolkit_roles_exceed_actor` (SEC-3, data
+	 *                       `caps` lists what the user would gain that the
+	 *                       actor lacks).
+	 */
+	public static function can_change_user_roles( WP_User $actor, WP_User $target, array $new_roles, array $role_caps = array() ) {
+		if ( ! $target->exists() ) {
+			return self::error( self::violation( 'blt_toolkit_no_user', '' ) );
+		}
+
+		if ( ! $actor->exists() ) {
+			return self::error( self::violation( 'blt_toolkit_no_actor', '' ) );
+		}
+
+		if ( self::is_toolkit_admin( $actor ) ) {
+			return true;
+		}
+
+		$wp_roles = wp_roles();
+		$roles    = array();
+		$own      = array();
+
+		foreach ( $new_roles as $role ) {
+			$role = (string) $role;
+
+			if ( isset( $role_caps[ $role ] ) && is_array( $role_caps[ $role ] ) ) {
+				$roles[ $role ] = $role_caps[ $role ];
+				continue;
+			}
+
+			$obj            = $wp_roles->get_role( $role );
+			$roles[ $role ] = $obj instanceof WP_Role && is_array( $obj->capabilities ) ? $obj->capabilities : array();
+		}
+
+		foreach ( is_array( $target->caps ) ? $target->caps : array() as $cap => $value ) {
+			if ( ! $wp_roles->is_role( (string) $cap ) ) {
+				$own[ (string) $cap ] = $value;
+			}
+		}
+
+		$key = md5( (string) wp_json_encode( array( $roles, $own ) ) );
+
+		if ( ! isset( self::$after_cache[ $key ] ) ) {
+			self::$after_cache[ $key ] = BLT_Toolkit_Superset::normalize( self::merge_caps( $roles, $own ), self::role_names() );
+		}
+
+		$violation = self::user_roles_violation(
+			array(
+				'actor_is_admin' => false,
+				'actor_caps'     => self::effective_caps( $actor ),
+				'after_caps'     => self::$after_cache[ $key ],
+				'restrictions'   => self::restrictions(),
 			)
 		);
 
@@ -1105,6 +1732,7 @@ class BLT_Toolkit_Guard {
 			'loses_edit_roles' => false,
 			'other_admin'      => false,
 			'confirmed'        => (bool) $confirmed,
+			'restrictions'     => $is_admin ? array() : self::restrictions(),
 		);
 
 		// SEC-1 for denies: only asked when a non-admin denies something, so
@@ -1459,9 +2087,15 @@ class BLT_Toolkit_Guard {
 		}
 
 		// Taking away a deny gives the capability back when a role grants it.
+		// Taking away a read-only marker the user holds lets them edit again
+		// (RS-14): a lift.
+		$lifts = array();
+
 		foreach ( $removes as $cap ) {
 			if ( isset( $denied[ $cap ] ) ) {
 				$grants[] = $cap;
+			} elseif ( BLT_Toolkit_Superset::is_marker( $cap ) ) {
+				$lifts[] = $cap;
 			}
 		}
 
@@ -1471,9 +2105,49 @@ class BLT_Toolkit_Guard {
 				'actor_caps'     => isset( $facts['actor_caps'] ) ? (array) $facts['actor_caps'] : array(),
 				'grants'         => $grants,
 				'denies'         => $denies,
+				'lifts'          => $lifts,
 				'role_names'     => isset( $facts['role_names'] ) ? (array) $facts['role_names'] : array(),
+				'restrictions'   => isset( $facts['restrictions'] ) ? (array) $facts['restrictions'] : array(),
 			)
 		);
+	}
+
+	/**
+	 * SEC-2 and SEC-3 for a change of a user's roles, from plain facts (see
+	 * can_change_user_roles()): everything the user can do afterwards must
+	 * be something the actor can do. The deprecated user levels are left
+	 * out, as for SEC-4's assignable roles (BLT_Toolkit_Superset::missing()).
+	 *
+	 * A read-only marker (RS-14) is not a capability to compare. Losing one
+	 * while keeping the type's `edit_posts` lets the user edit again, which
+	 * BLT_Toolkit_Superset::missing() already counts: the actor needs that
+	 * string (it is in the user's set afterwards) and, with the
+	 * restrictions, must not be held read-only on the type themselves.
+	 *
+	 * @param array $facts {
+	 *     @type bool  $actor_is_admin Whether the actor is a toolkit admin.
+	 *     @type array $actor_caps     The actor's effective capabilities (cap => true).
+	 *     @type array $after_caps     The user's effective capabilities after the change (cap => true).
+	 *     @type array $restrictions   Optional. See BLT_Toolkit_Superset::marker_strings().
+	 * }
+	 * @return array|null Null when allowed; otherwise array( 'code', 'rule', 'caps' ).
+	 */
+	public static function user_roles_violation( array $facts ) {
+		if ( ! empty( $facts['actor_is_admin'] ) ) {
+			return null;
+		}
+
+		$missing = BLT_Toolkit_Superset::missing(
+			isset( $facts['actor_caps'] ) ? (array) $facts['actor_caps'] : array(),
+			isset( $facts['after_caps'] ) ? (array) $facts['after_caps'] : array(),
+			isset( $facts['restrictions'] ) ? (array) $facts['restrictions'] : array()
+		);
+
+		if ( array() !== $missing ) {
+			return self::violation( 'blt_toolkit_roles_exceed_actor', 'SEC-3', $missing );
+		}
+
+		return null;
 	}
 
 	/**
@@ -1486,12 +2160,20 @@ class BLT_Toolkit_Guard {
 	 * (`level_0` to `level_10`) count here, although SEC-2 and SEC-4
 	 * comparisons leave them out (BLT_Toolkit_Superset::missing_grants()).
 	 *
+	 * Read-only markers (RS-14) work the other way round: granting one only
+	 * narrows access, so it needs nothing held, while denying one, or taking
+	 * one away (`lifts`), lets people edit the type again, so the actor must
+	 * be able to edit it themselves (BLT_Toolkit_Superset::lift_needs(),
+	 * `blt_toolkit_lift_exceeds_actor`).
+	 *
 	 * @param array $facts {
 	 *     @type bool     $actor_is_admin Whether the actor is a toolkit admin.
 	 *     @type array    $actor_caps     The actor's effective capabilities (cap => true).
 	 *     @type string[] $grants         Capabilities being granted.
 	 *     @type string[] $denies         Capabilities being set to false (optional).
+	 *     @type string[] $lifts          Read-only markers being taken away (optional).
 	 *     @type string[] $role_names     The site's role IDs.
+	 *     @type array    $restrictions   Optional. See BLT_Toolkit_Superset::marker_strings().
 	 * }
 	 * @return array|null Null when allowed; otherwise array( 'code', 'rule', 'caps' ).
 	 */
@@ -1526,6 +2208,20 @@ class BLT_Toolkit_Guard {
 
 		if ( array() !== $missing ) {
 			return self::violation( 'blt_toolkit_deny_exceeds_actor', 'SEC-3', $missing );
+		}
+
+		// RS-14: denying a marker lifts it as surely as removing it.
+		$restrictions = isset( $facts['restrictions'] ) ? (array) $facts['restrictions'] : array();
+		$need         = array();
+
+		foreach ( self::clean_list( array_merge( isset( $facts['lifts'] ) ? (array) $facts['lifts'] : array(), $denies ) ) as $cap ) {
+			if ( BLT_Toolkit_Superset::is_marker( $cap ) ) {
+				$need = array_merge( $need, BLT_Toolkit_Superset::lift_needs( $actor_caps, $cap, $restrictions ) );
+			}
+		}
+
+		if ( array() !== $need ) {
+			return self::violation( 'blt_toolkit_lift_exceeds_actor', 'SEC-3', self::clean_list( $need ) );
 		}
 
 		return null;
@@ -1587,8 +2283,11 @@ class BLT_Toolkit_Guard {
 
 			$actor_caps = isset( $facts['actor_caps'] ) ? (array) $facts['actor_caps'] : array();
 
+			$restrictions = isset( $facts['restrictions'] ) ? (array) $facts['restrictions'] : array();
+			$role_caps    = isset( $facts['role_caps'] ) ? (array) $facts['role_caps'] : array();
+
 			// SEC-2: never edit a role more powerful than yourself.
-			$missing = BLT_Toolkit_Superset::missing( $actor_caps, isset( $facts['role_caps'] ) ? (array) $facts['role_caps'] : array() );
+			$missing = BLT_Toolkit_Superset::missing( $actor_caps, $role_caps, $restrictions );
 
 			if ( array() !== $missing ) {
 				return self::violation( 'blt_toolkit_role_exceeds_actor', 'SEC-2', $missing );
@@ -1597,18 +2296,26 @@ class BLT_Toolkit_Guard {
 			$denies = isset( $facts['denies'] ) ? self::clean_list( $facts['denies'] ) : array();
 
 			// SEC-1: a deny in a role an administrator also holds overrides
-			// what `administrator` grants them.
-			if ( array() !== $denies && ! empty( $facts['admin_holds_role'] ) ) {
-				return self::violation( 'blt_toolkit_admin_holds_role', 'SEC-1', $denies );
+			// what `administrator` grants them. Denying a read-only marker
+			// takes nothing away from anyone (RS-14).
+			$taking = array_values( array_filter( $denies, array( 'BLT_Toolkit_Guard', 'takes_access' ) ) );
+
+			if ( array() !== $taking && ! empty( $facts['admin_holds_role'] ) ) {
+				return self::violation( 'blt_toolkit_admin_holds_role', 'SEC-1', $taking );
 			}
 
 			// SEC-3. Removing a capability the role denies gives it back to
 			// every holder who has it through another role: a grant.
+			// Removing a read-only marker the role grants lets its holders
+			// edit again (RS-14): a lift.
 			$denied = isset( $facts['role_denied'] ) ? array_flip( self::clean_list( $facts['role_denied'] ) ) : array();
+			$lifts  = array();
 
 			foreach ( isset( $facts['removes'] ) ? self::clean_list( $facts['removes'] ) : array() as $cap ) {
 				if ( isset( $denied[ $cap ] ) ) {
 					$grants[] = $cap;
+				} elseif ( BLT_Toolkit_Superset::is_marker( $cap ) && ! empty( $role_caps[ $cap ] ) ) {
+					$lifts[] = $cap;
 				}
 			}
 
@@ -1618,7 +2325,9 @@ class BLT_Toolkit_Guard {
 					'actor_caps'     => $actor_caps,
 					'grants'         => $grants,
 					'denies'         => $denies,
+					'lifts'          => $lifts,
 					'role_names'     => isset( $facts['role_names'] ) ? (array) $facts['role_names'] : array(),
+					'restrictions'   => $restrictions,
 				)
 			);
 
@@ -1658,6 +2367,17 @@ class BLT_Toolkit_Guard {
 	}
 
 	/**
+	 * Whether denying a capability takes access away from its holders:
+	 * every capability but a read-only marker (RS-14). Pure.
+	 *
+	 * @param string $cap Capability name.
+	 * @return bool
+	 */
+	public static function takes_access( $cap ) {
+		return ! BLT_Toolkit_Superset::is_marker( $cap );
+	}
+
+	/**
 	 * The WP_Error for a violation, with a message a person can act on.
 	 *
 	 * @param array $violation Result of one of the *_violation() methods.
@@ -1694,8 +2414,16 @@ class BLT_Toolkit_Guard {
 				/* translators: %s: comma-separated capability names. */
 				$message = sprintf( __( 'You cannot deny capabilities you do not have yourself (%s).', 'blt-toolkit' ), $list );
 				break;
+			case 'blt_toolkit_lift_exceeds_actor':
+				/* translators: %s: comma-separated capability names. */
+				$message = sprintf( __( 'Taking away read-only (View) access lets people edit that content again, so only someone who can edit it may do that. You would need: %s.', 'blt-toolkit' ), $list );
+				break;
 			case 'blt_toolkit_own_caps':
 				$message = __( 'You cannot change your own capabilities. Ask an administrator.', 'blt-toolkit' );
+				break;
+			case 'blt_toolkit_roles_exceed_actor':
+				/* translators: %s: comma-separated capability names. */
+				$message = sprintf( __( 'With these roles the user would have capabilities you do not have yourself (%s), so you cannot make this change. A role that denies a capability another role grants takes it away; removing it gives it back.', 'blt-toolkit' ), $list );
 				break;
 			case 'blt_toolkit_admin_holds_role':
 				$message = __( 'An administrator also holds this role, so only an administrator can deny capabilities in it.', 'blt-toolkit' );
@@ -1896,12 +2624,30 @@ class BLT_Toolkit_Guard {
 			error_log( 'BLT Toolkit: recovery mode could not store a role snapshot first; it restored the administrator role anyway.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- A failed snapshot must be visible to the site owner's logs.
 		}
 
+		// The role store's hooks, context `recovery` (RO-4). Recovery keeps its
+		// own path, because it must go ahead when the snapshot fails.
+		$changes = array(
+			self::ADMIN_ROLE => array(
+				'add'     => array_fill_keys( $missing, true ),
+				'remove'  => array(),
+				'created' => $recreate,
+				'deleted' => false,
+				'name'    => null,
+			),
+		);
+
+		/** This action is documented in includes/class-blt-toolkit-role-store.php */
+		do_action( 'blt_toolkit_before_roles_save', $changes, 'recovery' );
+
 		// One write for the whole batch (the RO-3 technique).
 		self::grant_in_memory( $wp_roles, $missing, $recreate );
 
 		update_option( $wp_roles->role_key, $wp_roles->roles );
 
 		self::log_recovery( $missing, $recreate, $snapshot_id );
+
+		/** This action is documented in includes/class-blt-toolkit-role-store.php */
+		do_action( 'blt_toolkit_after_roles_save', $changes, 'recovery', max( 0, (int) $snapshot_id ) );
 
 		return $missing;
 	}

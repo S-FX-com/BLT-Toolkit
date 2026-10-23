@@ -40,6 +40,22 @@ class BLT_Toolkit_Plugin {
 	private static $modules = array();
 
 	/**
+	 * Display names read through display_name(), keyed by "viewer ID|user
+	 * ID|context": `raw` (the stored value) and `name`.
+	 *
+	 * @var array<string,array{raw:string,name:string}>
+	 */
+	private static $names = array();
+
+	/**
+	 * The display name being read while the `user_display_name` filters run
+	 * on users.php: user ID, context and stored value (note_display_name_read()).
+	 *
+	 * @var array{0:int,1:string,2:string}|null
+	 */
+	private static $reading = null;
+
+	/**
 	 * Boot. Called on `plugins_loaded` priority 1.
 	 *
 	 * On multisite nothing boots (SPEC D1): activation is refused there, so
@@ -78,6 +94,34 @@ class BLT_Toolkit_Plugin {
 		BLT_Toolkit_Jobs::register();
 		BLT_Toolkit_Rest::register();
 
+		// - The legacy importers' `legacy_uc_log` job type (SPEC 15),
+		//   registered on `init` 5: Tools imports work with every module off.
+		BLT_Toolkit_Legacy::register();
+
+		// - Separate permissions (RS-30 to RS-34): isolated types are
+		//   re-registered by the filter the main file adds, whatever the
+		//   Roles module's state, so their verification at `init`
+		//   PHP_INT_MAX (RS-33), the notice and the Plugins-row warning
+		//   (RS-34) load with it. Only the small core class loads on every
+		//   request; the flows load in admin when used (SEC-9).
+		// - Read-only enforcement (RS-14): one map_meta_cap closure that
+		//   returns at once outside edit_post, delete_post and publish_post.
+		//   A View-level marker granted while the module ran keeps its
+		//   meaning with the module off.
+		BLT_Toolkit_Isolation_Core::register();
+		BLT_Toolkit_Readonly::register();
+
+		// - Privacy (SPEC 14.5: the log's exporter and eraser, the policy
+		//   text with SW-24's cookies) and the Site Health tests (GEN-1,
+		//   RS-33, SEC-14, LOG-3, the tables). Hooks only, and only where
+		//   they are used: wp-admin (the privacy tools run through
+		//   admin-ajax.php), WP-Cron (Site Health's weekly check) and WP-CLI.
+		//   A visitor's page view does not even load the classes.
+		if ( is_admin() || wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+			BLT_Toolkit_Privacy::register();
+			BLT_Toolkit_Site_Health::register();
+		}
+
 		// SPEC 4.2, step 3, on `init` in this order: the idempotent schema
 		// upgrade (priority 0; also covers a plugin update by file copy,
 		// which never fires the activation hook), the switch request handling
@@ -101,9 +145,113 @@ class BLT_Toolkit_Plugin {
 			self::$modules[ $key ] = $module;
 		}
 
+		// SW-10 holds with the Switch module off too (setting, constant or
+		// GEN-1 conflict): protection never depends on a module (SPEC 4.1).
+		// Switch cookies left in a browser from before the module went off are
+		// ended by the next sign-in or sign-out, so nobody who later signs in
+		// on that browser is offered the original user's account once the
+		// module is back. Only these hooks are added; the cookie class loads
+		// only when such a cookie is present.
+		if ( ! isset( self::$modules['switch'] ) ) {
+			add_action( 'wp_login', array( __CLASS__, 'end_switch' ), 10, 0 );
+			add_action( 'wp_logout', array( __CLASS__, 'end_switch' ), 10, 0 );
+			add_action( 'blt_m365_sso_user_authenticated', array( __CLASS__, 'end_switch' ), 10, 0 );
+		}
+
 		// Menu, screens and the PRG router (admin/class-blt-toolkit-admin.php).
 		if ( is_admin() && class_exists( 'BLT_Toolkit_Admin' ) ) {
 			BLT_Toolkit_Admin::instance()->init();
+		}
+
+		// The Users list row actions name each user (display_name()), and
+		// admin screens read a few options that are not autoloaded: one
+		// query for all of them, ahead of the update token on `init` 1.
+		if ( is_admin() ) {
+			add_action( 'load-users.php', array( __CLASS__, 'load_users_screen' ) );
+			add_action( 'init', array( 'BLT_Toolkit_Settings', 'prime_admin_options' ), 0 );
+		}
+	}
+
+	/**
+	 * `load-users.php` callback: note each display name core reads for the
+	 * list's rows (core names the user in its own "View posts by" link before
+	 * the row actions run), so display_name() reuses it instead of running
+	 * the display filters again for the same answer.
+	 *
+	 * @return void
+	 */
+	public static function load_users_screen() {
+		add_filter( 'user_display_name', array( __CLASS__, 'note_display_name_read' ), PHP_INT_MIN, 3 );
+		add_filter( 'user_display_name', array( __CLASS__, 'note_display_name' ), PHP_INT_MAX, 3 );
+	}
+
+	/**
+	 * `user_display_name`, first in line on users.php: the stored value a
+	 * read starts from. Returns it unchanged.
+	 *
+	 * @param mixed  $value   The stored display name.
+	 * @param int    $user_id User ID.
+	 * @param string $context Context (`display` on the list).
+	 * @return mixed
+	 */
+	public static function note_display_name_read( $value, $user_id = 0, $context = '' ) {
+		self::$reading = is_scalar( $value ) ? array( (int) $user_id, (string) $context, (string) $value ) : null;
+
+		return $value;
+	}
+
+	/**
+	 * `user_display_name`, last in line on users.php: remember the result of
+	 * the read note_display_name_read() saw start, for display_name(). Any
+	 * other filter that read a display name in between leaves nothing
+	 * remembered. Returns the value unchanged.
+	 *
+	 * @param mixed  $value   The filtered display name.
+	 * @param int    $user_id User ID.
+	 * @param string $context Context.
+	 * @return mixed
+	 */
+	public static function note_display_name( $value, $user_id = 0, $context = '' ) {
+		$reading       = self::$reading;
+		self::$reading = null;
+
+		if ( null !== $reading && is_scalar( $value ) && (int) $user_id === $reading[0] && (string) $context === $reading[1] ) {
+			self::remember_name( get_current_user_id() . '|' . (int) $user_id . '|' . (string) $context, $reading[2], (string) $value );
+		}
+
+		return $value;
+	}
+
+	/**
+	 * End switching in this browser while the Switch module is off (SW-10):
+	 * destroy the sessions the switch cookies could return to and clear
+	 * them, as the module does when it runs. Hooked on `wp_login`,
+	 * `wp_logout` and BLT M365 WP SSO's sign-in only when the module did not
+	 * boot. Costs one scan of the cookie names when no switch cookie is
+	 * present.
+	 *
+	 * @return void
+	 */
+	public static function end_switch() {
+		$names = array();
+
+		foreach ( array( 'BLT_TOOLKIT_SWITCH_COOKIE', 'BLT_TOOLKIT_SWITCH_SECURE_COOKIE', 'BLT_TOOLKIT_SWITCH_OLDUSER_COOKIE' ) as $constant ) {
+			if ( defined( $constant ) && is_string( constant( $constant ) ) ) {
+				$names[] = constant( $constant );
+			}
+		}
+
+		$found = false;
+
+		foreach ( array_keys( $_COOKIE ) as $name ) {
+			if ( 0 === strpos( (string) $name, 'wordpress_blt_sw_' ) || in_array( (string) $name, $names, true ) ) {
+				$found = true;
+				break;
+			}
+		}
+
+		if ( $found && class_exists( 'BLT_Toolkit_Switch_Cookies' ) ) {
+			BLT_Toolkit_Switch_Cookies::end_sessions();
 		}
 	}
 
@@ -231,6 +379,58 @@ class BLT_Toolkit_Plugin {
 		$key = (string) $key;
 
 		return isset( self::$modules[ $key ] ) ? self::$modules[ $key ] : null;
+	}
+
+	/**
+	 * A user's display name exactly as `$user->display_name` gives it, worked
+	 * out once per request for each user (SEC-9).
+	 *
+	 * In wp-admin, core runs `sanitize_text_field()`, `wp_kses_data()` and
+	 * `_wp_specialchars()` over the name on every read from a user object in
+	 * the `display` context, which is the context of the Users list rows
+	 * (8 to 12 µs a read). The Switch To and Change username row actions both
+	 * name the user in their accessible labels, so each row paid for it
+	 * twice, and core reads it once more for its own "View posts by" link
+	 * (load_users_screen()). The answer is reused only for the same viewer,
+	 * user, context and stored name, which is everything those filters are
+	 * given.
+	 *
+	 * @param WP_User $user The user.
+	 * @return string
+	 */
+	public static function display_name( WP_User $user ) {
+		$raw = isset( $user->data->display_name ) && is_scalar( $user->data->display_name ) ? (string) $user->data->display_name : '';
+		$key = get_current_user_id() . '|' . (int) $user->ID . '|' . (string) $user->filter;
+
+		if ( isset( self::$names[ $key ] ) && self::$names[ $key ]['raw'] === $raw ) {
+			return self::$names[ $key ]['name'];
+		}
+
+		$name = (string) $user->display_name;
+
+		self::remember_name( $key, $raw, $name );
+
+		return $name;
+	}
+
+	/**
+	 * Store a display name for display_name().
+	 *
+	 * @param string $key  "viewer ID|user ID|context".
+	 * @param string $raw  The stored value it was worked out from.
+	 * @param string $name The display name.
+	 * @return void
+	 */
+	private static function remember_name( $key, $raw, $name ) {
+		// A list page has at most 999 rows; keep the memory bounded anyway.
+		if ( count( self::$names ) >= 1000 ) {
+			self::$names = array();
+		}
+
+		self::$names[ $key ] = array(
+			'raw'  => $raw,
+			'name' => $name,
+		);
 	}
 
 	/**

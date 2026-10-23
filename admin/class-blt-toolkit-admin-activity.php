@@ -591,32 +591,43 @@ class BLT_Toolkit_Admin_Activity {
 	 */
 	public function action_label( $key ) {
 		$labels = array(
-			'switched_to'          => __( 'Switched to a user', 'blt-toolkit' ),
-			'switched_back'        => __( 'Switched back', 'blt-toolkit' ),
-			'switched_off'         => __( 'Switched off', 'blt-toolkit' ),
-			'username_changed'     => __( 'Username changed', 'blt-toolkit' ),
-			'bulk_rename'          => __( 'Bulk rename', 'blt-toolkit' ),
-			'role_saved'           => __( 'Role saved', 'blt-toolkit' ),
-			'roles_saved'          => __( 'Roles saved', 'blt-toolkit' ),
-			'role_created'         => __( 'Role created', 'blt-toolkit' ),
-			'role_deleted'         => __( 'Role deleted', 'blt-toolkit' ),
-			'role_renamed'         => __( 'Role renamed', 'blt-toolkit' ),
-			'role_copied'          => __( 'Role copied', 'blt-toolkit' ),
-			'role_merged'          => __( 'Roles merged', 'blt-toolkit' ),
-			'roles_reset'          => __( 'Roles reset', 'blt-toolkit' ),
-			'roles_imported'       => __( 'Roles imported', 'blt-toolkit' ),
-			'snapshot_restored'    => __( 'Snapshot restored', 'blt-toolkit' ),
-			'capability_added'     => __( 'Capability added', 'blt-toolkit' ),
-			'capability_deleted'   => __( 'Capability deleted', 'blt-toolkit' ),
-			'user_roles_changed'   => __( 'User roles changed', 'blt-toolkit' ),
-			'user_caps_changed'    => __( 'User capabilities changed', 'blt-toolkit' ),
-			'post_type_isolated'   => __( 'Separate permissions on', 'blt-toolkit' ),
-			'post_type_shared'     => __( 'Separate permissions off', 'blt-toolkit' ),
-			'administrator_synced' => __( 'Administrator synced', 'blt-toolkit' ),
-			'recovery'             => __( 'Recovery mode', 'blt-toolkit' ),
-			'log_exported'         => __( 'Activity exported', 'blt-toolkit' ),
-			'log_pruned'           => __( 'Old entries removed', 'blt-toolkit' ),
-			'legacy_imported'      => __( 'Imported from another plugin', 'blt-toolkit' ),
+			'switched_to'           => __( 'Switched to a user', 'blt-toolkit' ),
+			'switched_back'         => __( 'Switched back', 'blt-toolkit' ),
+			'switched_off'          => __( 'Switched off', 'blt-toolkit' ),
+			'switch_ended'          => __( 'Switched session ended', 'blt-toolkit' ),
+			'username_changed'      => __( 'Username changed', 'blt-toolkit' ),
+			'password_locked'       => __( 'Username change paused', 'blt-toolkit' ),
+			'bulk_rename'           => __( 'Bulk rename', 'blt-toolkit' ),
+			'bulk_rename_cancelled' => __( 'Bulk rename cancelled', 'blt-toolkit' ),
+			'bulk_rename_retried'   => __( 'Bulk rename retried', 'blt-toolkit' ),
+			'role_saved'            => __( 'Role saved', 'blt-toolkit' ),
+			'roles_saved'           => __( 'Roles saved', 'blt-toolkit' ),
+			'role_created'          => __( 'Role created', 'blt-toolkit' ),
+			'role_deleted'          => __( 'Role deleted', 'blt-toolkit' ),
+			'role_renamed'          => __( 'Role renamed', 'blt-toolkit' ),
+			'role_copied'           => __( 'Role copied', 'blt-toolkit' ),
+			'role_merged'           => __( 'Roles merged', 'blt-toolkit' ),
+			'roles_reset'           => __( 'Roles reset', 'blt-toolkit' ),
+			'roles_imported'        => __( 'Roles imported', 'blt-toolkit' ),
+			'roles_exported'        => __( 'Roles exported', 'blt-toolkit' ),
+			'snapshot_restored'     => __( 'Snapshot restored', 'blt-toolkit' ),
+			'capability_added'      => __( 'Capability added', 'blt-toolkit' ),
+			'capability_deleted'    => __( 'Capability deleted', 'blt-toolkit' ),
+			'user_roles_changed'    => __( 'User roles changed', 'blt-toolkit' ),
+			'user_caps_changed'     => __( 'User capabilities changed', 'blt-toolkit' ),
+			'role_details_saved'    => __( 'Role details saved', 'blt-toolkit' ),
+			'reassign_cancelled'    => __( 'Role reassignment cancelled', 'blt-toolkit' ),
+			'reassign_retried'      => __( 'Role reassignment retried', 'blt-toolkit' ),
+			'post_type_isolated'    => __( 'Separate permissions on', 'blt-toolkit' ),
+			'post_type_shared'      => __( 'Separate permissions off', 'blt-toolkit' ),
+			'administrator_synced'  => __( 'Administrator synced', 'blt-toolkit' ),
+			'recovery'              => __( 'Recovery mode', 'blt-toolkit' ),
+			'log_exported'          => __( 'Activity exported', 'blt-toolkit' ),
+			'log_pruned'            => __( 'Old entries removed', 'blt-toolkit' ),
+			'legacy_imported'       => __( 'Imported from another plugin', 'blt-toolkit' ),
+			'personal_data_erased'  => __( 'Personal data erased', 'blt-toolkit' ),
+			'log_failure_cleared'   => __( 'Log warning cleared', 'blt-toolkit' ),
+			'tables_repaired'       => __( 'Tables created again', 'blt-toolkit' ),
 		);
 
 		return isset( $labels[ $key ] ) ? $labels[ $key ] : self::humanize( $key );
@@ -828,9 +839,10 @@ class BLT_Toolkit_Admin_Activity {
 			}
 
 			// A snapshot's reason reads as its label (`baseline` is "Baseline,
-			// before BLT Toolkit changed anything"); other text stays as it is.
+			// before BLT Toolkit changed anything"), as does why a switched
+			// session ended; other text stays as it is.
 			if ( 'reason' === $key && is_string( $value ) ) {
-				$value = BLT_Toolkit_Snapshots::reason_label( $value );
+				$value = self::reason_label( $value );
 			}
 
 			$items .= '<dt>' . esc_html( $label ) . '</dt><dd>' . $this->value_html( $value, $depth + 1 ) . '</dd>';
@@ -901,6 +913,25 @@ class BLT_Toolkit_Admin_Activity {
 	}
 
 	/**
+	 * A `reason` value as words: why a switched session ended
+	 * (`switch_ended` rows), else a snapshot's reason
+	 * (BLT_Toolkit_Snapshots::reason_label()), else the value itself.
+	 *
+	 * @param string $reason Reason code.
+	 * @return string
+	 */
+	private static function reason_label( $reason ) {
+		switch ( (string) $reason ) {
+			case 'signed_in':
+				return __( 'Someone signed in on the same browser', 'blt-toolkit' );
+			case 'origin_ended':
+				return __( 'The session it was switched from had ended', 'blt-toolkit' );
+		}
+
+		return BLT_Toolkit_Snapshots::reason_label( $reason );
+	}
+
+	/**
 	 * A details key as a label.
 	 *
 	 * @param int|string $key Key.
@@ -925,6 +956,14 @@ class BLT_Toolkit_Admin_Activity {
 			'bytes'             => __( 'Size in bytes', 'blt-toolkit' ),
 			'keys'              => __( 'Recorded fields', 'blt-toolkit' ),
 			'granted'           => __( 'Capabilities granted', 'blt-toolkit' ),
+			'denied'            => __( 'Capabilities denied', 'blt-toolkit' ),
+			'inherited'         => __( 'Back to what the roles give', 'blt-toolkit' ),
+			'added'             => __( 'Added', 'blt-toolkit' ),
+			'removed'           => __( 'Removed', 'blt-toolkit' ),
+			'unchanged'         => __( 'Unchanged', 'blt-toolkit' ),
+			'skipped'           => __( 'Skipped', 'blt-toolkit' ),
+			'source'            => __( 'Source', 'blt-toolkit' ),
+			'context'           => __( 'Where', 'blt-toolkit' ),
 			'role_recreated'    => __( 'Role created again', 'blt-toolkit' ),
 			'snapshot_failed'   => __( 'Snapshot could not be saved', 'blt-toolkit' ),
 			'roles_in_code'     => __( 'Roles defined in code', 'blt-toolkit' ),

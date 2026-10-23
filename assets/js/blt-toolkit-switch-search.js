@@ -14,7 +14,9 @@
  *   switches to the highlighted user, Escape closes the list (and, when it
  *   is already closed, lets the toolbar close its menu);
  * - Enter with nothing highlighted submits the form, as without JavaScript;
- * - a polite live region says how many users were found.
+ * - a polite live region says how many users were found;
+ * - the "Switch to…" menu closes once keyboard focus leaves it, so it never
+ *   covers what focus reaches next on the page (WCAG 2.4.11).
  *
  * Settings and translated strings come from window.bltToolkit.switchSearch.
  * Every value from the server is put on the page with textContent or as an
@@ -367,6 +369,52 @@
 	}
 
 	/**
+	 * Close the toolbar menu that holds the field once keyboard focus has
+	 * left it (WCAG 2.4.11, Focus Not Obscured). Core's admin-bar.js opens
+	 * a menu with Enter by adding the `hover` class and removes it only on
+	 * Escape or on mouse out, so after Tab moves on the open menu would
+	 * cover the controls focus reaches on the page below.
+	 *
+	 * The menu stays open while focus moves within it, and while the pointer
+	 * is over it (core's hover intent closes it when the pointer leaves).
+	 *
+	 * @param {HTMLElement} input The search field.
+	 */
+	function closeMenuOnFocusOut( input ) {
+		var item = 'function' === typeof input.closest ? input.closest( 'li.menupop' ) : null;
+
+		if ( ! item ) {
+			return;
+		}
+
+		item.addEventListener( 'focusout', function ( event ) {
+			var next = event.relatedTarget;
+			var toggle;
+
+			if ( next && item.contains( next ) ) {
+				return;
+			}
+
+			if ( 'function' === typeof item.matches && item.matches( ':hover' ) ) {
+				return;
+			}
+
+			if ( ! item.classList.contains( 'hover' ) ) {
+				return;
+			}
+
+			item.classList.remove( 'hover' );
+
+			// As core's removeClass() does for its own menus.
+			toggle = item.querySelector( 'a.ab-item' );
+
+			if ( toggle && toggle.hasAttribute( 'aria-expanded' ) ) {
+				toggle.setAttribute( 'aria-expanded', 'false' );
+			}
+		} );
+	}
+
+	/**
 	 * Find the field and its list, then set them up.
 	 */
 	function init() {
@@ -375,6 +423,7 @@
 
 		if ( input && listbox ) {
 			setUp( input, listbox );
+			closeMenuOnFocusOut( input );
 		}
 	}
 

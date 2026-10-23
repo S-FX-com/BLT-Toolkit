@@ -180,4 +180,68 @@ class Test_Switch_Cookies extends TestCase {
 		$this->assertFalse( BLT_Toolkit_Switch_Cookies::is_persistent( $now + HOUR_IN_SECONDS, $now, $life ) );
 		$this->assertFalse( BLT_Toolkit_Switch_Cookies::is_persistent( $now - 1, $now, $life ), 'An expired cookie.' );
 	}
+
+	/**
+	 * SW-6, SW-5: a full stack has no room, so switch off is refused like
+	 * switch to instead of pushing and dropping the oldest entry, the person
+	 * who signed in.
+	 *
+	 * @return void
+	 */
+	public function test_sw6_full_stack_is_refused_not_trimmed() {
+		$max   = BLT_Toolkit_Switch_Cookies::MAX_DEPTH;
+		$stack = array();
+
+		for ( $i = 1; $i < $max; $i++ ) {
+			$stack[] = 'user' . $i;
+		}
+
+		$this->assertFalse( BLT_Toolkit_Switch_Cookies::is_full( $stack ), 'One short of the limit still has room.' );
+
+		$stack[] = 'user' . $max;
+
+		$this->assertTrue( BLT_Toolkit_Switch_Cookies::is_full( $stack ) );
+		$this->assertFalse( BLT_Toolkit_Switch_Cookies::is_full( array() ) );
+	}
+
+	/**
+	 * SW-7, SW-3: the switch cookies persist only when the actor's sign-in
+	 * does; otherwise they are browser-session cookies (expires 0).
+	 *
+	 * @return void
+	 */
+	public function test_sw7_cookies_follow_remember_me() {
+		$this->assertSame( 1700172800, BLT_Toolkit_Switch_Cookies::expires( 1700172800, true ) );
+		$this->assertSame( 0, BLT_Toolkit_Switch_Cookies::expires( 1700172800, false ) );
+	}
+
+	/**
+	 * SW-3, SW-2: the stack lives on SITECOOKIEPATH, unless the login URL
+	 * (BLT Secure's custom slug on a home URL) is outside it; then on the
+	 * longest directory both share, so switching back there receives it.
+	 *
+	 * @return void
+	 */
+	public function test_sw3_stack_path_covers_the_login_url() {
+		// WordPress at the root: unchanged.
+		$this->assertSame( '/', BLT_Toolkit_Switch_Cookies::path_for( '/', '/wp-login.php' ) );
+		$this->assertSame( '/', BLT_Toolkit_Switch_Cookies::path_for( '/', '/team-login' ) );
+
+		// WordPress in its own directory, core login screen: SITECOOKIEPATH.
+		$this->assertSame( '/wp/', BLT_Toolkit_Switch_Cookies::path_for( '/wp/', '/wp/wp-login.php' ) );
+		$this->assertSame( '/wp/', BLT_Toolkit_Switch_Cookies::path_for( '/wp/', '' ), 'Unknown login path.' );
+
+		// A home-path slug outside it.
+		$this->assertSame( '/', BLT_Toolkit_Switch_Cookies::path_for( '/wp/', '/my-login/' ) );
+		$this->assertSame( '/', BLT_Toolkit_Switch_Cookies::path_for( '/wp/', '/team-login' ) );
+		$this->assertSame( '/blog/', BLT_Toolkit_Switch_Cookies::path_for( '/blog/wp/', '/blog/team-login' ) );
+		$this->assertSame( '/blog/', BLT_Toolkit_Switch_Cookies::path_for( '/blog/wp', '/blog/team-login/' ), 'SITECOOKIEPATH without its trailing slash.' );
+
+		// `/blog/` does not cover a login path of exactly `/blog`.
+		$this->assertSame( '/', BLT_Toolkit_Switch_Cookies::path_for( '/blog/wp/', '/blog' ) );
+		$this->assertSame( '/blog/', BLT_Toolkit_Switch_Cookies::path_for( '/blog/wp/', '/blog/' ) );
+
+		// A shared prefix that is not a whole directory does not count.
+		$this->assertSame( '/', BLT_Toolkit_Switch_Cookies::path_for( '/wp/', '/wp-login/' ) );
+	}
 }

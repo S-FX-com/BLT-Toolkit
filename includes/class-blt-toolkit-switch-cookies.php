@@ -19,7 +19,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * - `wordpress_blt_sw_{COOKIEHASH}` (constant `BLT_TOOLKIT_SWITCH_COOKIE`):
  *   a JSON array, oldest first, of `auth`-scheme cookies, one for each
- *   originating user, path `SITECOOKIEPATH`.
+ *   originating user, path `SITECOOKIEPATH`, or a shorter path when the
+ *   login URL lies outside it (stack_path(), SW-2).
  * - `wordpress_blt_sw_secure_{COOKIEHASH}` (`BLT_TOOLKIT_SWITCH_SECURE_COOKIE`):
  *   the same stack in the `secure_auth` scheme, used when the auth cookie is
  *   secure (core's `secure_auth_cookie`).
@@ -30,14 +31,17 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Every cookie is HttpOnly and SameSite=Lax; Secure follows core's
  * `secure_auth_cookie` and `secure_logged_in_cookie` filters, exactly as
- * wp_set_auth_cookie() decides it for the core cookies. The filter
- * `blt_toolkit_switch_send_cookies` (default true) stops the `setcookie()`
- * calls for tests and headless setups.
+ * wp_set_auth_cookie() decides it for the core cookies. The cookies persist
+ * (48 hours) only when the person's own sign-in did ("Remember Me", SW-7);
+ * otherwise they are browser-session cookies, and the 48-hour limit stays
+ * inside each value. The filter `blt_toolkit_switch_send_cookies` (default
+ * true) stops the `setcookie()` calls for tests and headless setups.
  *
- * The stack operations (parse(), encode(), push(), pop(), peek()) and
- * is_persistent() are pure: they take and return plain strings and numbers
- * and call no WordPress function, so tests/test-switch-cookies.php covers
- * them (SPEC 18). Reading and writing the cookies is kept apart from them.
+ * The stack operations (parse(), encode(), push(), pop(), peek(),
+ * is_full()), is_persistent(), expires() and path_for() are pure: they take
+ * and return plain strings and numbers and call no WordPress function, so
+ * tests/test-switch-cookies.php covers them (SPEC 18). Reading and writing
+ * the cookies is kept apart from them.
  *
  * A value written during a request is also what later reads in the same
  * request see (core does not update `$_COOKIE` when it sends a cookie), so
@@ -67,11 +71,28 @@ class BLT_Toolkit_Switch_Cookies {
 	const LIFETIME = 172800;
 
 	/**
-	 * Most entries the stack keeps. Deeper nesting drops the oldest, which
-	 * only means that switching back stops at the oldest one kept. It keeps
-	 * the cookie well under the 4 KB browsers accept.
+	 * Most entries the stack keeps, which keeps the cookie well under the
+	 * 4 KB browsers accept. Switching to someone and switching off are both
+	 * refused on a full stack (is_full()), so the oldest entry, the person
+	 * who signed in, is never dropped; push() still caps a stack it is
+	 * handed.
 	 */
 	const MAX_DEPTH = 10;
+
+	/**
+	 * Session key the Switch module writes on a switched session: who
+	 * switched in (SPEC 14.4, BLT_Toolkit_Switch::FROM_ID). Named here rather
+	 * than read from BLT_Toolkit_Switch, so end_sessions() never loads the
+	 * module's code while the module is off; tests/test-switch-session.php
+	 * checks the names match.
+	 */
+	const SESSION_FROM_ID = 'blt_switched_from_id';
+
+	/**
+	 * Log action for a switched session BLT Toolkit ended by itself
+	 * (record_end()).
+	 */
+	const ENDED_ACTION = 'switch_ended';
 
 	/**
 	 * Values written this request: kind => value ('' after a clear). Reads
@@ -186,6 +207,19 @@ class BLT_Toolkit_Switch_Cookies {
 	}
 
 	/**
+	 * Whether a stack has no room for another entry (MAX_DEPTH). Pure.
+	 *
+	 * Switch to and switch off check it before pushing (SW-4, SW-6), so a
+	 * full stack never loses its oldest entry, the person who signed in.
+	 *
+	 * @param string[] $stack Entries, oldest first.
+	 * @return bool
+	 */
+	public static function is_full( array $stack ) {
+		return count( $stack ) >= self::MAX_DEPTH;
+	}
+
+	/**
 	 * Whether a cookie expiring at `$expiration` is a "remember me" cookie
 	 * (SW-7): it outlives the default, non-persistent, lifetime. Pure.
 	 *
@@ -196,6 +230,66 @@ class BLT_Toolkit_Switch_Cookies {
 	 */
 	public static function is_persistent( $expiration, $now, $default_life ) {
 		return ( (int) $expiration - (int) $now ) > (int) $default_life;
+	}
+
+	/**
+	 * The `expires` attribute of a switch cookie (SW-3, SW-7). Pure.
+	 *
+	 * A persistent cookie expires with its value; otherwise it is a
+	 * browser-session cookie (0), so closing the browser ends the way back
+	 * just as it ends a sign-in made without "Remember Me". The value keeps
+	 * its own 48-hour expiration either way.
+	 *
+	 * @param int  $expiration The value's expiration (Unix time).
+	 * @param bool $persistent Whether the person's sign-in persists.
+	 * @return int
+	 */
+	public static function expires( $expiration, $persistent ) {
+		return $persistent ? (int) $expiration : 0;
+	}
+
+	/**
+	 * The path for the stack cookie (SW-3, SW-2). Pure.
+	 *
+	 * SW-3 scopes the stack to `SITECOOKIEPATH`. Switching back reads it on
+	 * the login URL (SW-2), and a login URL filter can move that outside
+	 * the WordPress directory: BLT Secure's custom slug is a home URL, so
+	 * with WordPress in its own directory (site `/wp/`, slug `/team-login`)
+	 * the browser would never send the stack there. When the login path is
+	 * not under `$site_path`, the path is the longest directory both share.
+	 *
+	 * @param string $site_path  `SITECOOKIEPATH`.
+	 * @param string $login_path The path of wp_login_url(), '' when unknown.
+	 * @return string A path that starts and ends with `/`.
+	 */
+	public static function path_for( $site_path, $login_path ) {
+		$site_path  = '/' . trim( (string) $site_path, '/' ) . '/';
+		$site_path  = '//' === $site_path ? '/' : $site_path;
+		$login_path = (string) $login_path;
+
+		if ( '' === $login_path || 0 === strpos( $login_path, $site_path ) ) {
+			return $site_path;
+		}
+
+		$site  = array_values( array_filter( explode( '/', $site_path ), 'strlen' ) );
+		$login = array_values( array_filter( explode( '/', $login_path ), 'strlen' ) );
+		$same  = array();
+
+		foreach ( $site as $i => $part ) {
+			if ( ! isset( $login[ $i ] ) || $login[ $i ] !== $part ) {
+				break;
+			}
+
+			$same[] = $part;
+		}
+
+		// A cookie path covers only what starts with it, so `/blog/` does not
+		// cover a login path of exactly `/blog`: step up until it does.
+		while ( array() !== $same && 0 !== strpos( $login_path, '/' . implode( '/', $same ) . '/' ) ) {
+			array_pop( $same );
+		}
+
+		return array() === $same ? '/' : '/' . implode( '/', $same ) . '/';
 	}
 
 	/**
@@ -267,6 +361,18 @@ class BLT_Toolkit_Switch_Cookies {
 	}
 
 	/**
+	 * The path the stack cookies are set on: `SITECOOKIEPATH`, or a shorter
+	 * one that also covers the login URL (path_for()).
+	 *
+	 * @return string
+	 */
+	public static function stack_path() {
+		$login = wp_parse_url( wp_login_url(), PHP_URL_PATH );
+
+		return self::path_for( SITECOOKIEPATH, is_string( $login ) ? $login : '' );
+	}
+
+	/**
 	 * The cookie scheme of a stack kind.
 	 *
 	 * @param string $kind AUTH or SECURE.
@@ -298,6 +404,17 @@ class BLT_Toolkit_Switch_Cookies {
 		}
 
 		return '';
+	}
+
+	/**
+	 * Whether a cookie's current value is the one the browser sent (nothing
+	 * was written to it this request).
+	 *
+	 * @param string $kind AUTH, SECURE or OLDUSER.
+	 * @return bool
+	 */
+	public static function from_browser( $kind ) {
+		return ! array_key_exists( $kind, self::$written );
 	}
 
 	/**
@@ -365,11 +482,12 @@ class BLT_Toolkit_Switch_Cookies {
 	 * Push a user onto the stack and make them the old user (SW-4 step 3,
 	 * SW-6).
 	 *
-	 * @param int    $user_id The originating user.
-	 * @param string $token   Their session token, which switching back returns to.
+	 * @param int    $user_id    The originating user.
+	 * @param string $token      Their session token, which switching back returns to.
+	 * @param bool   $persistent Whether the cookies outlive the browser session (SW-7).
 	 * @return void
 	 */
-	public static function push_user( $user_id, $token ) {
+	public static function push_user( $user_id, $token, $persistent = true ) {
 		$user_id    = (int) $user_id;
 		$expiration = time() + self::LIFETIME;
 		$read       = self::read_stack();
@@ -387,7 +505,7 @@ class BLT_Toolkit_Switch_Cookies {
 
 		$entry = wp_generate_auth_cookie( $user_id, $expiration, self::scheme( $kind ), (string) $token );
 
-		self::write( $kind, self::push( self::encode( $read['stack'] ), $entry ), $expiration, $user_id, $secure, $token );
+		self::write( $kind, self::push( self::encode( $read['stack'] ), $entry ), $expiration, $user_id, $secure, $token, $persistent );
 	}
 
 	/**
@@ -398,9 +516,10 @@ class BLT_Toolkit_Switch_Cookies {
 	 * or the newest no longer validates (its session ended), every switch
 	 * cookie is cleared: there is nothing left to switch back to.
 	 *
+	 * @param bool $persistent Whether the cookies outlive the browser session (SW-7).
 	 * @return void
 	 */
-	public static function pop_user() {
+	public static function pop_user( $persistent = true ) {
 		$read  = self::read_stack();
 		$stack = $read['stack'];
 
@@ -422,7 +541,7 @@ class BLT_Toolkit_Switch_Cookies {
 			return;
 		}
 
-		self::write( $read['kind'], self::encode( $stack ), time() + self::LIFETIME, $user_id, self::SECURE === $read['kind'], (string) $parts['token'] );
+		self::write( $read['kind'], self::encode( $stack ), time() + self::LIFETIME, $user_id, self::SECURE === $read['kind'], (string) $parts['token'], $persistent );
 	}
 
 	/**
@@ -441,9 +560,195 @@ class BLT_Toolkit_Switch_Cookies {
 
 		$expire = time() - YEAR_IN_SECONDS;
 
-		self::send( self::name( self::AUTH ), ' ', $expire, SITECOOKIEPATH, false );
-		self::send( self::name( self::SECURE ), ' ', $expire, SITECOOKIEPATH, false );
+		foreach ( self::stack_paths() as $path ) {
+			self::send( self::name( self::AUTH ), ' ', $expire, $path, false );
+			self::send( self::name( self::SECURE ), ' ', $expire, $path, false );
+		}
+
 		self::send( self::name( self::OLDUSER ), ' ', $expire, COOKIEPATH, false );
+	}
+
+	/**
+	 * End switching in this browser for good (SW-10): destroy every session
+	 * the switch cookies could return to, then clear the cookies.
+	 *
+	 * Run on a sign-in and a sign-out. Clearing the cookies alone would
+	 * leave those sessions live, often an administrator's, until they
+	 * expire, so any copy of a stack entry, of the old-user cookie or of
+	 * the original sign-in cookie would still sign in. Each entry is
+	 * validated with its own scheme before its token is used, so only a
+	 * cookie this site made can end a session. Returns at once, without a
+	 * query, when the browser sent no switch cookie.
+	 *
+	 * The switched session this browser was in ends too (SW-5): a sign-in
+	 * replaces the browser's logged-in cookie, so the session made for the
+	 * switch target could never be used again, and leaving it in the
+	 * target's session list until its 48 hours ran out kept it visible to
+	 * the duplicate-switch check and to "Log out everywhere else". It is
+	 * found from the request's own logged-in cookie, validated, and ended
+	 * only when it carries `blt_switched_from_id` (a session a switch made);
+	 * the end is logged (record_end()). On a sign-out core has already
+	 * destroyed it.
+	 *
+	 * @param string $reason Why, for the log: `signed_in` (a sign-in, the default; on a sign-out
+	 *                       there is nothing left to end) or `origin_ended` (what is left of a
+	 *                       switch whose origin ended).
+	 * @return void
+	 */
+	public static function end_sessions( $reason = 'signed_in' ) {
+		if ( ! self::present() ) {
+			return;
+		}
+
+		// Read before anything is destroyed.
+		$switched = self::request_switched_session();
+		$cookies  = array();
+
+		foreach ( array( self::AUTH, self::SECURE ) as $kind ) {
+			foreach ( self::parse( self::value( $kind ) ) as $entry ) {
+				$cookies[] = array( $entry, self::scheme( $kind ), true );
+			}
+		}
+
+		if ( '' !== self::olduser() ) {
+			$cookies[] = array( self::olduser(), 'logged_in', false );
+		}
+
+		// The users the stack names, oldest first: the switch chain.
+		$origin = array();
+
+		foreach ( $cookies as $cookie ) {
+			$user_id = (int) wp_validate_auth_cookie( $cookie[0], $cookie[1] );
+			$parts   = $user_id > 0 ? wp_parse_auth_cookie( $cookie[0], $cookie[1] ) : false;
+
+			if ( is_array( $parts ) && ! empty( $parts['token'] ) ) {
+				if ( $cookie[2] ) {
+					$origin[] = $user_id;
+				}
+
+				WP_Session_Tokens::get_instance( $user_id )->destroy( (string) $parts['token'] );
+			}
+		}
+
+		if ( null !== $switched ) {
+			WP_Session_Tokens::get_instance( $switched['user_id'] )->destroy( $switched['token'] );
+
+			$chain   = array() !== $origin ? $origin : array( $switched['from_id'] );
+			$chain[] = $switched['user_id'];
+
+			self::record_end( $switched['user_id'], $switched['from_id'], $chain, $reason );
+		}
+
+		self::clear();
+	}
+
+	/**
+	 * The switched session named by the request's own logged-in cookie: its
+	 * user, token and who switched in. Null when the cookie is missing or
+	 * does not validate, or names a session no switch made.
+	 *
+	 * @return array{user_id:int,token:string,from_id:int}|null
+	 */
+	private static function request_switched_session() {
+		if ( ! defined( 'LOGGED_IN_COOKIE' ) || empty( $_COOKIE[ LOGGED_IN_COOKIE ] ) ) {
+			return null;
+		}
+
+		// '' reads the request's own logged-in cookie, which is what is meant here.
+		$user_id = (int) wp_validate_auth_cookie( '', 'logged_in' );
+		$parts   = $user_id > 0 ? wp_parse_auth_cookie( '', 'logged_in' ) : false;
+
+		if ( ! is_array( $parts ) || empty( $parts['token'] ) ) {
+			return null;
+		}
+
+		$session = WP_Session_Tokens::get_instance( $user_id )->get( (string) $parts['token'] );
+		$from_id = is_array( $session ) && isset( $session[ self::SESSION_FROM_ID ] ) && is_numeric( $session[ self::SESSION_FROM_ID ] ) ? (int) $session[ self::SESSION_FROM_ID ] : 0;
+
+		if ( $from_id <= 0 ) {
+			return null;
+		}
+
+		return array(
+			'user_id' => $user_id,
+			'token'   => (string) $parts['token'],
+			'from_id' => $from_id,
+		);
+	}
+
+	/**
+	 * Log a switched session BLT Toolkit ended by itself, rather than by a
+	 * switch back (LOG-1, LOG-2): `switch` / `switch_ended`, about the user
+	 * whose switched session it was. The row is the system's (actor 0),
+	 * since nobody asked for it in this request; the people involved are in
+	 * its details: `from` (who switched into that user), `to` (that user)
+	 * and `switch_chain` (oldest first, ending with that user), the shape
+	 * switch rows use.
+	 *
+	 * @param int    $user_id The user whose switched session ended.
+	 * @param int    $from_id Who switched into it.
+	 * @param int[]  $chain   The switch chain, oldest first, ending with `$user_id`.
+	 * @param string $reason  `signed_in` (a sign-in over the switched browser) or `origin_ended`
+	 *                        (the session it was switched from, or one further up, had ended).
+	 * @return void
+	 */
+	public static function record_end( $user_id, $from_id, array $chain, $reason ) {
+		$user   = get_userdata( (int) $user_id );
+		$name   = $user instanceof WP_User ? (string) $user->display_name : '#' . (int) $user_id;
+		$reason = 'signed_in' === $reason ? 'signed_in' : 'origin_ended';
+		$people = array();
+
+		foreach ( BLT_Toolkit_Log::clean_chain( $chain ) as $id ) {
+			$people[] = self::person( $id );
+		}
+
+		$summary = 'signed_in' === $reason
+			/* translators: %s: display name of the user whose switched session ended. */
+			? sprintf( __( 'The switched session as %s ended because someone signed in on the same browser.', 'blt-toolkit' ), $name )
+			/* translators: %s: display name of the user whose switched session ended. */
+			: sprintf( __( 'The switched session as %s ended because the session it was switched from had ended.', 'blt-toolkit' ), $name );
+
+		BLT_Toolkit_Log::record(
+			array(
+				'module'      => 'switch',
+				'action'      => self::ENDED_ACTION,
+				'object_type' => 'user',
+				'object_id'   => (string) (int) $user_id,
+				'summary'     => $summary,
+				'details'     => array(
+					'reason'       => $reason,
+					'from'         => self::person( (int) $from_id ),
+					'to'           => self::person( (int) $user_id ),
+					'switch_chain' => $people,
+				),
+				'system'      => true,
+			)
+		);
+	}
+
+	/**
+	 * A user as the log stores them: ID and login.
+	 *
+	 * @param int $user_id User ID.
+	 * @return array{id:int,login:string}
+	 */
+	private static function person( $user_id ) {
+		$user = (int) $user_id > 0 ? get_userdata( (int) $user_id ) : false;
+
+		return array(
+			'id'    => (int) $user_id,
+			'login' => $user instanceof WP_User ? (string) $user->user_login : '',
+		);
+	}
+
+	/**
+	 * The paths a stack cookie may have been set on: `SITECOOKIEPATH` and,
+	 * when it differs, stack_path(). A cleared cookie is cleared on both.
+	 *
+	 * @return string[]
+	 */
+	private static function stack_paths() {
+		return array_values( array_unique( array( (string) SITECOOKIEPATH, self::stack_path() ) ) );
 	}
 
 	/**
@@ -465,9 +770,10 @@ class BLT_Toolkit_Switch_Cookies {
 	 * @param int    $user_id    The newest originating user (the old user).
 	 * @param bool   $secure     Whether the stack cookie is secure.
 	 * @param string $token      The old user's session token.
+	 * @param bool   $persistent Whether the cookies outlive the browser session (SW-7).
 	 * @return void
 	 */
-	private static function write( $kind, $stack_json, $expiration, $user_id, $secure, $token ) {
+	private static function write( $kind, $stack_json, $expiration, $user_id, $secure, $token, $persistent ) {
 		$other   = self::SECURE === $kind ? self::AUTH : self::SECURE;
 		$olduser = wp_generate_auth_cookie( (int) $user_id, (int) $expiration, 'logged_in', (string) $token );
 		$stale   = '' !== self::value( $other );
@@ -490,11 +796,14 @@ class BLT_Toolkit_Switch_Cookies {
 			return;
 		}
 
-		self::send( self::name( $kind ), $stack_json, (int) $expiration, SITECOOKIEPATH, (bool) $secure );
-		self::send( self::name( self::OLDUSER ), $olduser, (int) $expiration, COOKIEPATH, $secure_olduser );
+		$expires = self::expires( (int) $expiration, (bool) $persistent );
+		$path    = self::stack_path();
+
+		self::send( self::name( $kind ), $stack_json, $expires, $path, (bool) $secure );
+		self::send( self::name( self::OLDUSER ), $olduser, $expires, COOKIEPATH, $secure_olduser );
 
 		if ( $stale ) {
-			self::send( self::name( $other ), ' ', time() - YEAR_IN_SECONDS, SITECOOKIEPATH, false );
+			self::send( self::name( $other ), ' ', time() - YEAR_IN_SECONDS, $path, false );
 		}
 	}
 

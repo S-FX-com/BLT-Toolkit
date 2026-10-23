@@ -2,24 +2,24 @@
 
 Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) section 16. A shipped hook name is never renamed.
 
-**Status.** BLT Toolkit is built phase by phase (SPEC 17). "Planned (Phase N)" means the hook is specified and arrives with that phase; it becomes "Available" when the phase lands. Until then, code that adds a callback to a planned hook is harmless but nothing calls it.
+**Status.** Every hook listed here is Available: something in the plugin fires or applies it. The list matches the code exactly: every `do_action()` and `apply_filters()` whose name starts with `blt_toolkit_`, the three User Switching compatibility actions, core's `shortcode_atts_blt_toolkit_username_form` (applied by `shortcode_atts()` for the username form) and the `current_user_switched()` shim, and nothing that does not exist. A change to a hook updates this file in the same commit (`AGENTS.md`); `grep -rnE "(do_action|apply_filters)\(" includes admin templates` lists the calls, some of which put the name on the next line.
 
-**Signatures.** SPEC 16 fixes the name and, for most hooks, the arguments and default. Where it fixes only the first argument, any further argument shown here is marked *proposed*: it is confirmed, and this file corrected, when the hook ships.
+**Signatures.** SPEC 16 fixes the name and, for most hooks, the arguments and default. Where it fixes only the first argument, the further arguments below are the ones the code passes, checked against the code that fires or applies each hook.
 
 | Hook | Type | Requirement | Status | Purpose |
 | --- | --- | --- | --- | --- |
 | [`blt_toolkit_switched_to`](#blt_toolkit_switched_to) | action | SW-4 | Available | After switching to a user |
 | [`blt_toolkit_switched_back`](#blt_toolkit_switched_back) | action | SW-5 | Available | After switching back |
 | [`blt_toolkit_switched_off`](#blt_toolkit_switched_off) | action | SW-6 | Available | After switching off |
-| [`blt_toolkit_before_username_change`](#blt_toolkit_before_username_change) | action | UN-10 | Planned (Phase 3) | Before a username is written |
-| [`blt_toolkit_after_username_change`](#blt_toolkit_after_username_change) | action | UN-10 | Planned (Phase 3) | After a username changed |
-| [`blt_toolkit_before_roles_save`](#blt_toolkit_before_roles_save) | action | RO-4 | Planned (Phase 4) | Before role capabilities are written |
-| [`blt_toolkit_after_roles_save`](#blt_toolkit_after_roles_save) | action | RO-4 | Planned (Phase 4) | After role capabilities were written |
-| [`blt_toolkit_role_created`](#blt_toolkit_role_created) | action | RO-30 | Planned (Phase 4) | After a role is added |
-| [`blt_toolkit_role_deleted`](#blt_toolkit_role_deleted) | action | RO-40, RO-42 | Planned (Phase 4) | After a role is deleted |
-| [`blt_toolkit_role_renamed`](#blt_toolkit_role_renamed) | action | RO-31 | Planned (Phase 4) | After a role's display name changes |
-| [`blt_toolkit_post_type_isolated`](#blt_toolkit_post_type_isolated) | action | RS-30 | Planned (Phase 5) | A post type was given separate permissions |
-| [`blt_toolkit_post_type_shared`](#blt_toolkit_post_type_shared) | action | RS-32 | Planned (Phase 5) | A post type shares Posts' permissions again |
+| [`blt_toolkit_before_username_change`](#blt_toolkit_before_username_change) | action | UN-10 | Available | Before a username is written |
+| [`blt_toolkit_after_username_change`](#blt_toolkit_after_username_change) | action | UN-10 | Available | After a username changed |
+| [`blt_toolkit_before_roles_save`](#blt_toolkit_before_roles_save) | action | RO-4 | Available | Before role capabilities are written |
+| [`blt_toolkit_after_roles_save`](#blt_toolkit_after_roles_save) | action | RO-4 | Available | After role capabilities were written |
+| [`blt_toolkit_role_created`](#blt_toolkit_role_created) | action | RO-30 | Available | After a role is added |
+| [`blt_toolkit_role_deleted`](#blt_toolkit_role_deleted) | action | RO-40, RO-42 | Available | After a role is deleted |
+| [`blt_toolkit_role_renamed`](#blt_toolkit_role_renamed) | action | RO-31 | Available | After a role's display name changes |
+| [`blt_toolkit_post_type_isolated`](#blt_toolkit_post_type_isolated) | action | RS-30 | Available | A post type was given separate permissions |
+| [`blt_toolkit_post_type_shared`](#blt_toolkit_post_type_shared) | action | RS-32 | Available | A post type shares Posts' permissions again |
 | [`blt_toolkit_before_job`](#blt_toolkit_before_job) | action | JOB-1 to JOB-5 | Available | A background job starts |
 | [`blt_toolkit_after_job`](#blt_toolkit_after_job) | action | JOB-1 to JOB-5 | Available | A background job ends |
 | [`blt_toolkit_logged`](#blt_toolkit_logged) | action | LOG-6 | Available | After a log row is written |
@@ -32,18 +32,21 @@ Every public action and filter in BLT Toolkit, seeded from [SPEC.md](SPEC.md) se
 | [`blt_toolkit_switch_show_footer_link`](#blt_toolkit_switch_show_footer_link) | filter | SW-17 | Available | The fixed "Switch back" link on the site |
 | [`blt_toolkit_switch_send_cookies`](#blt_toolkit_switch_send_cookies) | filter | SW-3 | Available | Whether switch cookies are sent |
 | [`blt_toolkit_switch_search_limit`](#blt_toolkit_switch_search_limit) | filter | SW-20 | Available | Toolbar search result cap |
-| [`blt_toolkit_validate_username`](#blt_toolkit_validate_username) | filter | UN-9 | Planned (Phase 3) | Add or remove username errors |
-| [`blt_toolkit_username_min_length`](#blt_toolkit_username_min_length) | filter | UN-2 | Planned (Phase 3) | Minimum username length |
-| [`blt_toolkit_disallowed_usernames`](#blt_toolkit_disallowed_usernames) | filter | UN-4 | Planned (Phase 3) | Disallowed usernames |
-| [`blt_toolkit_username_email`](#blt_toolkit_username_email) | filter | UN-15 | Planned (Phase 3) | The rename notification email |
-| [`blt_toolkit_bulk_rename_max_rows`](#blt_toolkit_bulk_rename_max_rows) | filter | UN-30 | Planned (Phase 3) | Bulk rename CSV row cap |
-| [`blt_toolkit_risky_caps`](#blt_toolkit_risky_caps) | filter | SPEC 5.4, SEC-10, SEC-11 | Planned (Phase 4) | Capability risk tiers |
+| [`blt_toolkit_validate_username`](#blt_toolkit_validate_username) | filter | UN-9 | Available | Add or remove username errors |
+| [`blt_toolkit_username_min_length`](#blt_toolkit_username_min_length) | filter | UN-2 | Available | Minimum username length |
+| [`blt_toolkit_disallowed_usernames`](#blt_toolkit_disallowed_usernames) | filter | UN-4 | Available | Disallowed usernames |
+| [`blt_toolkit_username_email`](#blt_toolkit_username_email) | filter | UN-15 | Available | The rename notification email |
+| [`blt_toolkit_bulk_rename_max_rows`](#blt_toolkit_bulk_rename_max_rows) | filter | UN-30 | Available | Bulk rename CSV row cap |
+| [`blt_toolkit_username_password_throttle`](#blt_toolkit_username_password_throttle) | filter | UN-22 | Available | Wrong current passwords allowed in the username forms |
+| [`shortcode_atts_blt_toolkit_username_form`](#shortcode_atts_blt_toolkit_username_form) | filter | UN-23 | Available | The username form's shortcode attributes (core's filter) |
+| [`blt_toolkit_risky_caps`](#blt_toolkit_risky_caps) | filter | SPEC 5.4, SEC-10, SEC-11 | Available | Capability risk tiers |
 | [`blt_toolkit_lockout_critical_caps`](#blt_toolkit_lockout_critical_caps) | filter | SEC-12 | Available | Capabilities administrator always keeps |
-| [`blt_toolkit_capability_labels`](#blt_toolkit_capability_labels) | filter | RO-12 | Planned (Phase 4) | Plain-English capability labels |
-| [`blt_toolkit_capability_groups`](#blt_toolkit_capability_groups) | filter | RO-11, RO-13 | Planned (Phase 4) | Named capability groups |
-| [`blt_toolkit_simple_controls`](#blt_toolkit_simple_controls) | filter | RS-3 | Planned (Phase 5) | Simple view controls |
-| [`blt_toolkit_isolation_excluded_types`](#blt_toolkit_isolation_excluded_types) | filter | RS-30, RS-35 | Planned (Phase 5) | Post types that cannot get separate permissions |
-| [`blt_toolkit_isolation_caps`](#blt_toolkit_isolation_caps) | filter | RS-31 | Planned (Phase 5) | Arguments applied to an isolated post type |
+| [`blt_toolkit_capability_labels`](#blt_toolkit_capability_labels) | filter | RO-12 | Available | Plain-English capability labels |
+| [`blt_toolkit_capability_groups`](#blt_toolkit_capability_groups) | filter | RO-11, RO-13 | Available | Named capability groups |
+| [`blt_toolkit_orphan_family_labels`](#blt_toolkit_orphan_family_labels) | filter | RO-11, RO-13, SPEC 15 | Available | Labels of orphaned capability families whose plugin is known |
+| [`blt_toolkit_simple_controls`](#blt_toolkit_simple_controls) | filter | RS-3 | Available | Simple view controls |
+| [`blt_toolkit_isolation_excluded_types`](#blt_toolkit_isolation_excluded_types) | filter | RS-30, RS-35 | Available | Post types that cannot get separate permissions |
+| [`blt_toolkit_isolation_caps`](#blt_toolkit_isolation_caps) | filter | RS-31 | Available | Arguments applied to an isolated post type |
 | [`blt_toolkit_hide_admins_from_non_admins`](#blt_toolkit_hide_admins_from_non_admins) | filter | SEC-6 | Available | Hide administrators in the Users list and REST |
 | [`blt_toolkit_snapshot_retention`](#blt_toolkit_snapshot_retention) | filter | SNAP-3 | Available | Snapshots kept besides the baseline |
 | [`blt_toolkit_log_retention_days`](#blt_toolkit_log_retention_days) | filter | LOG-4 | Available | Days log rows are kept |
@@ -93,15 +96,15 @@ Requirement SW-6. Status: Available.
 
 ### `blt_toolkit_before_username_change`
 
-Fires inside the rename procedure after the change is authorized and the new name validated, and before anything is written (UN-10 step 3).
+Fires inside the rename procedure (`BLT_Toolkit_Username_Changer::change()`) after the change is authorized, the new name validated, the current password checked when UN-22 asks for it and a switched session confirmed (UN-12), and before anything is written (UN-10 step 3). Every path fires it: the profile screen, the bulk rename and the self-service form.
 
 | Argument | Type | Description |
 | --- | --- | --- |
 | `$user_id` | int | The user being renamed. |
 | `$old` | string | The current login. |
-| `$new` | string | The new login. |
+| `$new` | string | The new login (trimmed, exactly as it will be stored). |
 
-Requirement UN-10. Status: Planned (Phase 3).
+Requirement UN-10. Status: Available.
 
 ### `blt_toolkit_after_username_change`
 
@@ -112,55 +115,59 @@ Fires after a username changed: the login, author slug, display name and nicknam
 | `$user_id` | int | The renamed user. |
 | `$old` | string | The previous login. |
 | `$new` | string | The new login. |
-| `$result` | array | What the procedure returns: `old_login`, `new_login`, `nicename_changed`, `old_nicename`, `sessions_ended`. |
+| `$result` | array | What the procedure returns: `old_login`, `new_login`, `nicename_changed` (bool), `old_nicename`, `sessions_ended` (int, sessions destroyed), plus `new_nicename` and `session_kept` (bool: a self rename kept the current session, UN-14). |
 
-Requirement UN-10. Status: Planned (Phase 3).
+The log row (`usernames` / `username_changed`) is written right after this action, then the optional email is sent.
+
+Requirement UN-10. Status: Available.
 
 ### `blt_toolkit_before_roles_save`
 
-Fires after the Guard has approved a computed change set and before the roles option is written (RO-4). Every write to role capabilities made by BLT Toolkit's role store goes through it.
+Fires after the Guard has approved a computed change set (and the SEC-10 review was confirmed) and the SNAP-1 snapshot was stored, just before the roles option is written once (RO-3, RO-4). Every BLT Toolkit write to the roles option fires it: `BLT_Toolkit_Role_Store::save_caps()` and `transaction()` (which every Tools write uses: snapshot restore, both resets, Sync administrator, role import and the legacy importers), and SEC-14 recovery, which keeps its own path because it must go ahead when the snapshot fails. Uninstall's removal of BLT Toolkit's own capabilities does not fire it. A save that changes nothing, a dry run and a refused save fire nothing.
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `$changes` | array | The change set: per role, the capabilities to add and to remove. |
-| `$context` | string | Where the save came from. *Proposed values:* `simple`, `advanced`, `self_service`, `isolation`, `import`, `restore`, `reset`, `recovery`. |
+| `$changes` | array | Role ID => `array( 'add' => array<string,bool>, 'remove' => string[], 'created' => bool, 'deleted' => bool, 'name' => null or array( 'from' => string, 'to' => string ) )`. `add` holds the new value of each capability added or flipped (`true` grants, `false` denies); `remove` the capabilities taken out of the role. A created role lists all its capabilities in `add`, a deleted one all of them in `remove`. |
+| `$context` | string | Where the save came from: `advanced` (the Advanced matrix, and adding or deleting a capability there; the default for a one-role save), `simple` (Simple view; needs `blt_edit_roles`, while `advanced` needs `blt_edit_capabilities` too), `self_service` (Settings > Usernames, UN-20), `support_agent` (SW-21), `lifecycle` (add, rename, move to a new role, delete and merge, RO-30 to RO-42), `activation` and `sync` (the administrator grant), `recovery` (SEC-14), `isolation` (separate permissions for a post type and their cleanup, RS-30, RS-32), `import` (Tools > Export and import, RO-45: the roles of an imported file, in one write with a `before_import` snapshot), `restore` (Tools > Snapshots, SNAP-4: the whole roles array put back as the snapshot held it, with a `before_restore` snapshot), `reset` (Tools > Reset, RO-43, either mode, with a `before_reset` snapshot), `sync` (also Tools > Sync administrator, RO-5: exactly the capabilities its preview listed), `legacy_import` (Tools > Import from legacy plugins, SPEC 15: Username Changer's Allowed Roles as `blt_change_own_username`, with a `before_import` snapshot) and `legacy_cleanup` (the same tab's removal of User Role Editor's `ure_*` capabilities, with a `before_save` snapshot). A `transaction()` without one passes `roles`. A restore or reset that adds or removes whole roles reports them here (`created`, `deleted`) and does not fire `blt_toolkit_role_created` or `blt_toolkit_role_deleted`. |
 
-Requirement RO-4. Status: Planned (Phase 4).
+Requirement RO-4. Status: Available.
 
 ### `blt_toolkit_after_roles_save`
 
-Fires after the roles option was written once (RO-3) and the change logged (RO-4).
+Fires after the roles option was written once (RO-3), the role objects reloaded from it, and the change logged (RO-4). A write the database refused fires nothing here (it is logged with status `failure`).
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `$changes` | array | The change set that was applied. |
+| `$changes` | array | The change set that was applied, as for `blt_toolkit_before_roles_save`. |
 | `$context` | string | As for `blt_toolkit_before_roles_save`. |
-| `$snapshot_id` | int | The snapshot taken before the write (SNAP-1). When the roles already matched the newest snapshot, that snapshot's ID. |
+| `$snapshot_id` | int | The snapshot taken before the write (SNAP-1). When the roles already matched the newest snapshot, that snapshot's ID. `0` only for SEC-14 recovery whose snapshot failed. |
 
-Requirement RO-4. Status: Planned (Phase 4).
+Requirement RO-4. Status: Available.
 
 ### `blt_toolkit_role_created`
 
-Fires after a role is added (RO-30), including a copy made by "Move users to a new role" (RO-32) and a role created by an import (RO-45).
+Fires after BLT Toolkit added a role and the roles option was written (RO-30), including the copy made by "Move users to a new role" (RO-32) and the Support Agent role (SW-21). A dry run, a refused add and an add awaiting the SEC-10 typed confirmation fire nothing. Import (RO-45) fires it for each role it creates, after the import's one roles write, with `$from` `import`.
 
 | Argument | Type | Description |
 | --- | --- | --- |
 | `$role_id` | string | The new role's ID. |
-| `$display_name` | string | *Proposed.* Its display name. |
-| `$source` | string | *Proposed.* What it started from: `blank`, or the ID of the role it copied. |
+| `$display_name` | string | Its display name, as stored. |
+| `$from` | string | What it started from: `blank` (`read` only), `subscriber`, `contributor`, `author` or `editor` (WordPress's default capabilities for that role), `copy:` followed by the copied role's ID (a copy, and every RO-32 move), `support_agent` (SW-21), or `import` (a role created by Tools > Export and import, RO-45). |
 
-Requirement RO-30. Status: Planned (Phase 4).
+Requirement RO-30. Status: Available.
 
 ### `blt_toolkit_role_deleted`
 
-Fires after a role is deleted (RO-40), including at the end of a merge (RO-42).
+Fires after a role is deleted (RO-40), including at the end of a merge (RO-42). A snapshot restore or a full reset (Tools) that removes roles does not fire it; those writes list the removed roles in `blt_toolkit_after_roles_save` (`deleted`).
 
 | Argument | Type | Description |
 | --- | --- | --- |
 | `$role_id` | string | The deleted role's ID. |
-| `$replacement` | string | *Proposed.* The role its users were moved to, or `''` when it had no users. |
+| `$replacement` | string | The role its holders were given instead (RO-41 and RO-42), or `''` when nobody held it. |
 
-Requirement RO-40, RO-42. Status: Planned (Phase 4).
+Fires once per role after the roles option was written, so a multi-role delete fires it for each. A role that people hold is deleted by the `role_reassign` job once nobody holds it, so for it the action fires inside the job's last batch (a page tick, a loopback or cron), not on the request that asked.
+
+Requirement RO-40, RO-42. Status: Available.
 
 ### `blt_toolkit_role_renamed`
 
@@ -169,10 +176,10 @@ Fires after a role's display name changes (RO-31). A role ID never changes in pl
 | Argument | Type | Description |
 | --- | --- | --- |
 | `$role_id` | string | The role's ID. |
-| `$old_name` | string | *Proposed.* The previous display name. |
-| `$new_name` | string | *Proposed.* The new display name. |
+| `$old_name` | string | The previous display name, as stored. |
+| `$new_name` | string | The new display name. |
 
-Requirement RO-31. Status: Planned (Phase 4).
+Requirement RO-31. Status: Available.
 
 ### `blt_toolkit_post_type_isolated`
 
@@ -182,7 +189,9 @@ Fires after a post type was given separate permissions: the seed capabilities ar
 | --- | --- | --- |
 | `$post_type` | string | The post type. |
 
-Requirement RS-30. Status: Planned (Phase 5).
+Fired by `BLT_Toolkit_Isolation::isolate()` after the roles were written in one batch through the role store (snapshot reason `before_isolation`, log action `post_type_isolated`), users with Posts or Pages capabilities of their own were updated, and the type was stored with its `since` time.
+
+Requirement RS-30. Status: Available.
 
 ### `blt_toolkit_post_type_shared`
 
@@ -192,7 +201,9 @@ Fires after a post type was reverted to sharing Posts' (or Pages') permissions (
 | --- | --- | --- |
 | `$post_type` | string | The post type. |
 
-Requirement RS-32. Status: Planned (Phase 5).
+Fired by `BLT_Toolkit_Isolation::revert()` after the type was taken off `roles.isolated_post_types` (log action `post_type_shared`). No role is written; the cleanup step logs `capability_deleted` and fires no hook.
+
+Requirement RS-32. Status: Available.
 
 ### `blt_toolkit_before_job`
 
@@ -200,9 +211,9 @@ Fires once when a background job starts, after its settings are pinned (JOB-3) a
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `$job` | array | The job state as stored in `blt_toolkit_job_{id}` (`id`, `type`, `mode`, `status`, `owner`, `pinned`, `cursor` and the counters). Its type is one of `username_bulk`, `role_reassign`, `log_prune` or `count_no_role` (JOB-5); in this release only `log_prune` is registered, the others arrive with their modules. |
+| `$job` | array | The job state as stored in `blt_toolkit_job_{id}` (`id`, `type`, `mode`, `status`, `owner`, `pinned`, `cursor` and the counters). Its type is one of `username_bulk`, `role_reassign`, `log_prune` or `count_no_role` (JOB-5), or `legacy_uc_log` (copying Username Changer's audit log, SPEC 15); `log_prune` and `legacy_uc_log` are always registered, `username_bulk` while the Usernames module runs, `role_reassign` and `count_no_role` while the Roles module runs. `chain` holds the switch chain of the request that started the job (user IDs, oldest first; empty when not switched), which every log row its ticks write is attributed to (LOG-2). |
 
-Requirement JOB-1 to JOB-5. Status: Available. The job runner landed in Phase 1 for the daily log prune (LOG-4).
+Requirement JOB-1 to JOB-5. Status: Available. The daily log prune (LOG-4) runs as a job too (`log_prune`).
 
 ### `blt_toolkit_after_job`
 
@@ -216,7 +227,7 @@ Requirement JOB-1 to JOB-5. Status: Available.
 
 ### `blt_toolkit_logged`
 
-Fires after each row is written to the activity log, so other logging plugins can listen (LOG-6). A failed insert does not fire it (LOG-3).
+Fires after each row is written to the activity log, so other logging plugins can listen (LOG-6). A failed insert does not fire it (LOG-3). One exception: the entries copied from Username Changer's audit log by **Tools > Import from legacy plugins** (`source` `username-changer`) are history, written 250 at a time in one insert, and do not fire it; the `toolkit` / `legacy_imported` summary row each import run writes does (SPEC 15).
 
 | Argument | Type | Description |
 | --- | --- | --- |
@@ -239,6 +250,8 @@ Fires after each row is written to the activity log, so other logging plugins ca
 | `source` | string | Empty for native rows; the plugin's name for imported rows (`username-changer`). |
 
 A listener that throws is reported to the PHP error log and otherwise ignored: the row is already written.
+
+Rows BLT Toolkit writes by itself, whoever is signed in, have `actor_id` 0 and `acting_as_id` 0: for example `switch` / `switch_ended`, written when a switched session is ended because the session it was switched from ended, or because someone signed in on the same browser (the people involved are in `details`: `from`, `to`, `switch_chain` and `reason`, `origin_ended` or `signed_in`).
 
 Requirement LOG-6. Status: Available.
 
@@ -284,7 +297,7 @@ Requirement SW-9. Status: Available.
 
 ### `blt_toolkit_switch_show_footer_link`
 
-Whether to print the fixed "Switch back to {Name}" link on the site (SW-17). Whatever this returns, the link is printed only while switched with the toolbar hidden, or after a Switch Off, and not on a page where the Meta widget already printed it (as User Switching does). Its stylesheet, `assets/css/blt-toolkit-front.css`, loads only when the link is printed. Applied at most once per request, and never for a visitor without a switch cookie.
+Whether to print the fixed "Switch back to {Name}" link on the site (SW-17). Whatever this returns, the link is printed only while switched with the toolbar hidden, or after a Switch Off, and not on a page where the Meta widget already printed it (as User Switching does). Its stylesheet, `assets/css/blt-toolkit-front.css`, loads only when the link is printed, and a page that prints it for someone who is signed out (after a Switch Off) is sent with no-cache headers and `DONOTCACHEPAGE` (SW-25). Applied at most once per request, and never for a visitor without a switch cookie.
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -322,7 +335,7 @@ The last validation rule (UN-9), applied on every path: profile, bulk rename, th
 | `$new` | string | | The proposed username, trimmed. |
 | `$user` | WP_User | | The user being renamed. |
 
-Requirement UN-9. Status: Planned (Phase 3).
+Requirement UN-9. Status: Available.
 
 ### `blt_toolkit_username_min_length`
 
@@ -332,7 +345,7 @@ The minimum username length (UN-2), enforced on the server. The maximum is alway
 | --- | --- | --- | --- |
 | `$length` | int | The Settings > Usernames field **Minimum length** (`usernames.min_length`, default `3`) | Characters. |
 
-Requirement UN-2. Status: Planned (Phase 3).
+Requirement UN-2. Status: Available.
 
 ### `blt_toolkit_disallowed_usernames`
 
@@ -342,7 +355,7 @@ Usernames nobody may change to (UN-4). The result is merged with core's `illegal
 | --- | --- | --- | --- |
 | `$names` | string[] | The Settings > Usernames field **Names that cannot be used** (`usernames.disallowed`, default `admin`, `administrator`, `root`, `sysadmin`, `webmaster`) | Usernames. |
 
-Requirement UN-4. Status: Planned (Phase 3).
+Requirement UN-4. Status: Available.
 
 ### `blt_toolkit_username_email`
 
@@ -350,22 +363,50 @@ The plain-text email sent to a renamed user when the Settings > Usernames toggle
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$email` | array | `to`, `subject`, `message`, `headers` (*proposed keys*, as core's `wp_new_user_notification_email`), with the tags in the subject and body already replaced | Return it. |
-| `$user` | WP_User | | *Proposed.* The renamed user. |
-| `$old` | string | | *Proposed.* The previous login. |
-| `$new` | string | | *Proposed.* The new login. |
+| `$email` | array | `to` (the user's email), `subject`, `message`, `headers` (`''`), as core's `wp_new_user_notification_email`, with the tags in the subject and body already replaced and the text in the user's locale | Return it. A result that is not an array, or whose `to` is not an email address, sends nothing. |
+| `$user` | WP_User | | The renamed user, as stored after the change. |
+| `$old` | string | | The previous login. |
+| `$new` | string | | The new login. |
 
-Requirement UN-15. Status: Planned (Phase 3).
+The subject and body come from the Settings > Usernames fields **Email subject** and **Email message** (`usernames.email_subject`, `usernames.email_body`), or a translated default when empty. Tags: `{old_username}`, `{new_username}`, `{display_name}`, `{email}`, `{sitename}`, `{siteurl}`, `{loginurl}`, replaced in one pass.
+
+Requirement UN-15. Status: Available.
 
 ### `blt_toolkit_bulk_rename_max_rows`
 
-The most data rows one bulk rename CSV may contain (UN-30). A larger file is refused, not truncated.
+The most rows with a new username one bulk rename CSV may contain (UN-30). Rows whose `new_username` is empty are skipped and do not count, so the template of a site with more users than this uploads back with a few names filled in. A file with more is refused, not truncated, and an upload larger than this many rows times 1 KB (plus 64 KB), or than the server's upload limit, is refused before it is read. Read when the Usernames screen shows the upload form and when a file is checked.
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$rows` | int | `5000` | Rows. |
+| `$rows` | int | `5000` | Rows (at least 1). |
 
-Requirement UN-30. Status: Planned (Phase 3).
+Requirement UN-30. Status: Available.
+
+### `blt_toolkit_username_password_throttle`
+
+How many wrong current passwords someone may enter in the username forms (the profile's **Change username** section and `[blt_toolkit_username_form]`) when **Ask for their current password** (`usernames.require_password`, UN-22) is on. After `limit` wrong passwords within `window` seconds, that person's self-service renames pause until the oldest of them is `window` seconds old: the password is not checked at all meanwhile, so the form cannot be used to guess it, and the error says when to try again (`blt_toolkit_username_password_locked`, HTTP 429). The attempt that reaches the limit is logged (`usernames` / `password_locked`, status `warning`); a correct password clears the count. Sign-in is not affected. The attempts are kept in the user meta `blt_toolkit_password_failures` (times only), which uninstall removes.
+
+| Argument | Type | Default | Description |
+| --- | --- | --- | --- |
+| `$throttle` | array | `array( 'limit' => 5, 'window' => 900 )` | `limit`: wrong passwords allowed within the window, 0 to 100 (0 turns the throttle off). `window`: seconds, 1 to 86400. A missing or non-numeric value takes the default. |
+| `$user` | WP_User | | The person renaming themselves. |
+
+Applied each time the current password is checked.
+
+Requirement UN-22. Status: Available.
+
+### `shortcode_atts_blt_toolkit_username_form`
+
+Core's `shortcode_atts_{$shortcode}` filter for `[blt_toolkit_username_form]` (UN-23), applied by `shortcode_atts()` each time the shortcode renders, and also when the page's content is checked early to decide whether the stylesheet goes in the head (`wp_enqueue_scripts`). Use it to set a site-wide default, such as `style="none"` on every form, which then also keeps the stylesheet off the page.
+
+| Argument | Type | Default | Description |
+| --- | --- | --- | --- |
+| `$out` | array | `style` (`styled`), `class` (`''`), merged with what the shortcode gave | Return it. `style` is `styled` or `none` (`no-css` also means `none`; anything else reads as `styled`); `class` is a space-separated list of extra wrapper classes, each sanitized with `sanitize_html_class()`. |
+| `$pairs` | array | | The defaults. |
+| `$atts` | array | | The attributes as written in the shortcode. |
+| `$shortcode` | string | | `blt_toolkit_username_form`. |
+
+Requirement UN-23. Status: Available.
 
 ### `blt_toolkit_risky_caps`
 
@@ -385,7 +426,7 @@ add_filter(
 );
 ```
 
-Requirement SPEC 5.4, SEC-10, SEC-11. Status: Planned (Phase 4). `BLT_Toolkit_Caps::tiers()` already applies the filter, but nothing reads the tiers until the tier badges and the Critical review step arrive with the Roles screen.
+Requirement SPEC 5.4, SEC-10, SEC-11. Status: Available. The role store's SEC-10 review (`BLT_Toolkit_Guard::requires_critical_review()`) and every capability catalog entry's `tier` (the tier badges, SEC-11) read it.
 
 ### `blt_toolkit_lockout_critical_caps`
 
@@ -395,7 +436,7 @@ The capabilities that can never be removed from the `administrator` role, and th
 | --- | --- | --- | --- |
 | `$caps` | string[] | `read`, `manage_options`, `list_users`, `edit_users`, `promote_users`, `activate_plugins`, `blt_edit_roles`, `blt_edit_capabilities` | Capability names. |
 
-Used by recovery mode (SEC-14), by snapshot restore (which always leaves `administrator` holding the set) and by `BLT_Toolkit_Guard::check_role_change()` for SEC-12, which the role editor calls from Phase 4.
+Used by recovery mode (SEC-14), by snapshot restore (which always leaves `administrator` holding the set) and by `BLT_Toolkit_Guard::check_role_change()` for SEC-12, which the role store runs on every role write.
 
 Requirement SEC-12. Status: Available.
 
@@ -405,9 +446,11 @@ Plain-English labels for capabilities (RO-12). The raw name is always shown next
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$labels` | array | The built-in dictionary for core capabilities, plus labels built from each post type's and taxonomy's own labels ("Edit others' Events") | Capability => label. Capabilities with no label are humanized from their name. |
+| `$labels` | array | The built-in dictionary for core capabilities, plus labels built from each post type's and taxonomy's own labels ("Edit others' Events") | Capability => label, for every capability in the catalog (core, content types, taxonomies, BLT Toolkit's own, declared groups, and any capability found on a role or user). Capabilities with no label are humanized from their name (`gravityforms_edit_forms` reads "Gravityforms edit forms"). Return the array; only non-empty strings for capabilities already in it are used. |
 
-Requirement RO-12. Status: Planned (Phase 4).
+Applied once per request, when `BLT_Toolkit_Capability_Catalog` is first built (only on BLT roles screens and their write paths), and again for `BLT_Toolkit_Capability_Catalog::label()` before the full catalog exists.
+
+Requirement RO-12. Status: Available.
 
 ### `blt_toolkit_capability_groups`
 
@@ -415,19 +458,64 @@ Named groups of capabilities for the Advanced view's group tree (RO-13). A capab
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$groups` | array | `array()` | *Proposed shape:* group key => `array( 'label' => string, 'caps' => string[] )`. |
+| `$groups` | array | While WooCommerce is active, its core capability set (key `woocommerce`): `WC_Install::get_core_capabilities()` merged with the same list built in (`manage_woocommerce`, `view_woocommerce_reports`, `create_customers` and the product, order, coupon and term capabilities, 54 names), so none of them reads as orphaned. While Gravity Forms is active, `GFCommon::all_caps()` (key `gravityforms`). | Group key => `array( 'label' => string, 'caps' => string[] )`. The key becomes the tree node `plugin-{key}` (lowercase letters, digits, `_` and `-`); a missing label is the key humanized; groups without capabilities are dropped. |
 
-Requirement RO-11, RO-13. Status: Planned (Phase 4).
+A capability declared here that core, a post type or a taxonomy also registers keeps that as its source and is also listed in the group's node. Capabilities nobody declares that share a prefix with two or more others (`gravityforms_*` while Gravity Forms is inactive, say) are grouped by that prefix too, but stay flagged as orphaned. Post types with separate permissions that are not in effect get a group of their own after this filter (not filterable), so their strings are never offered for deletion either.
 
-### `blt_toolkit_simple_controls`
+```php
+add_filter(
+	'blt_toolkit_capability_groups',
+	function ( $groups ) {
+		$groups['acme'] = array(
+			'label' => 'Acme Bookings',
+			'caps'  => array( 'acme_manage_bookings', 'acme_view_reports' ),
+		);
+		return $groups;
+	}
+);
+```
 
-The controls Simple view shows (RS-3). Other BLT plugins register their own sections here (for example BLT Documents' document management or BLT Events' event management). Each control declares an id, section, label, help text, its capability universe, how to compute its state from a role, how to compute target capabilities from a chosen state, its tier, its dependencies and an `available()` predicate. Simple view saves only controls that changed, and only within each control's universe (RS-5).
+Requirement RO-11, RO-13. Status: Available.
+
+### `blt_toolkit_orphan_family_labels`
+
+Labels for families of orphaned capabilities whose plugin is known (RO-11, RO-13). A family is the first word of a capability's name that is not a common verb (`ure` for `ure_edit_roles`, as `BLT_Toolkit_Capability_Catalog::prefix_family()` reads it). Its orphans are grouped under Plugins with this label and that label as their source, however few they are, and they stay orphaned: nothing registers them, so RO-24 may still delete them, and Sync administrator never grants them.
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$controls` | array | The built-in controls: one content row per capability group (SPEC 10.2 to 10.4) and the site and people controls in Appendix A | Control definitions. |
+| `$labels` | array | `array( 'ure' => 'From User Role Editor' )` (SPEC 15, `BLT_Toolkit_Legacy::orphan_families()`) | Family => label. Families are matched in lowercase and must be two or more letters or digits; empty labels are dropped. |
 
-Requirement RS-3. Status: Planned (Phase 5).
+Applied once per request, when `BLT_Toolkit_Capability_Catalog` is built (only on BLT roles screens, Tools and their write paths).
+
+Requirement RO-11, RO-13, SPEC 15. Status: Available.
+
+### `blt_toolkit_simple_controls`
+
+The controls Simple view shows (RS-3). Other BLT plugins register their own here (for example BLT Documents' document management or BLT Events' event management), in a built-in section or a new one. Simple view saves only controls that changed, and only within each control's capabilities (RS-5); the Guard applies to every save (SEC-2, SEC-3, SEC-5, SEC-10, SEC-12, SEC-13). Applied once per request, only on the Roles screen and its save handler (`BLT_Toolkit_Simple_Controls::definitions()`).
+
+| Argument | Type | Default | Description |
+| --- | --- | --- | --- |
+| `$controls` | array[] | The built-in controls: Basics (`read`, and `hide_toolbar`, the role setting of SPEC 9.5), one content row per capability group (`content-{type}`, SPEC 10.2 to 10.4), then the Appendix A controls in its order | Control definitions, a list. |
+
+Each control is an array:
+
+| Key | Type | Description |
+| --- | --- | --- |
+| `id` | string | Unique, `[a-z0-9_-]`. A duplicate ID is dropped. |
+| `section` | string | `basics`, `content`, `media`, `appearance`, `plugins`, `site`, `people` or `blt`, or a new section (drawn as its own card before "Other plugin permissions"). |
+| `section_label` | string | Optional. The card title of a new section (default: the section ID humanized). |
+| `label`, `help` | string | What the control is called and the line under it. |
+| `kind` | string | `toggle` (default) or `level`. |
+| `caps` | string[] | A toggle's capabilities, turned on and off together; partly granted reads as indeterminate (RS-4). |
+| `map` | array | A `level` row's type map for `BLT_Toolkit_Simple_Mapper` (see that class). |
+| `tier` | string | Optional. `critical`, `elevated` or `standard`; the default is the highest tier among its capabilities (SEC-11). |
+| `depends` | array[] | Optional RS-7 hints: each `array( 'control' => ID, 'text' => string, 'min' => level )` (`min` for level rows). Shown, with "Also allow", while the control is on and the one it needs is off. |
+| `note` | string | Optional. An extra line under the control. |
+| `available` | bool\|callable | Optional. False (or a callable returning false) leaves the control out. |
+
+Each capability a control covers is named in the Advanced matrix as "Simple: Events → level" or "Simple: Site → Change settings" (RO-21).
+
+Requirement RS-3. Status: Available.
 
 ### `blt_toolkit_isolation_excluded_types`
 
@@ -435,9 +523,9 @@ Post types that are never offered "Give {Type} separate permissions" (RS-30), fo
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `$types` | string[] | `array()`, plus any type found to break under isolation during the RS-35 tests (recorded in `tasks/lessons.md`) | Post type names. |
+| `$types` | string[] | `array( 'bricks_template' )` (RS-35; the reason is in `tasks/lessons.md`, Phase 5 isolation) | Post type names. |
 
-Requirement RS-30, RS-35. Status: Planned (Phase 5).
+Requirement RS-30, RS-35. Status: Available.
 
 ### `blt_toolkit_isolation_caps`
 
@@ -446,10 +534,12 @@ The `register_post_type_args` changes applied to each isolated post type (RS-31)
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
 | `$args` | array | `capability_type => array( singular, plural )`, `map_meta_cap => true`, `capabilities => array( 'create_posts' => "create_{plural}" )` | Arguments merged into the type's registration. |
-| `$post_type` | string | | *Proposed.* The post type. |
-| `$isolation` | array | | *Proposed.* Its stored entry: `singular`, `plural`, `since`. |
+| `$post_type` | string | | The post type. |
+| `$isolation` | array | | Its stored entry: `singular`, `plural`, `since` (`since` is 0 while a dry run computes the new capabilities). |
 
-Requirement RS-31. Status: Planned (Phase 5).
+The dry run, the collision check, the cleanup and the RS-33 verification build the new capability strings through the same filter, so a change made here is what the preview shows and what verification expects. Return an array; anything else is ignored. A `do_not_allow` value in the type's own `capabilities` registration is kept over these arguments; any other override of Posts' (or Pages') strings stops the type from being isolated, and RS-33 reports it.
+
+Requirement RS-31. Status: Available.
 
 ### `blt_toolkit_hide_admins_from_non_admins`
 
@@ -466,7 +556,7 @@ Requirement SEC-6. Status: Available.
 
 ### `blt_toolkit_snapshot_retention`
 
-How many role snapshots are kept, newest first, besides the baseline, which is never pruned (SNAP-2, SNAP-3).
+How many role snapshots are kept, newest first, besides the baseline and User Role Editor's imported backup (reason `legacy_ure_backup`, SPEC 15), which are never pruned and do not count toward this number (SNAP-2, SNAP-3).
 
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -520,7 +610,7 @@ These are action names only. BLT Toolkit never declares the functions `switch_to
 current_user_switched(): WP_User|false
 ```
 
-Returns the user who switched into the current session (the most recent originating user), or `false` when the current user is not switched or nobody is signed in. Code written for User Switching can call it unchanged.
+Returns the user who switched into the current session (the most recent originating user), or `false` when the current user is not switched or nobody is signed in. Code written for User Switching can call it unchanged. Like User Switching's, it reads the old-user cookie, which is sent on the site's front end and REST requests too; unlike it, the cookie counts only for the session that switch created (`blt_switched_from_id` and `blt_switched_from_session` on the current session), so switch cookies left behind by someone else in the same browser never make a signed-in user look switched.
 
 - Defined only when **Work with tools made for User Switching** (`switch.compat_hooks`) is on and no function of that name exists yet (SW-19, D2). It is the plugin's only global symbol without the `blt_toolkit_` prefix.
 - Guard calls with `function_exists( 'current_user_switched' )`, as with User Switching.

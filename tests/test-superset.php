@@ -299,7 +299,16 @@ class Test_Superset extends TestCase {
 
 		$this->assertSame( array(), BLT_Toolkit_Superset::missing_grants( $actor, array_fill_keys( array( 'read', 'level_0' ), true ) ) );
 		$this->assertSame( array( 'level_10', 'manage_options' ), BLT_Toolkit_Superset::missing_grants( $actor, array_fill_keys( array( 'level_10', 'manage_options', 'read' ), true ) ) );
-		$this->assertSame( array(), BLT_Toolkit_Superset::missing_grants( $actor, array( 'do_not_allow' => true, 'level_10' => false ) ) );
+		$this->assertSame(
+			array(),
+			BLT_Toolkit_Superset::missing_grants(
+				$actor,
+				array(
+					'do_not_allow' => true,
+					'level_10'     => false,
+				)
+			)
+		);
 	}
 
 	/**
@@ -377,5 +386,106 @@ class Test_Superset extends TestCase {
 		$this->assertSame( array( 'alpha', 'mid', 'zeta' ), array_keys( $once ) );
 		$this->assertSame( $once, BLT_Toolkit_Superset::normalize( $once ) );
 		$this->assertSame( array( 'b', 'c' ), BLT_Toolkit_Superset::missing( array( 'a' => true ), array_fill_keys( array( 'c', 'a', 'b' ), true ) ) );
+	}
+
+	/**
+	 * RS-14, SEC-8: a read-only marker restricts, so a target's marker is
+	 * never a power the actor needs, and granting one needs no held marker.
+	 * The evidence case: Editor plus Books Full control towards Books View.
+	 *
+	 * @return void
+	 */
+	public function test_rs14_sec8_markers_are_not_powers() {
+		$full   = array( 'read', 'edit_books', 'create_books', 'edit_others_books', 'edit_published_books', 'edit_private_books', 'publish_books', 'read_private_books', 'delete_books', 'delete_others_books', 'delete_published_books', 'delete_private_books' );
+		$actor  = BLT_Toolkit_Superset::normalize( array_fill_keys( $full, true ), $this->roles );
+		$viewer = BLT_Toolkit_Superset::normalize( array_fill_keys( array( 'read', 'level_0', 'read_private_books', 'edit_books', 'blt_readonly_books' ), true ), $this->roles );
+
+		$this->assertTrue( BLT_Toolkit_Superset::is_marker( 'blt_readonly_books' ) );
+		$this->assertFalse( BLT_Toolkit_Superset::is_marker( 'blt_readonly_' ) );
+		$this->assertFalse( BLT_Toolkit_Superset::is_marker( 'edit_books' ) );
+		$this->assertFalse( BLT_Toolkit_Superset::is_marker( array( 'blt_readonly_books' ) ) );
+		$this->assertTrue( BLT_Toolkit_Superset::is_subset( $actor, $viewer ) );
+		$this->assertSame( array(), BLT_Toolkit_Superset::missing( $actor, $viewer ) );
+		$this->assertSame( array(), BLT_Toolkit_Superset::missing_grants( $actor, array_fill_keys( array( 'edit_books', 'read_private_books', 'blt_readonly_books' ), true ) ) );
+		$this->assertSame( array( 'blt_edit_roles' ), BLT_Toolkit_Superset::missing_grants( $actor, array_fill_keys( array( 'blt_readonly_books', 'blt_edit_roles' ), true ) ) );
+	}
+
+	/**
+	 * RS-14, SEC-2: an actor held read-only on a type (marker, no create)
+	 * does not in effect hold its `edit_posts`, so a target who holds that
+	 * string without the marker is out of reach; one who is also held
+	 * read-only is not. A create string lifts the restriction.
+	 *
+	 * @return void
+	 */
+	public function test_rs14_sec2_read_only_actor_lacks_edit_in_effect() {
+		$restrictions = array(
+			'blt_readonly_books' => array(
+				'edit'   => 'edit_books',
+				'create' => array( 'create_books' ),
+			),
+		);
+		$actor        = array_fill_keys( array( 'read', 'edit_books', 'read_private_books', 'blt_readonly_books' ), true );
+		$editor       = array_fill_keys( array( 'read', 'edit_books' ), true );
+		$viewer       = array_fill_keys( array( 'read', 'edit_books', 'read_private_books', 'blt_readonly_books' ), true );
+
+		$this->assertSame( array( 'edit_books' ), BLT_Toolkit_Superset::missing( $actor, $editor, $restrictions ) );
+		$this->assertFalse( BLT_Toolkit_Superset::is_subset( $actor, $editor, $restrictions ) );
+		$this->assertSame( array(), BLT_Toolkit_Superset::missing( $actor, $viewer, $restrictions ) );
+		$this->assertSame( array(), BLT_Toolkit_Superset::missing( $actor + array( 'create_books' => true ), $editor, $restrictions ) );
+
+		// Without injected strings the marker's name gives edit_ and create_.
+		$this->assertSame( array( 'edit_books' ), BLT_Toolkit_Superset::missing( $actor, $editor ) );
+		$this->assertTrue( BLT_Toolkit_Superset::held_read_only( $actor, 'blt_readonly_books', array() ) );
+		$this->assertFalse( BLT_Toolkit_Superset::held_read_only( $editor, 'blt_readonly_books', array() ) );
+	}
+
+	/**
+	 * RS-14, SEC-3: taking a marker away needs the type's `edit_posts`, and
+	 * an actor held read-only on the type needs its create string too.
+	 * Injected strings win over the ones derived from the marker's name.
+	 *
+	 * @return void
+	 */
+	public function test_rs14_sec3_lift_needs() {
+		$restrictions = array(
+			'blt_readonly_courses' => array(
+				'edit'   => 'edit_courses',
+				'create' => array( 'add_courses' ),
+			),
+		);
+
+		$this->assertSame( array( 'edit_books' ), BLT_Toolkit_Superset::lift_needs( array(), 'blt_readonly_books', array() ) );
+		$this->assertSame( array( 'edit_books' ), BLT_Toolkit_Superset::lift_needs( array( 'read' => true ), 'blt_readonly_books', array() ) );
+		$this->assertSame( array(), BLT_Toolkit_Superset::lift_needs( array( 'edit_books' => true ), 'blt_readonly_books', array() ) );
+		$this->assertSame(
+			array( 'create_books' ),
+			BLT_Toolkit_Superset::lift_needs(
+				array(
+					'edit_books'         => true,
+					'blt_readonly_books' => true,
+				),
+				'blt_readonly_books',
+				array()
+			)
+		);
+		$this->assertSame(
+			array( 'add_courses' ),
+			BLT_Toolkit_Superset::lift_needs(
+				array(
+					'edit_courses'         => true,
+					'blt_readonly_courses' => true,
+				),
+				'blt_readonly_courses',
+				$restrictions
+			)
+		);
+		$this->assertSame(
+			array(
+				'edit'   => 'edit_courses',
+				'create' => array( 'add_courses' ),
+			),
+			BLT_Toolkit_Superset::marker_strings( 'blt_readonly_courses', $restrictions )
+		);
 	}
 }

@@ -19,9 +19,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  *   user of the switch chain) and `acting_as_id` the current user; the chain
  *   goes into details. The Switch module supplies the chain through
  *   set_switch_chain_provider(); without a provider nobody counts as switched.
+ *   A background job pins the chain it started under (with_switch_chain()),
+ *   so its rows name that human whoever drives the tick.
  * - LOG-3: writing never blocks or interrupts the action being recorded. A
  *   failed insert goes to error_log() and sets the `blt_toolkit_log_failure`
  *   flag (autoload no) for the Site Health test; the person never sees it.
+ *   The next successful write stamps the flag `recovered` instead of
+ *   clearing it (last_failure()).
  * - LOG-4: rows older than the retention (setting `log.retention_days`, filter
  *   `blt_toolkit_log_retention_days`) are removed by a daily WP-Cron event that
  *   starts a cursor-mode `log_prune` job deleting 1,000 rows per step.
@@ -52,7 +56,8 @@ class BLT_Toolkit_Log {
 
 	/**
 	 * Option flagging the most recent failed insert (LOG-3), autoload no:
-	 * array( 'time' => int, 'error' => string, 'count' => int ).
+	 * array( 'time' => int, 'error' => string, 'count' => int ), plus
+	 * 'recovered' => int once a later write succeeded (last_failure()).
 	 */
 	const FAILURE_OPTION = 'blt_toolkit_log_failure';
 
@@ -161,6 +166,14 @@ class BLT_Toolkit_Log {
 	private static $chain_provider = null;
 
 	/**
+	 * Switch chains pinned by with_switch_chain(), innermost last. While one
+	 * is set it replaces the provider's answer (LOG-2 for background jobs).
+	 *
+	 * @var array<int,int[]>
+	 */
+	private static $pinned_chains = array();
+
+	/**
 	 * Whether register() already ran.
 	 *
 	 * @var bool
@@ -174,6 +187,14 @@ class BLT_Toolkit_Log {
 	 * @var array<string,bool>
 	 */
 	private static $reported = array();
+
+	/**
+	 * Whether this request already looked at the failure flag after a
+	 * successful write (note_recovery()). A failure in between resets it.
+	 *
+	 * @var bool
+	 */
+	private static $recovery_checked = false;
 
 	// ---------- Boot ----------
 
@@ -258,6 +279,64 @@ class BLT_Toolkit_Log {
 		self::$chain_provider = $provider;
 	}
 
+	/**
+	 * The switch chain rows written now are attributed to (LOG-2): the one
+	 * pinned by with_switch_chain(), else the provider's. User IDs, oldest
+	 * first; empty when not switched.
+	 *
+	 * BLT_Toolkit_Jobs::start() stores this with a job, so the rows its ticks
+	 * write name the human who started it even when WP-Cron runs them.
+	 *
+	 * @return int[]
+	 */
+	public static function current_switch_chain() {
+		return self::switch_chain();
+	}
+
+	/**
+	 * Run a callable with a pinned switch chain (LOG-2), then restore what
+	 * was there before, even when it throws.
+	 *
+	 * A job tick runs as the person who started the job (JOB-3), but in a
+	 * request without their cookies (WP-Cron, the loopback), or driven by
+	 * someone else's browser, so the provider cannot know the chain then.
+	 * BLT_Toolkit_Jobs wraps each tick in this with the chain it pinned at
+	 * start, and every row the tick writes keeps its actor: the human who
+	 * signed in, acting as the job's owner. An empty chain pins "not
+	 * switched". Calls nest.
+	 *
+	 * @param array    $chain    User IDs, oldest first (anything else is dropped).
+	 * @param callable $callback What to run.
+	 * @return mixed What `$callback` returns.
+	 */
+	public static function with_switch_chain( array $chain, callable $callback ) {
+		self::$pinned_chains[] = self::clean_chain( $chain );
+
+		try {
+			return call_user_func( $callback );
+		} finally {
+			array_pop( self::$pinned_chains );
+		}
+	}
+
+	/**
+	 * A chain as positive user IDs, in order. Pure.
+	 *
+	 * @param array $chain Candidate chain.
+	 * @return int[]
+	 */
+	public static function clean_chain( array $chain ) {
+		$out = array();
+
+		foreach ( $chain as $id ) {
+			if ( is_numeric( $id ) && (int) $id > 0 ) {
+				$out[] = (int) $id;
+			}
+		}
+
+		return $out;
+	}
+
 	// ---------- Writing ----------
 
 	/**
@@ -278,6 +357,9 @@ class BLT_Toolkit_Log {
 	 *     @type int|null $snapshot_id The snapshot taken for a role change.
 	 *     @type string   $status      `success` (default), `failure` or `warning`.
 	 *     @type string   $source      Empty for native rows; the plugin's slug for imported rows.
+	 *     @type bool     $system      Write the row as the system's: `actor_id` 0, not acting as anyone and no
+	 *                                 switch chain, whoever is signed in. For what BLT Toolkit does by itself,
+	 *                                 such as ending a switched session whose origin ended. Default false.
 	 * }
 	 * @return int|false The new row's ID, or false when it could not be written.
 	 */
@@ -285,7 +367,7 @@ class BLT_Toolkit_Log {
 		try {
 			$data    = self::normalize_row( $row );
 			$details = $data['details'];
-			$who     = self::attribute( get_current_user_id(), self::switch_chain() );
+			$who     = empty( $row['system'] ) ? self::attribute( get_current_user_id(), self::switch_chain() ) : self::attribute( 0, array() );
 
 			if ( ! empty( $who['chain'] ) ) {
 				$details['switch_chain'] = self::chain_details( $who['chain'] );
@@ -303,6 +385,8 @@ class BLT_Toolkit_Log {
 			if ( false === $id ) {
 				return false;
 			}
+
+			self::note_recovery();
 
 			// LOG-6: listeners get the row as written, so the details are the
 			// stored JSON decoded (the truncation marker, substituted values
@@ -503,6 +587,10 @@ class BLT_Toolkit_Log {
 	 * @return array
 	 */
 	private static function switch_chain() {
+		if ( array() !== self::$pinned_chains ) {
+			return self::$pinned_chains[ count( self::$pinned_chains ) - 1 ];
+		}
+
 		if ( null === self::$chain_provider ) {
 			return array();
 		}
@@ -657,6 +745,9 @@ class BLT_Toolkit_Log {
 
 		self::report( 'could not write an activity log entry: ' . $error );
 
+		// A later successful write in this request stamps the recovery again.
+		self::$recovery_checked = false;
+
 		try {
 			$previous = get_option( self::FAILURE_OPTION );
 			$count    = is_array( $previous ) && isset( $previous['count'] ) ? (int) $previous['count'] : 0;
@@ -704,22 +795,94 @@ class BLT_Toolkit_Log {
 	 * The most recent failed write (LOG-3), for the Site Health test, or null
 	 * when none was recorded.
 	 *
-	 * The flag is not cleared by later successful writes; compare its `time`.
+	 * Clearing semantics (decided in the Phase 7 backlog, tasks/lessons.md):
+	 * a later successful write never deletes the flag, because entries were
+	 * lost and the owner should hear about it, but it stamps `recovered`
+	 * with the time of the first successful write after the latest failure.
+	 * `recovered` is 0 while no write has succeeded since; a new failure
+	 * resets it to 0 and keeps counting. So a Site Health test can tell
+	 * "writes are failing now" (`recovered` 0) from "writes failed earlier
+	 * and work again" (`recovered` after `time`). Only clear_failure()
+	 * removes the flag (a Site Health action, or uninstall).
 	 *
-	 * @return array{time:int,error:string,count:int}|null
+	 * @return array{time:int,error:string,count:int,recovered:int}|null
 	 */
 	public static function last_failure() {
 		$flag = get_option( self::FAILURE_OPTION );
 
-		if ( ! is_array( $flag ) || empty( $flag['time'] ) ) {
+		return self::failure_from( $flag );
+	}
+
+	/**
+	 * The failure flag as last_failure() returns it, from the stored value.
+	 * Pure.
+	 *
+	 * @param mixed $flag The stored option value.
+	 * @return array{time:int,error:string,count:int,recovered:int}|null
+	 */
+	public static function failure_from( $flag ) {
+		if ( ! is_array( $flag ) || empty( $flag['time'] ) || ! is_numeric( $flag['time'] ) ) {
 			return null;
 		}
 
+		$time      = (int) $flag['time'];
+		$recovered = isset( $flag['recovered'] ) && is_numeric( $flag['recovered'] ) ? (int) $flag['recovered'] : 0;
+
 		return array(
-			'time'  => (int) $flag['time'],
-			'error' => isset( $flag['error'] ) ? (string) $flag['error'] : '',
-			'count' => isset( $flag['count'] ) ? (int) $flag['count'] : 1,
+			'time'      => $time,
+			'error'     => isset( $flag['error'] ) && is_scalar( $flag['error'] ) ? (string) $flag['error'] : '',
+			'count'     => isset( $flag['count'] ) && is_numeric( $flag['count'] ) ? max( 1, (int) $flag['count'] ) : 1,
+			'recovered' => $recovered >= $time ? $recovered : 0,
 		);
+	}
+
+	/**
+	 * The stored flag after a successful write at `$now`: stamped with
+	 * `recovered` when it records a failure and no write succeeded since;
+	 * null when nothing needs storing. Pure.
+	 *
+	 * @param mixed $flag The stored option value.
+	 * @param int   $now  Time of the successful write.
+	 * @return array|null The value to store, or null to leave the option alone.
+	 */
+	public static function recovered_flag( $flag, $now ) {
+		$failure = self::failure_from( $flag );
+
+		if ( null === $failure || $failure['recovered'] > 0 ) {
+			return null;
+		}
+
+		$flag['recovered'] = max( (int) $now, $failure['time'] );
+
+		return $flag;
+	}
+
+	/**
+	 * After a successful write, stamp the failure flag as recovered
+	 * (last_failure()). One option read per request at most, answered from
+	 * the cache on admin screens (BLT_Toolkit_Settings::prime_admin_options()
+	 * reads it with the other options that are not autoloaded) and from
+	 * `notoptions` once read; a write only on the first success after a
+	 * failure.
+	 *
+	 * @return void
+	 */
+	private static function note_recovery() {
+		if ( self::$recovery_checked ) {
+			return;
+		}
+
+		self::$recovery_checked = true;
+
+		try {
+			$stamped = self::recovered_flag( get_option( self::FAILURE_OPTION ), time() );
+
+			if ( null !== $stamped ) {
+				update_option( self::FAILURE_OPTION, $stamped, false );
+			}
+		} catch ( \Throwable $e ) {
+			self::report( 'could not update the failure flag: ' . $e->getMessage() );
+		}
 	}
 
 	/**

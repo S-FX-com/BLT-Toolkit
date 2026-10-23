@@ -55,8 +55,11 @@ foreach ( array( 'blt_toolkit_log', 'blt_toolkit_snapshots' ) as $blt_toolkit_ta
 	$wpdb->query( "DROP TABLE IF EXISTS {$blt_toolkit_table}" );
 }
 
-// Options, including every job's state.
-$blt_toolkit_options = array( 'blt_toolkit_settings', 'blt_toolkit_db_version', 'blt_toolkit_secrets', 'blt_toolkit_legacy_imports', 'blt_toolkit_log_failure' );
+// Options, including every job's state. `blt_toolkit_isolation_state` holds
+// the RS-33 flag and the reverted types awaiting the RS-32 cleanup;
+// `blt_toolkit_legacy_lock` exists only while a batch of Username Changer's
+// audit log is copied (SPEC 15), unless a fatal error cut that batch short.
+$blt_toolkit_options = array( 'blt_toolkit_settings', 'blt_toolkit_db_version', 'blt_toolkit_secrets', 'blt_toolkit_legacy_imports', 'blt_toolkit_legacy_lock', 'blt_toolkit_log_failure', 'blt_toolkit_isolation_state' );
 
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-off lookup during uninstall.
 $blt_toolkit_jobs = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( 'blt_toolkit_job_' ) . '%' ) );
@@ -67,6 +70,40 @@ foreach ( array_merge( $blt_toolkit_options, (array) $blt_toolkit_jobs ) as $blt
 
 foreach ( array( 'blt_toolkit_no_role_count', 'blt_toolkit_recovery_in_code', 'blt_toolkit_log_menus' ) as $blt_toolkit_transient ) {
 	delete_transient( $blt_toolkit_transient );
+}
+
+// Per-user transients, named with a user ID: the bulk rename's dry run
+// (UN-30, an hour), the profile's rename notice (UN-18) and the username
+// form's result (UN-23), five minutes each; the Roles screen's pending review
+// or refused save (an hour), its one-time result notice and the role
+// lifecycle's (ten minutes), the Users list's bulk role result (US-3,
+// five minutes), the Tools screen's one-time result notice (ten minutes),
+// a role import's stored upload (RO-45, an hour, compressed) and a personal
+// data erasure in progress (SPEC 14.5, an hour; named with the ID of the
+// person being erased). Found by prefix in the options table, with their
+// timeouts; on a site with a persistent object cache they live there
+// instead and expire on their own.
+$blt_toolkit_prefixes = array(
+	'blt_toolkit_bulk_plan_',
+	'blt_toolkit_username_notice_',
+	'blt_toolkit_username_form_',
+	'blt_toolkit_roles_pending_',
+	'blt_toolkit_lifecycle_notice_',
+	'blt_toolkit_bulk_roles_notice_',
+	'blt_toolkit_tools_notice_',
+	'blt_toolkit_import_',
+	'blt_toolkit_privacy_erase_',
+);
+
+foreach ( $blt_toolkit_prefixes as $blt_toolkit_prefix ) {
+	foreach ( array( '_transient_', '_transient_timeout_' ) as $blt_toolkit_kind ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-off lookup during uninstall.
+		$blt_toolkit_names = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( $blt_toolkit_kind . $blt_toolkit_prefix ) . '%' ) );
+
+		foreach ( (array) $blt_toolkit_names as $blt_toolkit_option ) {
+			delete_option( $blt_toolkit_option );
+		}
+	}
 }
 
 // The plugin's own capabilities (SPEC 5.1) and every read-only marker. Other
@@ -120,7 +157,7 @@ if ( $blt_toolkit_changed && $blt_toolkit_use_db ) {
 // User-level data. User meta is shared by every site of a network, so it is
 // left alone there (the plugin never runs on multisite in any case).
 if ( ! is_multisite() ) {
-	foreach ( array( 'blt_toolkit_editor_mode', 'blt_toolkit_columns', 'blt_toolkit_previous_nicenames', 'blt_toolkit_username_changed_at' ) as $blt_toolkit_meta_key ) {
+	foreach ( array( 'blt_toolkit_editor_mode', 'blt_toolkit_columns', 'blt_toolkit_previous_nicenames', 'blt_toolkit_username_changed_at', 'blt_toolkit_password_failures' ) as $blt_toolkit_meta_key ) {
 		delete_metadata( 'user', 0, $blt_toolkit_meta_key, '', true );
 	}
 

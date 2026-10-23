@@ -1,0 +1,605 @@
+{
+    "about": "Generated from WordPress 7.1.3 on PHP 8.3.6 by wp_insert_user() (UN-13, SPEC 18). Do not edit by hand.",
+    "base": [
+        {
+            "label": "plain lowercase",
+            "raw": false,
+            "input": "jsmith",
+            "login": "jsmith",
+            "base": "jsmith",
+            "nicename": "jsmith",
+            "core_error": null
+        },
+        {
+            "label": "uppercase",
+            "raw": false,
+            "input": "JSmith",
+            "login": "JSmith",
+            "base": "jsmith",
+            "nicename": "jsmith",
+            "core_error": null
+        },
+        {
+            "label": "space",
+            "raw": false,
+            "input": "John Smith",
+            "login": "John Smith",
+            "base": "john-smith",
+            "nicename": "john-smith",
+            "core_error": null
+        },
+        {
+            "label": "collapsed whitespace",
+            "raw": false,
+            "input": "john \t  smith",
+            "login": "john smith",
+            "base": "john-smith",
+            "nicename": "john-smith",
+            "core_error": null
+        },
+        {
+            "label": "email style",
+            "raw": false,
+            "input": "john.smith@example.com",
+            "login": "john.smith@example.com",
+            "base": "john-smithexample-com",
+            "nicename": "john-smithexample-com",
+            "core_error": null
+        },
+        {
+            "label": "underscore",
+            "raw": false,
+            "input": "jane_doe",
+            "login": "jane_doe",
+            "base": "jane_doe",
+            "nicename": "jane_doe",
+            "core_error": null
+        },
+        {
+            "label": "repeated dashes",
+            "raw": false,
+            "input": "a-b--c",
+            "login": "a-b--c",
+            "base": "a-b-c",
+            "nicename": "a-b-c",
+            "core_error": null
+        },
+        {
+            "label": "leading and trailing dashes",
+            "raw": false,
+            "input": "--bob--",
+            "login": "--bob--",
+            "base": "bob",
+            "nicename": "bob",
+            "core_error": null
+        },
+        {
+            "label": "mixed case with dot",
+            "raw": false,
+            "input": "ADMIN.User",
+            "login": "ADMIN.User",
+            "base": "admin-user",
+            "nicename": "admin-user",
+            "core_error": null
+        },
+        {
+            "label": "digits",
+            "raw": false,
+            "input": "12345",
+            "login": "12345",
+            "base": "12345",
+            "nicename": "12345",
+            "core_error": null
+        },
+        {
+            "label": "looks suffixed",
+            "raw": false,
+            "input": "bob-2",
+            "login": "bob-2",
+            "base": "bob-2",
+            "nicename": "bob-2",
+            "core_error": null
+        },
+        {
+            "label": "accents, core sanitized",
+            "raw": false,
+            "input": "José García",
+            "login": "Jose Garcia",
+            "base": "jose-garcia",
+            "nicename": "jose-garcia",
+            "core_error": null
+        },
+        {
+            "label": "accents, raw",
+            "raw": true,
+            "input": "José García",
+            "login": "José García",
+            "base": "jose-garcia",
+            "nicename": "jose-garcia",
+            "core_error": null
+        },
+        {
+            "label": "more accents, raw",
+            "raw": true,
+            "input": "Zoë Ünal-Øster",
+            "login": "Zoë Ünal-Øster",
+            "base": "zoe-unal-oster",
+            "nicename": "zoe-unal-oster",
+            "core_error": null
+        },
+        {
+            "label": "angstrom, raw",
+            "raw": true,
+            "input": "Ångström",
+            "login": "Ångström",
+            "base": "angstrom",
+            "nicename": "angstrom",
+            "core_error": null
+        },
+        {
+            "label": "apostrophe, raw",
+            "raw": true,
+            "input": "O'Brien",
+            "login": "O'Brien",
+            "base": "obrien",
+            "nicename": "obrien",
+            "core_error": null
+        },
+        {
+            "label": "cyrillic short, raw",
+            "raw": true,
+            "input": "Иван",
+            "login": "Иван",
+            "base": "%d0%b8%d0%b2%d0%b0%d0%bd",
+            "nicename": "%d0%b8%d0%b2%d0%b0%d0%bd",
+            "core_error": null
+        },
+        {
+            "label": "cyrillic long, raw",
+            "raw": true,
+            "input": "Иван Петров",
+            "login": "Иван Петров",
+            "base": "%d0%b8%d0%b2%d0%b0%d0%bd-%d0%bf%d0%b5%d1%82%d1%80%d0%be%d0%b2",
+            "nicename": null,
+            "core_error": "user_nicename_too_long"
+        },
+        {
+            "label": "cjk, raw",
+            "raw": true,
+            "input": "李小龍",
+            "login": "李小龍",
+            "base": "%e6%9d%8e%e5%b0%8f%e9%be%8d",
+            "nicename": "%e6%9d%8e%e5%b0%8f%e9%be%8d",
+            "core_error": null
+        },
+        {
+            "label": "greek, raw",
+            "raw": true,
+            "input": "Σωκράτης",
+            "login": "Σωκράτης",
+            "base": "%cf%83%cf%89%ce%ba%cf%81%ce%ac%cf%84%ce%b7%cf%82",
+            "nicename": "%cf%83%cf%89%ce%ba%cf%81%ce%ac%cf%84%ce%b7%cf%82",
+            "core_error": null
+        },
+        {
+            "label": "emoji, raw",
+            "raw": true,
+            "input": "rock🎸star",
+            "login": "rock🎸star",
+            "base": "rock%f0%9f%8e%b8star",
+            "nicename": "rock%f0%9f%8e%b8star",
+            "core_error": null
+        },
+        {
+            "label": "only at signs",
+            "raw": false,
+            "input": "@@@",
+            "login": "@@@",
+            "base": "",
+            "nicename": null,
+            "core_error": "empty_user_nicename"
+        },
+        {
+            "label": "only dots",
+            "raw": false,
+            "input": "...",
+            "login": "...",
+            "base": "",
+            "nicename": null,
+            "core_error": "empty_user_nicename"
+        },
+        {
+            "label": "49 characters",
+            "raw": false,
+            "input": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghi",
+            "login": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghi",
+            "base": "user-name_abcdefghijabcdefghijabcdefghijabcdefghi",
+            "nicename": "user-name_abcdefghijabcdefghijabcdefghijabcdefghi",
+            "core_error": null
+        },
+        {
+            "label": "50 characters",
+            "raw": false,
+            "input": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "login": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "base": "user-name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "nicename": "user-name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "core_error": null
+        },
+        {
+            "label": "51 characters",
+            "raw": false,
+            "input": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghija",
+            "login": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghija",
+            "base": "user-name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "nicename": "user-name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "core_error": null
+        },
+        {
+            "label": "60 characters",
+            "raw": false,
+            "input": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghijabcdefghij",
+            "login": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghijabcdefghij",
+            "base": "user-name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "nicename": "user-name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "core_error": null
+        },
+        {
+            "label": "49 ASCII then accented, raw",
+            "raw": true,
+            "input": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghiézz",
+            "login": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghiézz",
+            "base": "user-name_abcdefghijabcdefghijabcdefghijabcdefghie",
+            "nicename": "user-name_abcdefghijabcdefghijabcdefghijabcdefghie",
+            "core_error": null
+        },
+        {
+            "label": "49 ASCII then cyrillic, raw",
+            "raw": true,
+            "input": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghiЖzz",
+            "login": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghiЖzz",
+            "base": "user-name_abcdefghijabcdefghijabcdefghijabcdefghi%d0%b6",
+            "nicename": null,
+            "core_error": "user_nicename_too_long"
+        },
+        {
+            "label": "50 ASCII then cyrillic, raw",
+            "raw": true,
+            "input": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghijЖ",
+            "login": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghijЖ",
+            "base": "user-name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "nicename": "user-name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "core_error": null
+        },
+        {
+            "label": "2 ASCII then 8 cyrillic, raw",
+            "raw": true,
+            "input": "abАлександ",
+            "login": "abАлександ",
+            "base": "ab%d0%b0%d0%bb%d0%b5%d0%ba%d1%81%d0%b0%d0%bd%d0%b4",
+            "nicename": "ab%d0%b0%d0%bb%d0%b5%d0%ba%d1%81%d0%b0%d0%bd%d0%b4",
+            "core_error": null
+        }
+    ],
+    "unique": [
+        {
+            "label": "needs -2",
+            "raw": false,
+            "login": "carol",
+            "base": "carol",
+            "taken": [
+                "admin",
+                "carol"
+            ],
+            "nicename": "carol-2",
+            "core_error": null
+        },
+        {
+            "label": "needs -3",
+            "raw": false,
+            "login": "dave",
+            "base": "dave",
+            "taken": [
+                "admin",
+                "dave",
+                "dave-2"
+            ],
+            "nicename": "dave-3",
+            "core_error": null
+        },
+        {
+            "label": "needs -10",
+            "raw": false,
+            "login": "erin",
+            "base": "erin",
+            "taken": [
+                "admin",
+                "erin",
+                "erin-2",
+                "erin-3",
+                "erin-4",
+                "erin-5",
+                "erin-6",
+                "erin-7",
+                "erin-8",
+                "erin-9"
+            ],
+            "nicename": "erin-10",
+            "core_error": null
+        },
+        {
+            "label": "first free suffix wins",
+            "raw": false,
+            "login": "frank",
+            "base": "frank",
+            "taken": [
+                "admin",
+                "frank",
+                "frank-3"
+            ],
+            "nicename": "frank-2",
+            "core_error": null
+        },
+        {
+            "label": "uppercase login collides with lowercase slug",
+            "raw": false,
+            "login": "Grace.Hopper",
+            "base": "grace-hopper",
+            "taken": [
+                "admin",
+                "grace-hopper"
+            ],
+            "nicename": "grace-hopper-2",
+            "core_error": null
+        },
+        {
+            "label": "49-character base truncated for -2",
+            "raw": false,
+            "login": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghi",
+            "base": "user-name_abcdefghijabcdefghijabcdefghijabcdefghi",
+            "taken": [
+                "admin",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefghi"
+            ],
+            "nicename": "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-2",
+            "core_error": null
+        },
+        {
+            "label": "50-character base truncated for -2",
+            "raw": false,
+            "login": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "base": "user-name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "taken": [
+                "admin",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefghij"
+            ],
+            "nicename": "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-2",
+            "core_error": null
+        },
+        {
+            "label": "50-character base truncated for -10",
+            "raw": false,
+            "login": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "base": "user-name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "taken": [
+                "admin",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefghij",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-2",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-3",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-4",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-5",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-6",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-7",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-8",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-9"
+            ],
+            "nicename": "user-name_abcdefghijabcdefghijabcdefghijabcdefg-10",
+            "core_error": null
+        },
+        {
+            "label": "50-character base truncated for -100",
+            "raw": false,
+            "login": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "base": "user-name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "taken": [
+                "admin",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefghij",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-2",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-3",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-4",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-5",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-6",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-7",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-8",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-9",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-10",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-11",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-12",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-13",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-14",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-15",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-16",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-17",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-18",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-19",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-20",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-21",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-22",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-23",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-24",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-25",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-26",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-27",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-28",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-29",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-30",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-31",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-32",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-33",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-34",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-35",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-36",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-37",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-38",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-39",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-40",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-41",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-42",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-43",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-44",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-45",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-46",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-47",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-48",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-49",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-50",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-51",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-52",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-53",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-54",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-55",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-56",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-57",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-58",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-59",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-60",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-61",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-62",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-63",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-64",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-65",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-66",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-67",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-68",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-69",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-70",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-71",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-72",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-73",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-74",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-75",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-76",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-77",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-78",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-79",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-80",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-81",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-82",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-83",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-84",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-85",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-86",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-87",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-88",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-89",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-90",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-91",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-92",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-93",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-94",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-95",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-96",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-97",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-98",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefg-99"
+            ],
+            "nicename": "user-name_abcdefghijabcdefghijabcdefghijabcdef-100",
+            "core_error": null
+        },
+        {
+            "label": "60-character login sharing its first 50 with another",
+            "raw": false,
+            "login": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghijabcdefghZZ",
+            "base": "user-name_abcdefghijabcdefghijabcdefghijabcdefghij",
+            "taken": [
+                "admin",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefghij"
+            ],
+            "nicename": "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-2",
+            "core_error": null
+        },
+        {
+            "label": "cyrillic needs -2, raw",
+            "raw": true,
+            "login": "Иван",
+            "base": "%d0%b8%d0%b2%d0%b0%d0%bd",
+            "taken": [
+                "admin",
+                "%d0%b8%d0%b2%d0%b0%d0%bd"
+            ],
+            "nicename": "%d0%b8%d0%b2%d0%b0%d0%bd-2",
+            "core_error": null
+        },
+        {
+            "label": "encoded 50-character base cut inside an escape, raw",
+            "raw": true,
+            "login": "abАлександ",
+            "base": "ab%d0%b0%d0%bb%d0%b5%d0%ba%d1%81%d0%b0%d0%bd%d0%b4",
+            "taken": [
+                "admin",
+                "ab%d0%b0%d0%bb%d0%b5%d0%ba%d1%81%d0%b0%d0%bd%d0%b4"
+            ],
+            "nicename": "ab%d0%b0%d0%bb%d0%b5%d0%ba%d1%81%d0%b0%d0%bd%d0%-2",
+            "core_error": null
+        },
+        {
+            "label": "accented boundary needs -2, raw",
+            "raw": true,
+            "login": "User.Name_abcdefghijabcdefghijabcdefghijabcdefghiézz",
+            "base": "user-name_abcdefghijabcdefghijabcdefghijabcdefghie",
+            "taken": [
+                "admin",
+                "user-name_abcdefghijabcdefghijabcdefghijabcdefghie"
+            ],
+            "nicename": "user-name_abcdefghijabcdefghijabcdefghijabcdefgh-2",
+            "core_error": null
+        },
+        {
+            "label": "looks suffixed needs -2",
+            "raw": false,
+            "login": "bob-2",
+            "base": "bob-2",
+            "taken": [
+                "admin",
+                "bob-2"
+            ],
+            "nicename": "bob-2-2",
+            "core_error": null
+        }
+    ],
+    "sanitize_title": {
+        "--bob--": "bob",
+        "...": "",
+        "12345": "12345",
+        "@@@": "",
+        "ADMIN.User": "admin-user",
+        "Grace.Hopper": "grace-hopper",
+        "JSmith": "jsmith",
+        "John Smith": "john-smith",
+        "Jose Garcia": "jose-garcia",
+        "José García": "jose-garcia",
+        "O'Brien": "obrien",
+        "User.Name_abcdefghijabcdefghijabcdefghijabcdefghi": "user-name_abcdefghijabcdefghijabcdefghijabcdefghi",
+        "User.Name_abcdefghijabcdefghijabcdefghijabcdefghij": "user-name_abcdefghijabcdefghijabcdefghijabcdefghij",
+        "User.Name_abcdefghijabcdefghijabcdefghijabcdefghié": "user-name_abcdefghijabcdefghijabcdefghijabcdefghie",
+        "User.Name_abcdefghijabcdefghijabcdefghijabcdefghiЖ": "user-name_abcdefghijabcdefghijabcdefghijabcdefghi%d0%b6",
+        "Zoë Ünal-Øster": "zoe-unal-oster",
+        "a-b--c": "a-b-c",
+        "abАлександ": "ab%d0%b0%d0%bb%d0%b5%d0%ba%d1%81%d0%b0%d0%bd%d0%b4",
+        "bob-2": "bob-2",
+        "carol": "carol",
+        "dave": "dave",
+        "erin": "erin",
+        "frank": "frank",
+        "jane_doe": "jane_doe",
+        "john smith": "john-smith",
+        "john.smith@example.com": "john-smithexample-com",
+        "jsmith": "jsmith",
+        "rock🎸star": "rock%f0%9f%8e%b8star",
+        "Ångström": "angstrom",
+        "Σωκράτης": "%cf%83%cf%89%ce%ba%cf%81%ce%ac%cf%84%ce%b7%cf%82",
+        "Иван": "%d0%b8%d0%b2%d0%b0%d0%bd",
+        "Иван Петров": "%d0%b8%d0%b2%d0%b0%d0%bd-%d0%bf%d0%b5%d1%82%d1%80%d0%be%d0%b2",
+        "李小龍": "%e6%9d%8e%e5%b0%8f%e9%be%8d"
+    }
+}

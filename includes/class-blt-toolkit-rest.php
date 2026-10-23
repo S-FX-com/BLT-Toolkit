@@ -33,9 +33,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  * - `GET /switch/users?search=` the toolbar "Switch to…" typeahead (SW-20):
  *   needs `blt_switch_users`, at least 2 characters, at most
  *   `blt_toolkit_switch_search_limit` (20) users, only users the current
- *   user may switch to, each with a nonced switch URL made here.
+ *   user may switch to, each with a nonced switch URL made here. An
+ *   optional `role` (a role ID) narrows the query to that role's holders,
+ *   for the Roles screen's "Test as…" search (X-3).
  * - The `blt_toolkit_switch_url` field on core's `user` object (SW-27):
  *   that URL, or null unless the current user may switch to that user.
+ *
+ * Phase 3 adds, while the Usernames module runs (register_username_routes()):
+ *
+ * - `GET /usernames/check?user_id=&username=` the profile screen's live
+ *   check (UN-16): needs `blt_change_username` for that user, runs the one
+ *   validator (UN-1 to UN-9) and says whether the name would pass. Advisory
+ *   only: the rename itself validates again and decides.
  */
 class BLT_Toolkit_Rest {
 
@@ -65,6 +74,13 @@ class BLT_Toolkit_Rest {
 	 * whole table.
 	 */
 	const SWITCH_SEARCH_SCAN = 500;
+
+	/**
+	 * Longest `username` the check route accepts. Far above the 60-character
+	 * limit, so the validator still answers "too long" (UN-2); it only stops
+	 * a huge string from being processed at all.
+	 */
+	const USERNAME_CHECK_MAX = 1000;
 
 	/**
 	 * Whether register() already ran.
@@ -100,6 +116,10 @@ class BLT_Toolkit_Rest {
 		// A module that did not boot registers nothing (SPEC 4.1).
 		if ( BLT_Toolkit_Plugin::is_active( 'switch' ) ) {
 			self::register_switch_routes();
+		}
+
+		if ( BLT_Toolkit_Plugin::is_active( 'usernames' ) ) {
+			self::register_username_routes();
 		}
 	}
 
@@ -245,6 +265,113 @@ class BLT_Toolkit_Rest {
 		return is_wp_error( $view ) ? $view : self::respond( $view );
 	}
 
+	// ---------- Usernames (UN-16) ----------
+
+	/**
+	 * The live username check (UN-16).
+	 *
+	 * @return void
+	 */
+	public static function register_username_routes() {
+		register_rest_route(
+			BLT_TOOLKIT_REST_NS,
+			'/usernames/check',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( __CLASS__, 'check_username' ),
+				'permission_callback' => array( __CLASS__, 'username_check_permission' ),
+				'args'                => array(
+					'user_id'  => array(
+						'description' => __( 'The user whose username would change.', 'blt-toolkit' ),
+						'type'        => 'integer',
+						'minimum'     => 1,
+						'required'    => true,
+					),
+					'username' => array(
+						'description' => __( 'The proposed username, as typed.', 'blt-toolkit' ),
+						'type'        => 'string',
+						'maxLength'   => self::USERNAME_CHECK_MAX,
+						'required'    => true,
+					),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Permission for `/usernames/check`: signed in, and allowed to change
+	 * that user's username (`blt_change_username`, so SEC-1, SEC-2 and the
+	 * cooldown apply exactly as they do to the rename).
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return true|WP_Error
+	 */
+	public static function username_check_permission( WP_REST_Request $request ) {
+		if ( ! is_user_logged_in() ) {
+			return new WP_Error( 'rest_forbidden', __( 'You need to be signed in to do that.', 'blt-toolkit' ), array( 'status' => 401 ) );
+		}
+
+		$user_id = (int) $request->get_param( 'user_id' );
+
+		if ( $user_id <= 0 || ! current_user_can( 'blt_change_username', $user_id ) ) { // phpcs:ignore WordPress.WP.Capabilities.Unknown -- BLT Toolkit's meta capability (SPEC 5.1).
+			return new WP_Error( 'rest_forbidden', __( 'You do not have permission to do that.', 'blt-toolkit' ), array( 'status' => 403 ) );
+		}
+
+		return true;
+	}
+
+	/**
+	 * `GET /usernames/check`: would this name pass for this user?
+	 *
+	 * Answers `valid`, the trimmed `username`, and for a name that fails the
+	 * first failing rule's `code` and `message` (and `suggestion` for UN-1).
+	 * The name is not reserved; the rename validates again.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function check_username( WP_REST_Request $request ) {
+		$user = get_userdata( (int) $request->get_param( 'user_id' ) );
+
+		if ( ! $user instanceof WP_User ) {
+			return new WP_Error( 'blt_toolkit_username_no_user', __( 'That user does not exist.', 'blt-toolkit' ), array( 'status' => 404 ) );
+		}
+
+		$raw    = $request->get_param( 'username' );
+		$name   = BLT_Toolkit_Username_Validator::normalize( $raw );
+		$errors = BLT_Toolkit_Username_Validator::validate( is_string( $raw ) ? $raw : '', $user );
+
+		if ( BLT_Toolkit_Username_Validator::is_valid( $errors ) ) {
+			return self::respond(
+				array(
+					'valid'    => true,
+					'username' => $name,
+					'code'     => '',
+					'message'  => sprintf(
+						/* translators: %s: a username. */
+						__( '"%s" is available.', 'blt-toolkit' ),
+						$name
+					),
+				)
+			);
+		}
+
+		$code = (string) $errors->get_error_code();
+		$data = $errors->get_error_data( $code );
+		$out  = array(
+			'valid'    => false,
+			'username' => $name,
+			'code'     => BLT_Toolkit_Username_Changer::public_error_code( $code ),
+			'message'  => BLT_Toolkit_Username_Changer::public_error_message( $code, $errors->get_error_message( $code ) ),
+		);
+
+		if ( is_array( $data ) && isset( $data['suggestion'] ) && is_string( $data['suggestion'] ) && '' !== $data['suggestion'] ) {
+			$out['suggestion'] = $data['suggestion'];
+		}
+
+		return self::respond( $out );
+	}
+
 	// ---------- Switch (SW-20, SW-27) ----------
 
 	/**
@@ -267,6 +394,11 @@ class BLT_Toolkit_Rest {
 						'required'          => true,
 						'validate_callback' => array( __CLASS__, 'validate_switch_search' ),
 						'sanitize_callback' => array( __CLASS__, 'clean_switch_search' ),
+					),
+					'role'   => array(
+						'description' => __( 'Only users holding this role (a role ID).', 'blt-toolkit' ),
+						'type'        => 'string',
+						'required'    => false,
 					),
 				),
 			)
@@ -360,12 +492,22 @@ class BLT_Toolkit_Rest {
 	 * itself, since SEC-1 would refuse every one of them; the capability
 	 * check still decides. Reads at most SWITCH_SEARCH_SCAN candidates.
 	 *
+	 * With `role`, only that role's holders are queried (X-3's "Test as…"
+	 * search), so a broad term still finds them; a role that does not
+	 * exist finds nobody.
+	 *
 	 * @param WP_REST_Request $request Request.
 	 * @return WP_REST_Response
 	 */
 	public static function search_switch_users( WP_REST_Request $request ) {
 		$search = self::clean_switch_search( $request->get_param( 'search' ) );
 		$actor  = wp_get_current_user();
+		$role   = $request->get_param( 'role' );
+		$role   = is_string( $role ) ? $role : '';
+
+		if ( '' !== $role && ! wp_roles()->is_role( $role ) ) {
+			return self::respond( array() );
+		}
 
 		/**
 		 * Filter the most users the toolbar "Switch to…" search returns (SW-20).
@@ -389,6 +531,10 @@ class BLT_Toolkit_Rest {
 
 		if ( ! BLT_Toolkit_Guard::is_toolkit_admin( $actor ) ) {
 			$args['role__not_in'] = array( BLT_Toolkit_Guard::ADMIN_ROLE );
+		}
+
+		if ( '' !== $role ) {
+			$args['role'] = $role;
 		}
 
 		$found   = array();
